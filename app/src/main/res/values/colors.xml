@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#ff4081</color>
+    <color name="colorForCursor">#3F51B5</color>
+    <color name="white">#ffffff</color>
+    <color name="red">#d50000</color>
+    <color name="green">#64dd17</color>
+    <color name="cyan">#18ffff</color>
+    <color name="orange">#ffa726</color>
+    <color name="yellow">#ffea00</color>
+    <color name="blue">#536dfe</color>
+    <color name="pink">#ff80ab</color>
+    <color name="brown">#a1887f</color>
+    <color name="cyan_dark">#0097a7</color>
+    <color name="brown_dark">#8d6e63</color>
+    <color name="purple">#aa00ff</color>
+    <color name="black">#000000</color>
+
+
+</resources>

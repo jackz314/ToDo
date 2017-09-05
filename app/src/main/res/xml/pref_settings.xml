@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <!-- NOTE: EditTextPreference accepts EditText attributes. -->
+    <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
+
+    <!-- NOTE: Hide buttons to simplify the UI. Users can touch outside the dialog to
+         dismiss it. -->
+    <!-- NOTE: ListPreference's summary should be set to its value by the activity code. -->
+
+    <com.jackz314.todo.MyPreferenceCategory android:title="@string/history_category"
+        android:id="@+id/hiscategory">
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/main_history_switch"
+            android:summary="@string/history_switch_content"
+            android:title="@string/history_switch_title" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/clear_history_switch_key"
+            android:summary="@string/clear_history_switch_summary"
+            android:title="@string/clear_history_switch_title" />
+        <Preference
+            android:key="@string/clear_frequency_choose_key"
+            android:title="@string/clear_history_frequency"
+            android:summary="@string/disabled" />
+        <Preference
+            android:enabled="true"
+            android:summary="@string/wipe_history_detail"
+            android:textColor="#ff0000"
+            android:title="@string/wipe_history"
+            android:key="@string/wipe_history_key"
+            android:id="@+id/wipe_history">/>
+        </Preference>
+    </com.jackz314.todo.MyPreferenceCategory>
+
+
+    <com.jackz314.todo.MyPreferenceCategory
+        android:title="@string/appearance_category"
+        android:id="@+id/appcategory">
+        <SwitchPreference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:defaultValue="true"
+            android:key="@string/order_key"
+            android:title="@string/list_order_title" />
+        <Preference
+            android:id="@+id/text_size"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:enabled="true"
+            android:key="@string/text_size_key"
+            android:summary="@string/text_size_content"
+            android:title="@string/text_size_title">/>
+        </Preference>
+        <ListPreference
+            android:defaultValue="@array/theme_default_value"
+            android:dialogIcon="@drawable/ic_color_lens_black_24dp"
+            android:entries="@array/theme_entries"
+            android:entryValues="@array/theme_entries_value"
+            android:key="@string/theme_selector_key"
+            android:title="@string/theme_selector_title"
+            android:summary="@string/custom"/>
+        <Preference
+            android:id="@+id/theme_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:enabled="true"
+            android:icon="@drawable/ic_format_color_fill_black_24dp"
+            android:key="@string/theme_color_key"
+            android:summary="@string/theme_color_selector_content"
+            android:title="@string/theme_color_selector">/>
+        </Preference>
+        <Preference
+            android:id="@+id/text_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:enabled="true"
+            android:icon="@drawable/ic_text_format_black_24dp"
+            android:key="@string/text_color_key"
+            android:summary="@string/text_color_selector_content"
+            android:title="@string/text_color_selector">/>
+        </Preference>
+        <Preference
+            android:id="@+id/background_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:enabled="true"
+            android:icon="@drawable/ic_aspect_ratio_black_24dp"
+            android:key="@string/background_color_key"
+            android:summary="@string/background_color_selector_content"
+            android:title="@string/background_color_selector">/>
+        </Preference>
+        <Preference
+            android:id="@+id/reset_appearance_values"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:enabled="true"
+            android:key="@string/reset_appearance_key"
+            android:summary="@string/reset_appearance_content"
+            android:title="@string/reset_appearance_title">/>
+        </Preference>
+    </com.jackz314.todo.MyPreferenceCategory>
+    <com.jackz314.todo.MyPreferenceCategory
+        android:title="@string/others_category"
+        android:id="@+id/others_category">
+        <Preference
+            android:id="@+id/backup_data"
+            android:enabled="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:key="@string/backup_data_key"
+            android:title="@string/backup_data_title"
+            android:summary="@string/backup_data_content">/>
+        </Preference>
+        <Preference
+            android:id="@+id/restore_data"
+            android:enabled="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:key="@string/restore_data_key"
+            android:title="@string/restore_data_title"
+            android:summary="@string/restore_data_content">/>
+        </Preference>
+    </com.jackz314.todo.MyPreferenceCategory>
+
+
+</PreferenceScreen>

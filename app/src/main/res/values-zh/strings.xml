@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ToDo</string>
+    <string name="confirm">确定</string>
+    <string name="about_name">关于</string>
+    <string name="action_settings">设置</string>
+    <string name="all_note_deleted_snack_text">已删除所有项目</string>
+    <string name="empty_history">没有已完成的项目\\n你的已完成项目将出现在这里</string>
+    <string name="cancel">取消</string>
+    <string name="all_note_finished_snack_text">已完成所有项目</string>
+    <string name="appearance_category">外观</string>
+    <string name="background_color_selector">背景颜色</string>
+    <string name="clear_history_catagory_title">清除历史记录</string>
+    <string name="clear_history_frequency">清除历史记录频率</string>
+    <string name="clear_history_switch_summary">按照设定的频率自动清除历史记录</string>
+    <string name="clear_history_switch_title">自动清除历史记录</string>
+    <string name="color_conflict">你确定吗？这可能会导致不同元素间颜色的重复而显示不清</string>
+    <string name="color_picker_dialog_title">请选择一个颜色</string>
+    <string name="background_color_selector_content">改变背景颜色</string>
+    <string name="delete_all_notes">删除所有项目</string>
+    <string name="delete_menu_text">删除</string>
+    <string name="empty_todolist">没什么可做的？</string>
+    <string name="error_message">出了点错 ：-/</string>
+    <string name="feedback">意见与错误反馈</string>
+    <string name="feedback_title">意见反馈</string>
+    <string name="finish_all_notes">完成所有项目</string>
+    <string name="modify_menu_text">修改</string>
+    <string name="general_history_catagory_title">其他</string>
+    <string name="history_category">历史</string>
+    <string name="history_name">"历史记录 "</string>
+    <string name="impossible_text">这种事情不太可能发生，但是。。。</string>
+    <string name="input_hint_text">你有什么想法？</string>
+    <string name="just_do_it">我不管，继续！</string>
+    <string name="list_order_title">将最新的项目排在顶部</string>
+    <string name="note_deleted_snack_text">项目已删除</string>
+    <string name="note_finished_snack_text">项目已完成</string>
+    <string name="note_restored_snack_text">项目已还原</string>
+    <string name="no">不</string>
+    <string name="custom_frequency_title">自定义频率</string>
+    <string name="snack_undo_text">撤销</string>
+    <string name="support_me">支持开发者！</string>
+    <string name="share_via">与其他人分享这款应用</string>
+    <string name="send">发送</string>
+    <string name="restore_menu_text">还原</string>
+    <string name="pref_header_appearance">外观</string>
+    <string name="feedback_hint">请输入你想反馈的信息</string>
+    <string name="pref_header_history">历史记录设置</string>
+    <string name="press_again_to_exit">再按一次退出</string>
+    <string name="theme_color_selector">主题颜色</string>
+    <string name="theme_color_selector_content">改变主题颜色</string>
+    <string name="text_size_title">文字大小</string>
+    <string name="text_size_not_suitable">你确定吗？你设置的字体大小可能很不合适</string>
+    <string name="text_color_selector_content">改变文字颜色</string>
+    <string name="text_color_selector">文字颜色</string>
+    <string name="text_size_content">改变列表中文字大小</string>
+    <string name="reset_appearance_title">重置</string>
+    <string name="reset_appearance_content">重置所有外观设定</string>
+    <string name="rate_this">为此应用评分</string>
+    <string name="restore_all_notes">还原所有项目</string>
+    <string name="thx_for_feed">感谢您的反馈</string>
+    <string name="title_activity_settings">设置</string>
+    <string name="txt_size_hint">新的文字大小</string>
+    <string name="txt_size_message">改变列表文字大小</string>
+    <string name="txt_size_title">文字大小</string>
+    <string name="warning_content">你确定吗？该操作无法撤销！</string>
+    <string name="warning_title">警告！</string>
+    <string name="wipe_history_detail">清除所有历史记录</string>
+    <string name="wipe_history">清理历史</string>
+    <string name="yes">确定</string>
+    <string name="nav_about">关于</string>
+    <string name="nav_history">历史记录</string>
+    <string name="nav_more">更多</string>
+    <string name="nav_remove_ad">去除广告！</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_share">分享</string>
+    <string name="contact_me">如果你有任何详细的问题，建议或这任何其他你想获得的帮助，请用电子邮件联系我: zhangmengyu10@gmail.com</string>
+    <string name="feedback_message">请描述你遇到的问题，或者尽管向我提其他意见 :) 如果你有其他更详细的信息想要告诉我，请在\"关于\"中通过电子邮件联系我！</string>
+    <string name="aboutAct_name">关于</string>
+    <string name="about">这是一个轻量级但高度定制化的待办事项应用。请随意支持我或在应用商店里为我打分支持</string>
+    <string name="share_content">嗨！快来Google Play体验ToDo\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo—一款高度定制化的待办事项应用，最大限度提升你的效率！</string>
+    <string name="share_subject">ToDo — 棒极了的待办事项应用！</string>
+    <string-array name="clear_history_frequency_titles">
+        <item>30分钟</item>
+        <item>1小时</item>
+        <item>4小时</item>
+        <item>8小时</item>
+        <item>1天</item>
+        <item>2天</item>
+        <item>3天</item>
+        <item>5天</item>
+        <item>1周</item>
+        <item>2周</item>
+        <item>1个月</item>
+    </string-array>
+    <string name="version_text">"版本: "</string>
+    <string name="purchase_failed">购买失败:(\\n请过一会再试或者向我报告错误</string>
+    <string name="reconsider">让我再想想</string>
+    <string name="welcome_note">欢迎来到ToDo，以下是一些简单的教程</string>
+    <string name="tutorial_1">按 \\\"+\\\" 添加新的内容</string>
+    <string name="tutorial_2">轻敲以完成</string>
+    <string name="tutorial_3">长按以进一步控制:修改或删除</string>
+    <string name="tutorial_4">打开菜单来获取更多个性化选项</string>
+    <string name="tutorial_5">现在，如果你记住了这些，请按右上角的点来获得删除所有教程的选项\\n开始记录吧！:)</string>
+</resources>
