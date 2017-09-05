@@ -174,6 +174,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         input.setFocusable(true);
         todolist.setFocusable(true);
         todolist.setFocusableInTouchMode(true);
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                todolist.performLongClick();
+                // Actions to do after 10 seconds
+            }
+        },100);
         String base64EncodedPublicKey = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
         base64EncodedPublicKey += "BIjAN" + bep.substring(2,bep.length()-1);
@@ -419,6 +426,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         }
                     });
                    todolist.performItemClick(view,position,id);
+
                     /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -428,6 +436,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     });*/
                     getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    public void run() {
+                    }
+                }, 200);
                 return true;
             }
         });
