@@ -174,6 +174,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         input.setFocusable(true);
         todolist.setFocusable(true);
         todolist.setFocusableInTouchMode(true);
+        //todolist.performLongClick();
+        //setOutOfSelectionMode();
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             public void run() {
@@ -346,7 +348,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         todolist.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+            public boolean onItemLongClick(AdapterView<?> parent, final View view, int position, long id) {
                 if(isInSelectionMode){
                     //do nothing
                 }else {
@@ -425,7 +427,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             }
                         }
                     });
-                   todolist.performItemClick(view,position,id);
+                    addSelectedId(id);
+                    //todoListAdapter.setCheckboxChecked(view,true);
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
+                        public void run() {
+                            multiSelectionBox =(CheckBox)view.findViewById(R.id.multiSelectionBox);
+                            multiSelectionBox.setChecked(true);
+                        }
+                    }, 1);//to solve the problem that the checkbox is not checked with no delay
 
                     /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
                         @Override
@@ -436,11 +446,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     });*/
                     getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    public void run() {
-                    }
-                }, 200);
                 return true;
             }
         });

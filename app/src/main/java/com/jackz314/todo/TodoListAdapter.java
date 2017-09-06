@@ -88,6 +88,11 @@ public class TodoListAdapter extends SimpleCursorAdapter {
         return v;
     }*/
 
+    public void setCheckboxChecked(View view, boolean YN){
+        CheckBox checkBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
+        checkBox.setChecked(YN);
+    }
+
     public ViewBinder getViewBinder() {
         return mViewBinder;
     }

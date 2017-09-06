@@ -70,6 +70,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.HeaderViewListAdapter;
 import android.widget.NumberPicker;
+import android.widget.RadioButton;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -1161,6 +1162,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             coloredSummary.setSpan( new ForegroundColorSpan(Color.parseColor(colors[i])), 0, coloredSummary.length(), 0 );
             coloredEntries.add(coloredSummary);
         }
+        pref.getIcon().setColorFilter(themeColorNum, PorterDuff.Mode.SRC_IN);
         CharSequence[] coloredEntriesArray = coloredEntries.toArray(new CharSequence[coloredEntries.size()]);
         Spannable coloredTitle = new SpannableString (title);
         coloredTitle.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredTitle.length(), 0 );
