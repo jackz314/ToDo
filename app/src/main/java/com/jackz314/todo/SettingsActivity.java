@@ -1,11 +1,7 @@
 package com.jackz314.todo;
 
 
-import android.*;
 import android.Manifest;
-import android.annotation.TargetApi;
-import android.app.Activity;
-import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -15,13 +11,10 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
-import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.shapes.RectShape;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -29,83 +22,51 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.EditTextPreference;
-import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
-import android.preference.PreferenceScreen;
-import android.preference.SwitchPreference;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
-import android.provider.SyncStateContract;
-import android.support.annotation.IntDef;
-import android.support.constraint.solver.widgets.Rectangle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.PermissionChecker;
-import android.support.v4.provider.DocumentFile;
-import android.support.v4.widget.SimpleCursorAdapter;
-import android.support.v7.app.ActionBar;
-import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.RingtonePreference;
+import android.preference.SwitchPreference;
+import android.provider.DocumentsContract;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NavUtils;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.widget.DrawableUtils;
-import android.support.v7.widget.Toolbar;
-import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
-import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
-import android.support.v4.app.NavUtils;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.HeaderViewListAdapter;
 import android.widget.NumberPicker;
-import android.widget.RadioButton;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.RuntimeExecutionException;
 import com.google.firebase.analytics.FirebaseAnalytics;
-import com.google.firebase.crash.FirebaseCrash;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.lang.reflect.Field;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
-import java.sql.Array;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
-import java.util.Set;
 
-import static android.content.ContentValues.TAG;
-import static android.graphics.Color.BLACK;
-import static android.graphics.Color.luminance;
 import static com.jackz314.todo.R.color.colorPrimary;
 import static com.jackz314.todo.dtb.DATABASE_NAME;
-import static com.jackz314.todo.dtb.TODO_TABLE;
 
 /**
  * A {@link PreferenceActivity} that presents a set of application settings. On
@@ -1214,7 +1175,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         ,ColorUtils.lighten(themeColorNum,0.32) //enabled
                 }
         );
-        //// TODO: 2017/8/29 CHANGE COLOR OF SWITCHPREFERENCE DYNAMICALLY
+        //// TODO: 2017/8/29 CHANGE COLOR OF SWITCHPREFERENCE DYNAMICALLY//fuck me, this shit is so hard
         if(pref.isEnabled()){
             //pref.setWidgetLayoutResource(R.layout.custom_switchpreference);
             Switch customSwitch = (Switch)getLayoutInflater().inflate(R.layout.custom_switchpreference,null);
