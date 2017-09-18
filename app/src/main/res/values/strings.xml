@@ -42,9 +42,10 @@
     <string name="restore_dialog_content1">Restore your notes from </string>
     <string name="restore_dialog_content2">Backed up at: </string>
     <string name="restore_dialog_content_before">Choose a backup file to restore your notes</string>
-    <string name="restore_error">Restore error!</string>
+    <string name="restore_error">Restore error :-/</string>
     <string name="restore_finished">Restore finished!</string>
     <string name="not_validate_backup">This is not a validate backup file!</string>
+    <string name="err_msg">ERROR MESSAGE</string>
 
     <!-- History settings -->
     <string name="pref_header_history">History Preferences</string>
@@ -71,6 +72,7 @@
     <string name="clr_interval_dialog_Message">Pick a time interval</string>
     <string name="disabled">Disabled</string>
     <string name="custom">Custom</string>
+    <string name="custom_theme_key">custom_theme_key</string>
     <string name="selection_mode_title">" Selected"</string>
     <string name="selection_mode_empty_title">Select items </string>
     <string name="email_subject">Feedback for ToDo</string>
@@ -177,34 +179,53 @@
     <string name="version_text">Version: </string>
     <string name="welcome_note">Welcome to ToDo! Here goes some simple tutorials</string>
     <string name="tutorial_1">Press \"+\" to create a new note</string>
-    <string name="tutorial_2">Tap to finish</string>
-    <string name="tutorial_3">Long press to have further control: modify or ddelete</string>
-    <string name="tutorial_4">Open menu for more options, history or customization settings</string>
-    <string name="tutorial_5">Now if you got everything, press the dots on the top right corner to have an option to delete all of the gibberish tutorials\\nEnjoy! :)</string>
+    <string name="tutorial_2">Tap to modify</string>
+    <string name="tutorial_3">Double Tap to finish</string>
+    <string name="tutorial_4">Long tap to select multiple items</string>
+    <string name="tutorial_5">Check out the settings to have your customized experience</string>
+    <string name="tutorial_6">Now if you got everything, just remove all of the gibberish tutorials\nEnjoy! :)</string>
     <string name="theme_selector_title">Preset Themes</string>
     <string name="theme_selector_key">theme_selector_key</string>
     <string name="theme_selector_summary_key">theme_selector_summary_key</string>
     <string name="theme_selector_value_key">theme_selector_value_key</string>
     <string name="theme_selector_default_summary">Dark Blue</string>
+    <string name="theme_selector_position_key">theme_selector_position_key</string>
+    <string name="restore_purchase_key">restore_purchase_key</string>
+    <string name="restore_purchase_title">Restore purchase</string>
+    <string name="restore_purchase_summary">Restore your previous purchase</string>
+    <string name="purchase_updated">Purchase updated!</string>
+    <string name="restore_purchase_failed">Restore procedure failed! if you purchased something and the problem persists, please contact us via the about page or the feedback!  </string>
+    <string name="err_msg_copied">LOG copied to clipboard!</string>
+    <string name="purchase_unavailable">Can\'t launch purchase for now, please try again later</string>
+    <string name="reporting_feedback_title">Sending feedback…</string>
+    <string name="please_wait">Please wait…</string>
+    <string name="todo_copied">Copied to Clipboard!</string>
 
     <string-array name="theme_default_value">
         <item>1</item>
     </string-array>
 
     <string-array name="theme_entries">
-        <item>Dark Blue</item>
-        <item>Red</item>
-        <item>Green</item>
-        <item>Cyan</item>
-        <item>Orange</item>
-        <item>Yellow</item>
-        <item>Blue</item>
-        <item>Pink</item>
-        <item>Brown</item>
-        <item>Cyan (Dark)</item>
-        <item>Brown (Dark)</item>
-        <item>Purple (Dark)</item>
-        <item>Black (Dark)</item>
+        <item>Material Dark Blue</item>
+        <item>Material Red</item>
+        <item>Material Green</item>
+        <item>Material Cyan</item>
+        <item>Material Orange</item>
+        <item>Material Yellow</item>
+        <item>Material Blue</item>
+        <item>Material Pink</item>
+        <item>Material Brown</item>
+        <item>Material Cyan</item>
+        <item>Material Dark Brown</item>
+        <item>Material Purple</item>
+        <item>Violet Purple</item>
+        <item>Aquamarine Blue</item>
+        <item>Emerald Green</item>
+        <item>Coffee Brown</item>
+        <item>Navy Blue</item>
+        <item>Wine Red</item>
+        <item>Starry Grey</item>
+        <item>Piano Black</item>
     </string-array>
 
     <string-array name="theme_entries_value">
@@ -220,7 +241,15 @@
         <item>#0097a7</item>
         <item>#8d6e63</item>
         <item>#aa00ff</item>
-        <item>#000000</item>
+        <item>#7e51a7</item>
+        <item>#02899e</item>
+        <item>#015c42</item>
+        <item>#753d01</item>
+        <item>#020669</item>
+        <item>#870032</item>
+        <item>#413f41</item>
+        <item>#1d1b1d</item>
+
     </string-array>
 
     <string-array name="theme_entries_value_color">

@@ -1,11 +1,13 @@
 package com.jackz314.todo;
 
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
 import android.widget.Toast;
 
 import java.io.File;
@@ -18,10 +20,10 @@ import java.util.Date;
  * Created by zhang on 2017/6/15.
  */
 
-public class dtb extends SQLiteOpenHelper {
+public class dtb extends SQLiteOpenHelper{
     public static String DATABASE_NAME = "todo.db";
     public static String TODO_TABLE = "todolist_table";
-    public static String HISTORY_TBLE = "deleted_notes_table";
+    public static String HISTORY_TABLE = "deleted_notes_table";
     public static String SAVED_FOR_LATER_TABLE = "saved_for_later";
     public static String ID = "_id";
     //public static String UNIQUE_ID = "special_id";
@@ -43,31 +45,31 @@ public class dtb extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ HISTORY_TBLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS "+TODO_TABLE);
-        db.execSQL("DROP TABLE IF EXISTS "+HISTORY_TBLE);
+        db.execSQL("DROP TABLE IF EXISTS "+HISTORY_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+SAVED_FOR_LATER_TABLE);
         onCreate(db);
     }
-
+    /*
     public boolean insertData(String title){
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(TITLE,title);
         long result = db.insert(TODO_TABLE,null,cv);
         return (result != -1);
-    }
+    }*/
 
     public boolean insertDataToHistory(String title){
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(TITLE,title);
-        long result = db.insert(HISTORY_TBLE,null,cv);
+        long result = db.insert(HISTORY_TABLE,null,cv);
         return (result != -1);
     }
 
@@ -91,13 +93,13 @@ public class dtb extends SQLiteOpenHelper {
 
     public Cursor getHistorySearchResults(String text){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,HISTORY_TBLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
+        Cursor cs = db.query(false,HISTORY_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
         return cs;
     }
 
     public void wipeHistory(){
         SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(HISTORY_TBLE,null,null);
+        db.delete(HISTORY_TABLE,null,null);
     }
 
     public void wipeTodoList(){
@@ -107,13 +109,13 @@ public class dtb extends SQLiteOpenHelper {
 
     public Cursor getHistory(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TBLE,null);
+        Cursor cs = db.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE,null);
         return cs;
     }
 
     public  Cursor getHistoryDesc(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TBLE + " order by _id desc",null);
+        Cursor cs = db.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE + " order by _id desc",null);
         return cs;
     }
 
@@ -126,7 +128,7 @@ public class dtb extends SQLiteOpenHelper {
             data = cs.getString(cs.getColumnIndex(TITLE));
             cv.put(TITLE,data);
         }
-        db.insert(HISTORY_TBLE,null,cv);
+        db.insert(HISTORY_TABLE,null,cv);
         Integer del = db.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
         cs.close();
         return del;
@@ -134,7 +136,7 @@ public class dtb extends SQLiteOpenHelper {
 
     public Integer deleteFromHistory(String id){
         SQLiteDatabase db = this.getWritableDatabase();
-        Integer del = db.delete(HISTORY_TBLE,ID + " = ?",new String[] {id});
+        Integer del = db.delete(HISTORY_TABLE,ID + " = ?",new String[] {id});
         return del;
     }
 
@@ -145,7 +147,7 @@ public class dtb extends SQLiteOpenHelper {
 
     public void restoreDataHToM(String id){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TBLE + " WHERE "+ ID + " = " + id, null);
+        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
         ContentValues cv = new ContentValues();
         String data;
         while(cs.moveToNext()){
@@ -153,7 +155,7 @@ public class dtb extends SQLiteOpenHelper {
             cv.put(TITLE,data);
         }
         db.insert(TODO_TABLE,null,cv);
-        db.delete(HISTORY_TBLE,ID + " = ?",new String[] {id});
+        db.delete(HISTORY_TABLE,ID + " = ?",new String[] {id});
         cs.close();
     }
 
@@ -191,8 +193,8 @@ public class dtb extends SQLiteOpenHelper {
             while (cursor.moveToNext()){
                 combinedString += cursor.getString(cursor.getColumnIndex("name"));
             }
-            if (combinedString.contains(HISTORY_TBLE)) {
-                currentDatabase.execSQL("INSERT INTO " + HISTORY_TBLE + "(" + TITLE + "," + CONTENT + "," + IMPORTANCE + ") SELECT " + TITLE + "," + CONTENT + "," + IMPORTANCE + " FROM " + "backupDb" + "." + HISTORY_TBLE);
+            if (combinedString.contains(HISTORY_TABLE)) {
+                currentDatabase.execSQL("INSERT INTO " + HISTORY_TABLE + "(" + TITLE + "," + CONTENT + "," + IMPORTANCE + ") SELECT " + TITLE + "," + CONTENT + "," + IMPORTANCE + " FROM " + "backupDb" + "." + HISTORY_TABLE);
             }
             if (combinedString.contains(SAVED_FOR_LATER_TABLE)) {
                 currentDatabase.execSQL("INSERT INTO " + SAVED_FOR_LATER_TABLE + "(" + TITLE + "," + CONTENT + "," + IMPORTANCE + ") SELECT " + TITLE + "," + CONTENT + "," + IMPORTANCE + " FROM " + "backupDb" + "." + SAVED_FOR_LATER_TABLE);
@@ -258,7 +260,7 @@ public class dtb extends SQLiteOpenHelper {
 
     public String getOneDataInHISTORY(String id){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TBLE + " WHERE "+ ID + " = " + id, null);
+        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
         String data="";
         while(cs.moveToNext()){
             data = cs.getString(cs.getColumnIndex(TITLE));
@@ -269,14 +271,14 @@ public class dtb extends SQLiteOpenHelper {
 
     public void restoreAllDataFromHistoryToTODO(){
         SQLiteDatabase db = this.getWritableDatabase();
-        String cmd = "INSERT INTO " + TODO_TABLE + " SELECT * FROM " + HISTORY_TBLE;
+        String cmd = "INSERT INTO " + TODO_TABLE + " SELECT * FROM " + HISTORY_TABLE;
         db.execSQL(cmd);
         wipeHistory();
     }
 
     public void finishAllInTodoList(){
         SQLiteDatabase db = this.getWritableDatabase();
-        String cmd = "INSERT INTO " + HISTORY_TBLE + " SELECT * FROM " + TODO_TABLE;
+        String cmd = "INSERT INTO " + HISTORY_TABLE + " SELECT * FROM " + TODO_TABLE;
         db.execSQL(cmd);
         wipeTodoList();
     }
@@ -301,10 +303,10 @@ public class dtb extends SQLiteOpenHelper {
 
     public void deleteTheLastCoupleOnesFromHistory(int number){
         SQLiteDatabase db = this.getWritableDatabase();
-        String cmd = "SELECT * FROM " + HISTORY_TBLE + " ORDER BY _id DESC LIMIT " + Integer.toString(number);
+        String cmd = "SELECT * FROM " + HISTORY_TABLE + " ORDER BY _id DESC LIMIT " + Integer.toString(number);
         Cursor cs = db.rawQuery(cmd,null);
         while(cs.moveToNext()){
-            db.delete(HISTORY_TBLE,ID + " = ?",new String[]{Integer.toString(cs.getInt(cs.getColumnIndex(ID)))});
+            db.delete(HISTORY_TABLE,ID + " = ?",new String[]{Integer.toString(cs.getInt(cs.getColumnIndex(ID)))});
         }
         cs.close();
         db.close();
@@ -323,7 +325,7 @@ public class dtb extends SQLiteOpenHelper {
 
     public long getIdOfLatestDataInHistory(){
         SQLiteDatabase db = this.getWritableDatabase();
-        String cmd = "SELECT * FROM " + HISTORY_TBLE + " ORDER BY _id DESC LIMIT 1";
+        String cmd = "SELECT * FROM " + HISTORY_TABLE + " ORDER BY _id DESC LIMIT 1";
         long id = 0;
         Cursor cs = db.rawQuery(cmd,null);
         while (cs.moveToNext()){
@@ -335,7 +337,7 @@ public class dtb extends SQLiteOpenHelper {
 
     /*public String getDeletedTimeFromDB(long id){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TBLE + " WHERE "+ ID + " = " + id, null);
+        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
         String time="";
         while(cs.moveToNext()){
             time = cs.getString(cs.getColumnIndex(DELETED_TIMESTAMP));
@@ -364,6 +366,10 @@ public class dtb extends SQLiteOpenHelper {
         }
     }
 
+
+
+
+    /* OLD METHOD
     public boolean updateData(String id, String title){
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -371,7 +377,7 @@ public class dtb extends SQLiteOpenHelper {
         cv.put(TITLE,title);
         db.update(TODO_TABLE, cv, ID + " = ?", new String[] { id });
         return true;
-    }
+    }*/
 
     public void stopService(){
         SQLiteDatabase db = this.getWritableDatabase();

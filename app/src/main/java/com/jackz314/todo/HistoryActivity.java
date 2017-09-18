@@ -2,31 +2,43 @@ package com.jackz314.todo;
 
 import android.app.Activity;
 import android.app.SearchManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
+import android.os.Handler;
 import android.os.Vibrator;
-import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
+import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.app.NavUtils;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -37,6 +49,7 @@ import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -56,19 +69,21 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.prefs.PreferenceChangeListener;
 
-import static com.jackz314.todo.MainActivity.DELETE_CONTEXT_ID;
 import static com.jackz314.todo.R.color.colorPrimary;
 import static com.jackz314.todo.dtb.CONTENT;
 import static com.jackz314.todo.dtb.DELETED_TIMESTAMP;
+import static com.jackz314.todo.dtb.HISTORY_TABLE;
 import static com.jackz314.todo.dtb.ID;
+import static com.jackz314.todo.dtb.TITLE;
+import static com.jackz314.todo.dtb.TODO_TABLE;
 
-public class HistoryActivity extends AppCompatActivity {
+public class HistoryActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
     dtb todosql;
     TextView emptyHistory, selectionTitle;
-    ListView historyList;
+    RecyclerView historyList;
     ActionBar toolbar;
     int themeColor,textColor,backgroundColor,textSize;
-    SharedPreferences ps,sharedPreferencesCustom;
+    SharedPreferences sharedPreferences;
     private FirebaseAnalytics mFirebaseAnalytics;
     ColorUtils colorUtils;
     boolean isInSearchMode =false, isInSelectionMode = false;
@@ -79,17 +94,19 @@ public class HistoryActivity extends AppCompatActivity {
     public String searchText;
     MenuItem searchViewItem;
     CheckBox selectAllBox, multiSelectionBox;
+    private static final String[] PROJECTION = new String[]{ID, TITLE};
+    private static final String SELECTION = TITLE + " LIKE ?";
     public static int RESTORE_CONTEXT_ID = 1;
     ConstraintLayout historyView;
     public static int DELETE_HISTORY_CONTEXT_ID = 2;
+    TodoListAdapter historyListAdapter;
     MainActivity mainActivity;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        ps = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        /*sharedPreferencesCustom = getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferencesCustom.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
-        textColor=sharedPreferencesCustom.getInt(getString(R.string.text_color_key), Color.BLACK);
-        backgroundColor=sharedPreferencesCustom.getInt(getString(R.string.theme_color_key),Color.WHITE);*/
+        /*sharedPreferences) = sharedPreferences("settings_data",MODE_PRIVATE);
+        themeColor=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
+        textColor=sharedPreferences).getInt(getString(R.string.text_color_key), Color.BLACK);
+        backgroundColor=sharedPreferences).getInt(getString(R.string.theme_color_key),Color.WHITE);*/
         super.onCreate(savedInstanceState);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setContentView(R.layout.activity_history);
@@ -97,7 +114,9 @@ public class HistoryActivity extends AppCompatActivity {
         selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
         setSupportActionBar(selectionToolBar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        historyList = (ListView)findViewById(R.id.historyList);
+        historyList = (RecyclerView) findViewById(R.id.historyList);
+        historyList.setHasFixedSize(true);
+
         emptyHistory = (TextView)findViewById(R.id.emptyHistory);
         LayoutInflater inflater =this.getLayoutInflater();
         historyView = (ConstraintLayout)findViewById(R.id.historyView);
@@ -109,29 +128,59 @@ public class HistoryActivity extends AppCompatActivity {
         setHistoryColorsPreferences();
         deleteExpiredNotes();
         displayAllNotes();
-        /*historyList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+
+        ItemClickSupport.addTo(historyList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
-                vibrator.vibrate(25);
-                //vibrator.cancel();
-                deleteNote(String.valueOf(id));
-                return false;
-            }
-        });*/
-        historyList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                if(isInSelectionMode){
-                    //do nothing
+            public void onItemClicked(RecyclerView recyclerView, int position, View v) {
+                long id = historyList.getAdapter().getItemId(position);
+                if (isInSelectionMode) {
+                    multiSelectionBox = (CheckBox)v.findViewById(R.id.multiSelectionBox);
+                    if(multiSelectionBox.isChecked()){
+                        removeSelectedId(id);
+                        //System.out.println("false" + id);
+                        multiSelectionBox.setChecked(false);
+                    }else {
+                        addSelectedId(id);
+                        multiSelectionBox.setChecked(true);
+                        //System.out.println("true" + id);
+                    }
+                    /*if(selectedId.contains(id)){
+                        selectedId.remove(selectedId.indexOf(id));
+                    }else {
+                        selectedId.add(0,id);
+                    }*/
+                    // Toast.makeText(getApplicationContext(),selectedId.toString(),Toast.LENGTH_SHORT).show();
                 }else {
-                    isInSelectionMode = true;
+                    final String restoredContent = todosql.getOneDataInHISTORY(String.valueOf(id));
+                    restoreData(id);
+                    Snackbar.make(historyView, getString(R.string.note_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            insertData(restoredContent);
+                            todosql.deleteNote(todosql.getIdOfLatestDataInTODO());
+                            displayAllNotes();
+                        }
+                    }).show();
+                }
+            }
+        });
+
+        ItemClickSupport.addTo(historyList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
+                long id = historyListAdapter.getItemId(position);
+                if(isInSelectionMode){
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInHISTORY(String.valueOf(id)));
+                    clipboard.setPrimaryClip(clip);
+                    Snackbar.make(view,getString(R.string.todo_copied),Snackbar.LENGTH_SHORT).show();
+                }else {
+                    setOutOfSelectionMode();
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     getSupportActionBar().setDisplayHomeAsUpEnabled(false);
                     selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
                     selectionToolBar.getMenu().clear();
-                    displayAllNotes();
                     selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.history_selection_toolbar_title);
                     //toolbar.hide();
@@ -142,6 +191,10 @@ public class HistoryActivity extends AppCompatActivity {
                     selectionToolBar.setBackgroundColor(themeColor);
                     selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.history_select_all_box);
                     selectAllBox.setVisibility(View.VISIBLE);
+                    isInSelectionMode = true;
+                    //System.out.println(isInSelectionMode + "isInselectionmode");
+                    getSupportLoaderManager().restartLoader(123,null,HistoryActivity.this);
+                    displayAllNotes();
                     ColorStateList colorStateList = new ColorStateList(
                             new int[][]{
                                     new int[]{-android.R.attr.state_checked}, //disabled
@@ -164,7 +217,7 @@ public class HistoryActivity extends AppCompatActivity {
                                 selectAllBox.setChecked(false);
                                 selectedId.clear();
                                 selectedContent.clear();
-                                for(int i = 0; i < historyList.getCount(); i++){
+                                for(int i = 0; i < historyList.getAdapter().getItemCount(); i++){
                                     multiSelectionBox = (CheckBox)historyList.getChildAt(i).findViewById(R.id.multiSelectionBox);
                                     multiSelectionBox.setChecked(false);
                                 }
@@ -173,27 +226,30 @@ public class HistoryActivity extends AppCompatActivity {
                             }else if(selectAllBox.isChecked()){//check all
                                 selectAllBox.setChecked(true);
                                 selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-                                selectionToolBar.inflateMenu(R.menu.history_selection_mode_menu);
-                                selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
-                                    @Override
-                                    public boolean onMenuItemClick(MenuItem item) {
-                                        if(item.getItemId() == R.id.history_selection_menu_restore){
-                                            restoreSetOfData();
-                                        }else if(item.getItemId() == R.id.history_selection_menu_delete){
-                                            deleteSetOfData();
+                                if(selectedId.size() == 0){
+                                    selectionToolBar.inflateMenu(R.menu.history_selection_mode_menu);
+                                    selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+                                        @Override
+                                        public boolean onMenuItemClick(MenuItem item) {
+                                            if(item.getItemId() == R.id.history_selection_menu_restore){
+                                                restoreSetOfData();
+                                            }else if(item.getItemId() == R.id.history_selection_menu_delete){
+                                                deleteSetOfData();
+                                            }
+                                            return false;
                                         }
-                                        return false;
-                                    }
-                                });
+                                    });
+                                }
+
                                 Long id;
                                 selectedId.clear();
                                 selectedContent.clear();
-                                for(int i = 0; i < historyList.getAdapter().getCount(); i++){
+                                for(int i = 0; i < historyList.getAdapter().getItemCount(); i++){
                                     multiSelectionBox = (CheckBox)historyList.getChildAt(i).findViewById(R.id.multiSelectionBox);
                                     multiSelectionBox.setChecked(true);
-                                    id = historyList.getAdapter().getItemId(i);
+                                    id = historyListAdapter.getItemId(i);
                                     selectedId.add(0,id);
-                                    String data = todosql.getOneDataInTODO(Long.toString(id));
+                                    String data = todosql.getOneDataInHISTORY(Long.toString(id));
                                     selectedContent.add(0,data);
                                 }
                                 String count = Integer.toString(selectedId.size());
@@ -208,49 +264,19 @@ public class HistoryActivity extends AppCompatActivity {
                             //What to do on back clicked
                         }
                     });*/
+                    addSelectedId(id);
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
+                        public void run() {
+                            multiSelectionBox =(CheckBox)view.findViewById(R.id.multiSelectionBox);
+                            multiSelectionBox.setChecked(true);
+                        }
+                    }, 1);//to solve the problem that the checkbox is not checked with no delay
                     getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
-                return false;
+                return true;
             }
         });
-
-
-        historyList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, final long id) {
-                if (isInSelectionMode) {
-                    multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
-                    if(multiSelectionBox.isChecked()){
-                        removeSelectedId(id);
-                        System.out.println("false" + id);
-                        multiSelectionBox.setChecked(false);
-                    }else {
-                        addSelectedId(id);
-                        multiSelectionBox.setChecked(true);
-                        System.out.println("true" + id);
-
-                    }
-                    /*if(selectedId.contains(id)){
-                        selectedId.remove(selectedId.indexOf(id));
-                    }else {
-                        selectedId.add(0,id);
-                    }*/
-                    // Toast.makeText(getApplicationContext(),selectedId.toString(),Toast.LENGTH_SHORT).show();
-                }else {
-                    final String restoredContent = todosql.getOneDataInHISTORY(String.valueOf(id));
-                    restoreNote(String.valueOf(id));
-                    Snackbar.make(historyView, getString(R.string.note_restored_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            todosql.insertDataToHistory(restoredContent);
-                            todosql.deleteNote(todosql.getIdOfLatestDataInTODO());
-                            displayAllNotes();
-                        }
-                    }).show();
-                }
-            }
-        });
-
     }
 
     public void onResume(){
@@ -262,11 +288,11 @@ public class HistoryActivity extends AppCompatActivity {
 
     public void setHistoryColorsPreferences(){
         //get colors
-        sharedPreferencesCustom = getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferencesCustom.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
-        textColor=sharedPreferencesCustom.getInt(getString(R.string.text_color_key), Color.BLACK);
-        backgroundColor=sharedPreferencesCustom.getInt(getString(R.string.background_color_key),Color.WHITE);
-        textSize=sharedPreferencesCustom.getInt(getString(R.string.text_size_key),24);
+        sharedPreferences = getSharedPreferences("settings_data",MODE_PRIVATE);
+        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
+        textColor=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
+        backgroundColor=sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
+        textSize=sharedPreferences.getInt(getString(R.string.text_size_key),24);
         //set colors
         Window window = this.getWindow();
         window.setStatusBarColor(themeColor);
@@ -276,43 +302,81 @@ public class HistoryActivity extends AppCompatActivity {
         actionBarColor.setColorFilter(themeColor, PorterDuff.Mode.DST);
         actionBar.setBackgroundDrawable(actionBarColor);
         historyList.setBackgroundColor(backgroundColor);
-        emptyHistory.setTextColor(ColorUtils.lighten(textColor,0.65));
+        emptyHistory.setTextColor(ColorUtils.lighten(textColor,0.6));
         historyView.setBackgroundColor(backgroundColor);
         int[] colors = {0,colorUtils.lighten(textColor,0.3),0};
-        historyList.setDivider(new GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, colors));
-        historyList.setDividerHeight(2);
+        //divider
     }
 
     public void displayAllNotes(){
-        if(isInSearchMode && searchText != null){
-            displaySearchResults(searchText);
-        }else {
-            setHistoryColorsPreferences();
-            int[] colors = {0,colorUtils.lighten(textColor,0.3),0};
-            historyList.setDivider(new GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, colors));
-            historyList.setDividerHeight(2);
-            sharedPreferencesCustom = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-            boolean isOrderReguar = sharedPreferencesCustom.getBoolean(getString(R.string.order_key),true);
-            Cursor cs;
-            if(!isOrderReguar){
-                cs = todosql.getHistory();
-            }
-            else {
-                cs = todosql.getHistoryDesc();
-            }if(cs.getCount()==0){//if database is empty, then clears the listView too
-                System.out.println("empty history!");
-                emptyHistory.setVisibility(View.VISIBLE);
-                emptyHistory.setText(R.string.empty_history);
-                historyList.removeAllViewsInLayout();//remove all items
-            } else {
-                emptyHistory.setVisibility(View.INVISIBLE);
-                emptyHistory.setText("");
-            }
-            historyList.setAdapter(new TodoListAdapter(this,R.layout.todolist,cs,new String[] {todosql.TITLE},new int[]{R.id.titleText}){
+        if(historyList.getAdapter() == null){
+            LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+            linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+            historyList.setLayoutManager(linearLayoutManager);
+            historyListAdapter = (new TodoListAdapter(null){
                 @Override
-                public View getView(int position, View convertView, ViewGroup parent){
-                    View todoView = super.getView(position,convertView,parent);
-                    CheckBox multiSelectionBox = (CheckBox)todoView.findViewById(R.id.multiSelectionBox);
+                public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
+                    super.onBindViewHolder(holder, cursor);
+                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+                    holder.todoText.setTextColor(textColor);
+                    holder.cardView.setCardBackgroundColor(colorUtils.darken(backgroundColor,0.01));
+                    holder.todoText.setTextSize(textSize);
+                    if(isInSearchMode){
+                        if(cursor.getCount() == 0){
+                            emptyHistory.setVisibility(View.VISIBLE);
+                            emptyHistory.setText(getString(R.string.empty_search_result));
+                        }else {
+                            emptyHistory.setVisibility(View.GONE);
+                            emptyHistory.setText("");
+                            Spannable spannable = new SpannableString(text);
+                            ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
+                            TextAppearanceSpan highlightSpan = new TextAppearanceSpan(null, Typeface.BOLD, -1, highlightColor, null);
+                            int startPos = text.indexOf(searchText);
+                            String textLow = text.toLowerCase();
+                            String searchTextLow = searchText.toLowerCase();
+                            //spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), startPos, startPos + searchTextLow.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            do{
+                                int start = Math.min(startPos, textLow.length());
+                                int end = Math.min(startPos + searchTextLow.length(), textLow.length());
+                                startPos = textLow.indexOf(searchTextLow,end);
+                                spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            }while (startPos > 0);
+                            holder.todoText.setText(spannable);
+                        }
+                    }else {
+                        holder.todoText.setText(text);
+                    }
+                    //System.out.println(isInSelectionMode + "DISPLAYALLNOTES");
+                    if(isInSelectionMode){
+                        //Toast.makeText(getApplicationContext(),"SELECTIONMODE",Toast.LENGTH_SHORT).show();
+                        holder.cBox.setVisibility(View.VISIBLE);
+                    }else {
+                        holder.cBox.setChecked(false);
+                        holder.cBox.setVisibility(View.GONE);
+                    }
+                    //System.out.println(text+"|cursor read");
+                    holder.cBox.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            if (cb.isChecked()) {
+                                if(mContext.toString().contains("MainActivity")){
+                                    ((MainActivity)mContext).addSelectedId(id);
+                                }else if(mContext.toString().contains("HistoryActivity")){
+                                    ((HistoryActivity)mContext).addSelectedId(id);
+                                }
+                                //System.out.println("checked " + id);
+                                // do some operations here
+                            } else if (!cb.isChecked()) {
+                                //System.out.println("unchecked " + id);
+                                if(mContext.toString().contains("MainActivity")){
+                                    ((MainActivity)mContext).removeSelectedId(id);
+                                }else if(mContext.toString().contains("HistoryActivity")){
+                                    ((HistoryActivity)mContext).removeSelectedId(id);
+                                }                    // do some operations here
+                            }
+                        }
+                    });
                     ColorStateList colorStateList = new ColorStateList(
                             new int[][]{
                                     new int[]{-android.R.attr.state_checked}, //disabled
@@ -323,33 +387,118 @@ public class HistoryActivity extends AppCompatActivity {
                                     ,themeColor //enabled
                             }
                     );
-                    if(isInSelectionMode){
-                        multiSelectionBox.setVisibility(View.VISIBLE);
-                        multiSelectionBox.setBackgroundColor(backgroundColor);
-                        multiSelectionBox.setButtonTintList(colorStateList);
-                        multiSelectionBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                            @Override
-                            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                                returnSelected();
-                            }
-                        });
-                    }else {
-                        multiSelectionBox.setVisibility(View.GONE);
-                    }
-                    TextView todoText = (TextView)todoView.findViewById(R.id.titleText);
-                    todoText.setTextColor(textColor);
-                    todoText.setTextSize(TypedValue.COMPLEX_UNIT_SP,textSize);
-                    return todoView;
+                    holder.cBox.setButtonTintList(colorStateList);
                 }
             });
+            historyList.setAdapter(historyListAdapter);
+            getSupportLoaderManager().initLoader(123,null,this);
+            ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
+            mItemTouchHelper.attachToRecyclerView(historyList);
+        }
+        if(todosql.getHistory().getCount()==0){//if database is empty, then clears the listView too
+            ////System.out.println("empty history!");
+            emptyHistory.setVisibility(View.VISIBLE);
+            emptyHistory.setText(R.string.empty_history);
+            historyList.removeAllViewsInLayout();//remove all items
+            historyList.setAdapter(null);
+        } else {
+            emptyHistory.setVisibility(View.GONE);
+            emptyHistory.setText("");
         }
     }
 
+
+    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0,ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT) {
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
+        }
+
+        @Override
+        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            if (direction == ItemTouchHelper.RIGHT) {
+                final String restoredContent = todosql.getOneDataInHISTORY(String.valueOf(viewHolder.getItemId()));
+                restoreData(viewHolder.getItemId());
+                Snackbar.make(historyView, getString(R.string.note_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        insertData(restoredContent);
+                        todosql.deleteTheLastCoupleOnesFromToDo(1);
+                        displayAllNotes();
+                    }
+                }).show();
+            }
+
+            if (direction == ItemTouchHelper.LEFT) {
+                final String deletedContent = todosql.getOneDataInHISTORY(String.valueOf(viewHolder.getItemId()));
+                deleteData(viewHolder.getItemId());
+                Snackbar.make(historyView, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        insertData(deletedContent);
+                        displayAllNotes();
+                    }
+                }).show();
+            }
+        }
+
+        @Override
+        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+            if (viewHolder.getAdapterPosition() == -1) {
+                return;
+            }
+            View itemView = viewHolder.itemView;
+            Paint textPaint = new Paint();
+            textPaint.setStrokeWidth(2);
+            textPaint.setTextSize(80);
+            textPaint.setColor(themeColor);
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            Rect bounds = new Rect();
+            textPaint.getTextBounds(getString(R.string.delete),0,getString(R.string.finish).length(), bounds);
+            Drawable deleteIcon = ContextCompat.getDrawable(HistoryActivity.this, R.drawable.ic_delete_black_24dp);//draw finish icon
+            Drawable restoreIcon = ContextCompat.getDrawable(HistoryActivity.this,R.drawable.ic_restore_black_24dp);
+            restoreIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+            deleteIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+            int iconMargin = 34;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
+            int intrinsicWidthRestore = restoreIcon.getIntrinsicWidth();
+            int intrinsicHeighthRestore = restoreIcon.getIntrinsicHeight();
+            int restoreIconLeft = itemView.getLeft() + iconMargin;
+            int restoreIconRight = itemView.getLeft() + iconMargin + intrinsicWidthRestore;
+            int restoreIconTop = itemView.getTop() + (itemHeight - intrinsicHeighthRestore)/2;
+            int restoreIconBottom = restoreIconTop + intrinsicHeighthRestore;
+            restoreIcon.setBounds(restoreIconLeft,restoreIconTop,restoreIconRight,restoreIconBottom);
+            int intrinsicWidth = deleteIcon.getIntrinsicWidth();
+            int intrinsicHeight = deleteIcon.getIntrinsicWidth();
+            int deleteIconLeft = itemView.getRight() - iconMargin - intrinsicWidth - bounds.width();
+            int deleteIconRight = itemView.getRight() - iconMargin - bounds.width();
+            int deleteIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+            int deleteIconBottom = deleteIconTop + intrinsicHeight;
+            deleteIcon.setBounds(deleteIconLeft, deleteIconTop, deleteIconRight, deleteIconBottom);
+            if(dX < 0){
+                deleteIcon.draw(c);
+                c.drawText(getString(R.string.delete),(float) itemView.getRight() - iconMargin - bounds.width() ,(((deleteIconTop + deleteIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+            }
+            if(dX > 0){
+                restoreIcon.draw(c);
+                c.drawText(getString(R.string.restore),itemView.getLeft() + iconMargin +restoreIconRight,(((restoreIconTop + restoreIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint );
+
+            }
+            //fade out the view
+            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
+            viewHolder.itemView.setAlpha(alpha);
+            viewHolder.itemView.setTranslationX(dX);
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+        }
+    };
+
     @Override
     public void onBackPressed() {
+        //System.out.println("BACKPRESSED");
         if (isInSelectionMode || isInSearchMode) {
             if (isInSelectionMode) {
                 setOutOfSelectionMode();
+                //System.out.println("set1out back");
             } else {
                 setOutOfSearchMode();
             }
@@ -360,19 +509,25 @@ public class HistoryActivity extends AppCompatActivity {
 
     public void setOutOfSearchMode(){
         isInSearchMode = false;
+        //System.out.println("setfase search");
+        getSupportLoaderManager().restartLoader(123,null,HistoryActivity.this);
         displayAllNotes();
     }
 
     public void setOutOfSelectionMode(){
         isInSelectionMode = false;
+        //System.out.println("setfase selection");
         selectedId.clear();
         selectedContent.clear();
-        selectAllBox.setVisibility(View.GONE);
+        if(selectAllBox != null){
+            selectAllBox.setVisibility(View.GONE);
+        }
         selectionTitle.setText(R.string.history_name);
         selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
         selectionToolBar.getMenu().clear();
         selectionToolBar.inflateMenu(R.menu.search_menu);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
         selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
         //selectionToolBar.setVisibility(View.GONE);
@@ -386,18 +541,19 @@ public class HistoryActivity extends AppCompatActivity {
     public void restoreSetOfData(){
         CLONESelectedContent.clear();
         for(long id : selectedId){
-            todosql.restoreDataHToM(String.valueOf(id));
+            restoreData(id);
         }
         final int size = selectedId.size();
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
+        //System.out.println("set1out restore");
         displayAllNotes();
-        Snackbar.make(historyView, getString(R.string.note_restored_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(historyView, getString(R.string.notes_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 todosql.deleteTheLastCoupleOnesFromToDo(CLONESelectedContent.size());
                 for(String str : CLONESelectedContent){
-                    todosql.insertDataToHistory(str);
+                    insertData(str);
                 }
                 displayAllNotes();
             }
@@ -407,16 +563,17 @@ public class HistoryActivity extends AppCompatActivity {
     public void deleteSetOfData(){
         CLONESelectedContent.clear();
         for(long id : selectedId){
-            todosql.deleteFromHistory(String.valueOf(id));
+            deleteData(id);
         }
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
+        //System.out.println("set1out delete");
         displayAllNotes();
-        Snackbar.make(historyView, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(historyView, getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (String content : CLONESelectedContent){
-                    todosql.insertDataToHistory(content);
+                for (String str : CLONESelectedContent){
+                    insertData(str);
                 }
                 displayAllNotes();
             }
@@ -441,7 +598,7 @@ public class HistoryActivity extends AppCompatActivity {
                     return false;
                 }
             });
-        }if(selectedId.size() == historyList.getCount()){
+        }if(selectedId.size() == historyList.getAdapter().getItemCount()){
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -487,6 +644,7 @@ public class HistoryActivity extends AppCompatActivity {
             public boolean onMenuItemActionCollapse(MenuItem item) {
                 if(isInSelectionMode){
                     setOutOfSelectionMode();
+                    //System.out.println("set1out menu collapse");
                     return false;
                 }else {
                     setOutOfSearchMode();
@@ -501,22 +659,30 @@ public class HistoryActivity extends AppCompatActivity {
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            Bundle bundle = new Bundle();
+
             @Override
             public boolean onQueryTextSubmit(String query) {
-                searchText = query;
+                query(query);
                 return false;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                searchText = newText;
-                displaySearchResults(newText);
+                query(newText);
                 return false;
+            }
+
+            private void query(String text) {
+                bundle.putString("QUERY", text);
+                searchText = text;
+                getSupportLoaderManager().restartLoader(123, bundle, HistoryActivity.this);
             }
         });
         return true;
     }
 
+    /*
     public void displaySearchResults(final String filter){
         final Cursor cursor = todosql.getHistorySearchResults(filter);
         if(cursor.getCount() == 0){
@@ -527,14 +693,13 @@ public class HistoryActivity extends AppCompatActivity {
         } else {
             emptyHistory.setVisibility(View.GONE);
             emptyHistory.setText("");
-            final TodoListAdapter historyListAdapter = new TodoListAdapter(this,R.layout.todolist,cursor,new String[] {todosql.TITLE},new int[]{R.id.titleText});
-            historyList.setAdapter(new TodoListAdapter(this,R.layout.todolist,cursor,new String[] {todosql.TITLE},new int[]{R.id.titleText}){
+            final TodoListAdapter historyListAdapter = (new TodoListAdapter(cursor){
                 @Override
-                public View getView(int position, View convertView, ViewGroup parent){
-                    View todoView = super.getView(position,convertView,parent);
-                    CheckBox multiSelectionBox = (CheckBox)todoView.findViewById(R.id.multiSelectionBox);
-                    TextView todoText = (TextView)todoView.findViewById(R.id.titleText);
-                    String cursorText = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+                public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
+                    super.onBindViewHolder(holder, cursor);
+                    CheckBox multiSelectionBox = holder.cBox;
+                    TextView todoText = holder.todoText;
+                    String cursorText = cursor.getString(cursor.getColumnIndex(TITLE));
                     int startPos = cursorText.toLowerCase(Locale.US).indexOf(filter.toLowerCase(Locale.US));
                     int endPos = startPos + filter.length();
                     todoText.setTextColor(textColor);
@@ -557,6 +722,7 @@ public class HistoryActivity extends AppCompatActivity {
                                     ,themeColor //enabled
                             }
                     );
+                    //System.out.println("null called");
                     if(isInSelectionMode){
                         multiSelectionBox.setVisibility(View.VISIBLE);
                         multiSelectionBox.setBackgroundColor(backgroundColor);
@@ -570,29 +736,30 @@ public class HistoryActivity extends AppCompatActivity {
                     }else {
                         multiSelectionBox.setVisibility(View.GONE);
                     }
-
-                    return todoView;
                 }
             });
+            historyList.setAdapter(historyListAdapter);
         }
-    }
+    }*/
 
     String timestr = "";
     int expireTime = 60*24;
     public void deleteExpiredNotes(){
-        if(!ps.getBoolean("clear_history_switch_key",false)){//see auto delete state /off
+        if(!sharedPreferences.getBoolean("clear_history_switch_key",false)){//see auto delete state /off
             displayAllNotes();
         }
         else {//on
             Cursor cs = todosql.getHistory();
-            if(cs.getCount()==0) System.out.println();
+            if(cs.getCount()==0) {
+                //System.out.println();
+            }
             else {
-                expireTime=ps.getInt(getString(R.string.clear_interval_value_key),60*24);
+                expireTime=sharedPreferences.getInt(getString(R.string.clear_interval_value_key),60*24);
                 while(cs.moveToNext()){
                     timestr = cs.getString(cs.getColumnIndex("datetime(deleted_timestamp,'localtime')"));
-                    //System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
+                    ////System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
                     if(todosql.getTimeDifference(timestr)>=expireTime){//if bigger than set value, delete it!
-                        deleteNote(String.valueOf(cs.getInt(cs.getColumnIndex(todosql.ID))));
+                        deleteData(cs.getInt(cs.getColumnIndex(todosql.ID)));
                     }
                 }
             }
@@ -601,20 +768,67 @@ public class HistoryActivity extends AppCompatActivity {
         }
     }
 
-    public void deleteNote(String id){
-        Integer delRows = todosql.deleteFromHistory(id);
-        displayAllNotes();
-        if(delRows==0) Toast.makeText(this,R.string.error_message,Toast.LENGTH_SHORT).show();
+    public void insertData(String title){
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(TITLE,title);
+        getContentResolver().insert(AppContract.Item.HISTORY_URI,contentValues);
     }
 
-    public void restoreNote(String id){
+    public void restoreData(long id){
         Bundle bundle = new Bundle();
         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "restore_notes");
         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "restore notes");
         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-        todosql.restoreDataHToM(id);
-        displayAllNotes();
+        ContentValues cv = new ContentValues();
+        String data = todosql.getOneDataInHISTORY(Long.toString(id));
+        cv.put(TITLE,data);
+        deleteData(id);
+        getContentResolver().insert(AppContract.Item.TODO_URI, cv);
     }
 
+    public void deleteData(long id){
+        Uri uri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, id);
+        getContentResolver().delete(uri, null, null);
+        displayAllNotes();
+        Bundle bundle = new Bundle();
+        bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "delete_history");
+        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "delete history");
+        bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
+        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        String sort = null;
+        setHistoryColorsPreferences();
+        if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+            sort = "_id DESC";
+        }
+        if (args != null) {
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
+            return new CursorLoader(this, AppContract.Item.HISTORY_URI, PROJECTION, SELECTION, selectionArgs, sort);
+        }
+        return new CursorLoader(this, AppContract.Item.HISTORY_URI, PROJECTION, null, null, sort);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if(data.getCount() == 0 && isInSearchMode){
+            emptyHistory.setVisibility(View.VISIBLE);
+            emptyHistory.setText(getString(R.string.empty_search_result));
+        }else if(data.getCount() == 0 && !isInSearchMode){
+            emptyHistory.setVisibility(View.VISIBLE);
+            emptyHistory.setText(R.string.empty_todolist);
+        }else {
+            emptyHistory.setVisibility(View.GONE);
+            emptyHistory.setText("");
+        }
+        historyListAdapter.changeCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        historyListAdapter.changeCursor(null);
+    }
 }

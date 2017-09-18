@@ -2,7 +2,10 @@ package com.jackz314.todo;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.support.v4.widget.SimpleCursorAdapter;
+import android.support.v7.widget.CardView;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,91 +14,111 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+
 /*
  * Created by zhang on 2017/8/13.
  */
 
-public class TodoListAdapter extends SimpleCursorAdapter {
+ class TodoListAdapter extends CursorRecyclerAdapter<TodoListAdapter.TodoViewHolder> {
     private Cursor c;
-    private Context context;
+    Context mContext;
     private ArrayList<Long> itemChecked = new ArrayList<>();
     protected int[] mFrom;
     protected int[] mTo;
 
     LayoutInflater inflater;
+
+
+     TodoListAdapter(Cursor cursor){
+        super(cursor);
+        c = cursor;
+    }
+
+    @Override
+    public TodoViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todolist,parent,false);
+        System.out.println("|cursor created");
+        return new TodoViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(TodoViewHolder holder, final Cursor cursor) {
+        final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
+        String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+        holder.todoText.setText(text);
+        holder.todoText.setTextColor(Color.BLACK);
+        System.out.println(text+"|cursor read");
+        holder.cBox.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                if (cb.isChecked()) {
+                    if(mContext.toString().contains("MainActivity")){
+                        ((MainActivity)mContext).addSelectedId(id);
+                    }else if(mContext.toString().contains("HistoryActivity")){
+                        ((HistoryActivity)mContext).addSelectedId(id);
+                    }
+                    System.out.println("checked " + id);
+                    // do some operations here
+                } else if (!cb.isChecked()) {
+                    System.out.println("unchecked " + id);
+                    if(mContext.toString().contains("MainActivity")){
+                        ((MainActivity)mContext).removeSelectedId(id);
+                    }else if(mContext.toString().contains("HistoryActivity")){
+                        ((HistoryActivity)mContext).removeSelectedId(id);
+                    }                    // do some operations here
+                }
+            }
+        });
+        //override in main/history activity?
+    }
+
+    static class TodoViewHolder extends RecyclerView.ViewHolder {
+        TextView todoText;
+        CardView cardView;
+        CheckBox cBox;
+        TodoViewHolder(View view){
+            super(view);
+            todoText = (TextView) view.findViewById(R.id.titleText);
+            cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
+            cardView = (CardView) view.findViewById(R.id.cardView);
+            /*final long id = getItemId(position);
+            cBox.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                    if (cb.isChecked()) {
+                        if(context.toString().contains("MainActivity")){
+                            ((MainActivity)context).addSelectedId(id);
+                        }else if(context.toString().contains("HistoryActivity")){
+                            ((HistoryActivity)context).addSelectedId(id);
+                        }
+                        System.out.println("checked " + id);
+                        // do some operations here
+                    } else if (!cb.isChecked()) {
+                        System.out.println("unchecked " + id);
+                        if(context.toString().contains("MainActivity")){
+                            ((MainActivity)context).removeSelectedId(id);
+                        }else if(context.toString().contains("HistoryActivity")){
+                            ((HistoryActivity)context).removeSelectedId(id);
+                        }                    // do some operations here
+                    }
+                }
+            });*/
+        }
+    }
+
     private int mStringConversionColumn = -1;
-    private CursorToStringConverter mCursorToStringConverter;
-    private ViewBinder mViewBinder;
     MainActivity main;
     String[] mOriginalFrom;
 
 // itemChecked will store the position of the checked items.
 
-    public TodoListAdapter(Context context, int layout, Cursor c, String[] from, int[] to) {
-        super(context, layout, c, from, to,1);
-        this.c = c;
-        this.context = context;
-        mTo = to;
-        mOriginalFrom = from;
-        inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        /*for (int i = 0; i < this.getCount(); i++) {
-            itemChecked.add(i, false); // initializes all items value with false
-        }*/
-    }
-  /*
-    @Override
-    public void bindView(View view, Context context, Cursor cursor) {
-        System.out.println("BIND VIEW!");
-        final ViewBinder binder = mViewBinder;
-        final int count = mTo.length;
-        final int[] from = mFrom;
-        final int[] to = mTo;
-        if (view == null) {
-            LayoutInflater inflater = (LayoutInflater) context
-                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            view = inflater.inflate(R.layout.todolist, null);
-        }
-        TextView todoText = (TextView) view.findViewById(R.id.titleText);
-        for (int i = 0; i < count; i++) {
-            final View v = view.findViewById(to[i]);
-            if (v != null) {
-                boolean bound = false;
-                if (binder != null) {
-                    bound = binder.setViewValue(v, cursor, from[i]);
-                }
 
-                if (!bound) {
-                    String text = cursor.getString(from[i]);
-                    if (text == null) {
-                        text = "";
-                    }
-
-                    if (v instanceof TextView) {
-                        todoText.setText(text);
-                        setViewText((TextView) v, text);
-                    } else if (v instanceof ImageView) {
-                        setViewImage((ImageView) v, text);
-                    } else {
-                        throw new IllegalStateException(v.getClass().getName() + " is not a " + " view that can be bounds by this SimpleCursorAdapter");
-                    }
-                }
-            }
-        }
-        super.bindView(view,context,cursor);
-    }
-    public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        View v = inflater.inflate(R.layout.todolist, parent, false);
-        return v;
-    }*/
 
     public void setCheckboxChecked(View view, boolean YN){
         CheckBox checkBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
         checkBox.setChecked(YN);
     }
 
-    public ViewBinder getViewBinder() {
-        return mViewBinder;
-    }
 
     public ArrayList returnSelected(){
         return itemChecked;
@@ -108,16 +131,7 @@ public class TodoListAdapter extends SimpleCursorAdapter {
     public void clearCheckbox(){
         //final CheckBox cBox = (CheckBox)findViewById(R.id.multiSelectionBox); // your CheckBox
     }
-
-    public void refreshCursor(Cursor cursor){
-        c = cursor;
-        swapCursor(c);
-    }
-
-    public void setViewBinder(ViewBinder viewBinder) {
-        mViewBinder = viewBinder;
-    }
-
+/*
     public View getView(int position, View view, ViewGroup parent){
         if(c.moveToPosition(position)){
             if (view == null) {
@@ -126,7 +140,7 @@ public class TodoListAdapter extends SimpleCursorAdapter {
                 newView(context,c,parent);
             }
             bindView(view,context,c);
-            System.out.println("bindView!");
+            //System.out.println("bindView!");
 
             final TextView todoText = (TextView) view.findViewById(R.id.titleText);
             final CheckBox cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox); // your CheckBox
@@ -158,7 +172,7 @@ public class TodoListAdapter extends SimpleCursorAdapter {
             bindView(view,context,c);
         }
         return view;
-    } //getView method that will scroll the list to the top every time you refreshes the data
+    }*/ //getView method that will scroll the list to the top every time you refreshes the data
 /*
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {

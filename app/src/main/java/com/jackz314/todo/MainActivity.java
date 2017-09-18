@@ -1,7 +1,13 @@
 package com.jackz314.todo;
 
 
+import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -11,23 +17,38 @@ import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.database.Cursor;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.RemoteException;
+import android.support.annotation.ColorInt;
+import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -62,22 +83,49 @@ import android.widget.Toast;
 import com.android.vending.billing.IInAppBillingService;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crash.FirebaseCrash;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.jackz314.todo.util.IabBroadcastReceiver;
 import com.jackz314.todo.util.IabHelper;
 import com.jackz314.todo.util.IabResult;
 import com.jackz314.todo.util.Inventory;
 import com.jackz314.todo.util.Purchase;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
+import java.net.NetworkInterface;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static android.R.attr.data;
+import static com.jackz314.todo.dtb.HISTORY_TABLE;
+import static com.jackz314.todo.dtb.ID;
+import static com.jackz314.todo.dtb.TITLE;
+import static com.jackz314.todo.dtb.TODO_TABLE;
+
 //   ┏┓　　　┏┓
 //┏┛┻━━━┛┻┓
 //┃　　　　　　　┃
@@ -95,25 +143,27 @@ import java.util.concurrent.TimeoutException;
 //    ┗┓┓┏━┳┓┏┛
 //     ┃┫┫　┃┫┫
 //    ┗┻┛　┗┻┛
+// the great alpaca that saves me from the bugs
 
-public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener{
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener{
     dtb todosql;
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
-    ListView todolist;
+    RecyclerView todoList;
     private FirebaseAnalytics mFirebaseAnalytics;
     IabHelper mHelper;
     private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
     int exit=0,doubleClickCout = 0;
+    private static final String[] PROJECTION = new String[]{ID, TITLE};
+    private static final String SELECTION = TITLE + " LIKE ?";
     boolean justex = true;
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
-    boolean etr = false;
     boolean isConnected = false;
-    boolean isEmpty = false;
+    boolean justDoubleClicked = false;
     SharedPreferences sharedPreferences;
     public String searchText;
     int themeColor,textColor,backgroundColor,textSize;
@@ -123,6 +173,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     ColorUtils colorUtils;
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
+    RecyclerView.LayoutManager todoLayoutManager;
     ActionBarDrawerToggle mDrawerToggle;
     TextView EmptextView, selectionTitle;
     CheckBox multiSelectionBox;
@@ -136,14 +187,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     CheckBox selectAllBox;
     private String payload = "HAHA! this is the real one, fuck you motherfucker";
     IabBroadcastReceiver mBroadcastReceiver;
-    public static int MODIFY_CONTEXT_ID = 1;
-    public static int DELETE_CONTEXT_ID = 2;
-    public boolean iapsetup = false;
+    //public static int MODIFY_CONTEXT_ID = 1;
+    //public static int DELETE_CONTEXT_ID = 2;
+    public boolean iapsetup = true;
     public boolean isAdRemoved = false;
     View todoView;
     static int REMOVE_REQUEST_ID =1022;
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         adView= (AdView)findViewById(R.id.bannerAdView);
@@ -156,11 +207,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
        // FirebaseCrash.report(new Exception("MainActivity created"));
         //FirebaseCrash.log("MainActivity created log");
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-        View todoView = layoutInflater.inflate(R.layout.todolist,null);
         input = (EditText)findViewById(R.id.input);
         modifyId = (TextView)findViewById(R.id.modifyId);
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         EmptextView = (TextView)findViewById(R.id.emptyText);
+        todoList = (RecyclerView) findViewById(R.id.todolist);
+        todoList.setHasFixedSize(true);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
         payload = "0x397821dc97276";
@@ -172,42 +225,40 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         displayAllNotes();
         input.setTextIsSelectable(true);
         input.setFocusable(true);
-        todolist.setFocusable(true);
-        todolist.setFocusableInTouchMode(true);
-        //todolist.performLongClick();
-        //setOutOfSelectionMode();
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            public void run() {
-                todolist.performLongClick();
-                // Actions to do after 10 seconds
-            }
-        },100);
+        todoList.setFocusable(true);
+        todoList.setFocusableInTouchMode(true);
         String base64EncodedPublicKey = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
         base64EncodedPublicKey += "BIjAN" + bep.substring(2,bep.length()-1);
         input.setVisibility(View.GONE);
         menuNav = navigationView.getMenu();
         navRemoveAD = menuNav.findItem(R.id.unlock);
-        if(navRemoveAD != null){
-            navRemoveAD.setEnabled(false);
+        int size = menuNav.size();
+        for (int i = 0; i < size; i++) {
+            menuNav.getItem(i).setChecked(false);
         }
         mHelper = new IabHelper(this, base64EncodedPublicKey);
+        
         mHelper.enableDebugLogging(false);
         mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener(){
             public void onIabSetupFinished(IabResult result) {
                 if(!result.isSuccess()||result.isFailure()){
+                    System.out.println("qazwsx"+3);
                     iapsetup = false;
                     return;
                 }
                 if(mHelper == null){
+                    System.out.println("qazwsx"+4);
                     iapsetup = false;
                     return;
                 }
                 try {
                     mHelper.queryInventoryAsync(mGotInventoryListener);
+                    iapsetup = true;
                 } catch (IabHelper.IabAsyncInProgressException e) {
                     e.printStackTrace();
+                    System.out.println("qazwsx"+5);
+                    iapsetup = false;
                 }
             }
         });
@@ -216,15 +267,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }else {
             adView.loadAd(adRequest);
         }
+        if(navRemoveAD != null && !iapsetup){
+            //navRemoveAD.setEnabled(false);
+        }
         if(!sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) != null){
             navigationView.getMenu().removeItem(R.id.history);
         }else if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
             menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history));
         }
-        todolist.setOnTouchListener(new View.OnTouchListener() {
+        todoList.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                todolist.requestFocus();
+                todoList.requestFocus();
                 if(input.isCursorVisible()||input.isInEditMode()||input.isInputMethodTarget()||input.isFocused()||input.hasFocus()){
                     hideKeyboard();
                     if(input.getText().toString().equals("")&&input.getText().toString().isEmpty()){
@@ -237,11 +291,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         });
         int[] colors = {0, colorUtils.lighten(textColor,0.6), 0}; // red for the example
-        todolist.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
-        todolist.setDividerHeight(2);
-        //todolist.setDivider(new ColorDrawable(colorUtils.lighten(textColor,0.5)));
+        //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
+        //todoList.setDividerHeight(2);
+        //todoList.setDivider(new ColorDrawable(colorUtils.lighten(textColor,0.5)));
         //long click listener replaced by context menu due to suitable design concern
-        /*todolist.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+        /*todoList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 deleteNote(String.valueOf(id),id);
@@ -251,7 +305,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         input.setText("");
                         input.setVisibility(View.GONE);
                         hideKeyboard();
-                        todolist.clearFocus();
+                        todoList.clearFocus();
                         adView.requestFocus();
                         fab.setImageResource(R.drawable.ic_add_black_24dp);
                         Bundle bundle = new Bundle();
@@ -265,9 +319,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         });*/
         doubleClickCout = 0;
-        todolist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, final View view, int position, final long id) {
+            public void onItemClicked(RecyclerView recyclerView, int position, final View view) {
+                long id = todoListAdapter.getItemId(position);
                 if (isInSelectionMode) {
                     multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
@@ -299,15 +354,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         //Double click
                         // Toast.makeText(getApplicationContext(),"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
                         final String finishedContent = todosql.getOneDataInTODO(String.valueOf(id));
-                        finishNote(id);
+                        finishData(id);
                         if(!modifyId.getText().toString().equals("")){
                             if(modifyId.getText().toString().equals(String .valueOf(id))){
                                 modifyId.setText("");
                                 input.setText("");
                                 input.setVisibility(View.GONE);
                                 hideKeyboard();
-                                todolist.clearFocus();
-                                adView= (AdView)findViewById(R.id.bannerAdView);
+                                todoList.clearFocus();
                                 adView.requestFocus();
                                 fab.setImageResource(R.drawable.ic_add_black_24dp);
                                 Bundle bundle = new Bundle();
@@ -317,15 +371,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                 mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                             }
                         }
-                        Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                        Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                todosql.insertData(finishedContent);
+                                insertData(finishedContent);
                                 long lastHistoryId = todosql.getIdOfLatestDataInHistory();
                                 todosql.deleteFromHistory(String.valueOf(lastHistoryId));
                                 displayAllNotes();
                             }
                         }).show();
+                        justDoubleClicked = true;
                         doubleClickCout = 0;
                     }else if (doubleClickCout == 1) {
                         //Single click
@@ -337,26 +392,36 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         (new Handler()).postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                input.requestFocus();
-                                todolist.smoothScrollBy(view.getTop(),300);
+                                if(!justDoubleClicked){
+                                    input.requestFocus();
+                                    todoList.smoothScrollBy(view.getTop(),300);
+                                }
                             }
                         }, 250);
+                        justDoubleClicked = false;
                     }
                 }
             }
         });
 
-        todolist.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+        ItemClickSupport.addTo(todoList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, final View view, int position, long id) {
+            public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
+                long id = todoListAdapter.getItemId(position);
                 if(isInSelectionMode){
-                    //do nothing
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(String.valueOf(id)));
+                    clipboard.setPrimaryClip(clip);
+                    Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
                     setOutOfSelectionMode();
+                    fab.setVisibility(View.INVISIBLE);
                     isInSelectionMode = true;
+                    getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
+
                     selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -374,7 +439,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                     new int[]{android.R.attr.background}
                             },
                             new int[] {
-                                     Color.WHITE//disabled
+                                    Color.WHITE//disabled
                                     ,ColorUtils.lighten(themeColor,0.32) //enabled
                                     ,Color.WHITE
                             }
@@ -389,10 +454,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                 selectAllBox.setChecked(false);
                                 selectedId.clear();
                                 selectedContent.clear();
-                                for(int i = 0; i < todolist.getCount(); i++){
-                                    multiSelectionBox = (CheckBox)getViewByPosition(i).findViewById(R.id.multiSelectionBox);
-                                    multiSelectionBox.setChecked(false);
-                                }
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
                             }else if(selectAllBox.isChecked()){//check all
@@ -414,10 +475,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                 Long id;
                                 selectedId.clear();
                                 selectedContent.clear();
-                                for(int i = 0; i < todolist.getAdapter().getCount(); i++){
-                                    multiSelectionBox = (CheckBox)getViewByPosition(i).findViewById(R.id.multiSelectionBox);
-                                    multiSelectionBox.setChecked(true);
-                                    id = todolist.getAdapter().getItemId(i);
+                                for(int i = 0; i < todoList.getAdapter().getItemCount(); i++){//add all the data
+                                    id = todoList.getAdapter().getItemId(i);
                                     selectedId.add(0,id);
                                     String data = todosql.getOneDataInTODO(Long.toString(id));
                                     selectedContent.add(0,data);
@@ -428,7 +487,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         }
                     });
                     addSelectedId(id);
-                    //todoListAdapter.setCheckboxChecked(view,true);
                     Handler handler = new Handler();
                     handler.postDelayed(new Runnable() {
                         public void run() {
@@ -450,6 +508,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         });
 
+
         input.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -459,26 +518,23 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         });
 
-        todolist.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override
-            public void onScrollStateChanged(AbsListView view, int scrollState) {
-                switch (scrollState) {
-                    case AbsListView.OnScrollListener.SCROLL_STATE_IDLE: //stopped scroll
-                        firstVisibleItem = view.getFirstVisiblePosition();
-                        firstItemDiff = view.getTop();
-                        break;
-                    case AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL://scrolling
-                        break;
-                    case AbsListView.OnScrollListener.SCROLL_STATE_FLING://fleeing
-                        break;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            todoList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                @Override
+                public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+
                 }
-            }
+            });
+        }else {
+            todoList.setOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
 
-            @Override
-            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                    super.onScrolled(recyclerView, dx, dy);
+                }
+            });
+        }
 
-            }
-        });
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -491,26 +547,27 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     input.requestFocus();
                 }
                 else{
-                    boolean successModify=false,success=false;
+                    int successModify=-1;
+                    Uri success = null;
                     if (!modifyId.getText().toString().equals("")){
                         Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "update_notes");
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "updated notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                        successModify = updateData(modifyId.getText().toString(),input.getText().toString());
+                        successModify = updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
-                        success = todosql.insertData(input.getText().toString());
+                        success = insertData(input.getText().toString());
                         int[] colors = {0, colorUtils.lighten(textColor,0.6), 0};
-                        todolist.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
-                        todolist.setDividerHeight(2);
-                        todolist.smoothScrollToPosition(0);
+                        //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
+                        //todoList.setDividerHeight(2);
+                        todoList.smoothScrollToPosition(0);
                         Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "new_notes");
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "new notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                    }if(success||successModify){
+                    }if(success != null || successModify != -1){
                         hideKeyboard();
                         displayAllNotes();
                         fab.setImageResource(R.drawable.ic_add_black_24dp);
@@ -523,7 +580,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         input.requestFocus();
                     }
                 }
-                /*Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_SHORT).setAction("Action", null).show();*/
+                /*Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();*/
             }
         });
 
@@ -553,7 +610,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         toggle.syncState();
 
         navigationView.setNavigationItemSelectedListener(this);
-        input.setOnFocusChangeListener(new android.view.View.OnFocusChangeListener(){
+        input.setOnFocusChangeListener(new View.OnFocusChangeListener(){
             @Override
             public void onFocusChange(View v, boolean hasFocus){
                 if (hasFocus){
@@ -585,24 +642,32 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         });
     }//--------end of onCreate!
 
+
+
     IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             if(mHelper == null){
+                System.out.println("qazwsx"+1);
                 iapsetup = false;
                 return;
             }
             if(result.isFailure()||!result.isSuccess()){
+                System.out.println("qazwsx"+2);
                 iapsetup = false;
                 return;
             }
             if(result.isSuccess()){
+                iapsetup = true;
                 Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
-                isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase));
+                isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
                 removeAd();
             }
         }
     };
 
+    public boolean restorePurchase(){
+        return isAdRemoved;
+    }
 
     public void removeAd(){
         if(isAdRemoved){
@@ -619,34 +684,32 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public void setOutOfSearchMode(){
+        fab.setVisibility(View.VISIBLE);
         isInSearchMode = false;
         displayAllNotes();
         hideKeyboard();
     }
 
+    /*
     public View getViewByPosition(int pos) {
-        final int firstListItemPosition = todolist.getFirstVisiblePosition();
-        final int lastListItemPosition = firstListItemPosition + todolist.getChildCount() - 1;
+        //final int firstListItemPosition = todoList.getFirstVisiblePosition();
+        final int lastListItemPosition = firstListItemPosition + todoList.getChildCount() - 1;
 
         if (pos < firstListItemPosition || pos > lastListItemPosition ) {
-            return todolist.getAdapter().getView(pos, null, todolist);
+            return todoList.getAdapter().getView(pos, null, todoList);
         } else {
             final int childIndex = pos - firstListItemPosition;
-            return todolist.getChildAt(childIndex);
+            return todoList.getChildAt(childIndex);
         }
-    }
+    }*/
 
     public void setOutOfSelectionMode(){
         isInSelectionMode = false;
+        fab.setVisibility(View.VISIBLE);
+        getSupportLoaderManager().restartLoader(123,null,this);
         selectedId.clear();
         selectedContent.clear();
         displayAllNotes();
-        if(!isEmpty){
-            for(int i = 0; i < todolist.getCount(); i++) {
-                multiSelectionBox = (CheckBox) getViewByPosition(i).findViewById(R.id.multiSelectionBox);
-                multiSelectionBox.setChecked(false);
-            }
-        }
         selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
         selectionToolBar.getMenu().clear();
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -655,7 +718,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             selectAllBox.setChecked(false);
         }
         toolbar.setVisibility(View.VISIBLE);
-        todolist.requestFocus();
+        todoList.requestFocus();
     }
 
     @Override
@@ -687,9 +750,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     boolean verifyDeveloperPayload(Purchase p) {
-
-        String payload = p.getDeveloperPayload();
-
+        if(p.getDeveloperPayload().equals("0x397821dc97276")){
+            return true;
+        }
         /*
          * TODO: verify that the developer payload of the purchase is correct. It will be
          * the same one that you sent when initiating the purchase.
@@ -713,7 +776,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
          * installations is recommended.
          */
 
-        return true;
+        return false;
     }
 
     IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
@@ -750,7 +813,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (item.getItemId() == MODIFY_CONTEXT_ID) {
             main.requestFocus();
             View top = adapterContextMenuInfo.targetView;
-            todolist.scrollListBy(top.getTop());
+            todoList.scrollListBy(top.getTop());
             modifyId.setText(String.valueOf(id));
             fab.setImageResource(R.drawable.ic_send_black_24dp);
             input.setVisibility(View.VISIBLE);
@@ -773,7 +836,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     input.setText("");
                     input.setVisibility(View.GONE);
                     hideKeyboard();
-                    todolist.clearFocus();
+                    todoList.clearFocus();
                     adView= (AdView)findViewById(R.id.bannerAdView);
                     adView.requestFocus();
                     fab.setImageResource(R.drawable.ic_add_black_24dp);
@@ -784,10 +847,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                 }
             }
-            Snackbar.make(main, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+            Snackbar.make(main, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    todosql.insertData(deleteContent);
+                    insertData()(deleteContent);
                     displayAllNotes();
                 }
             }).show();
@@ -797,7 +860,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     input.setText("");
                     input.setVisibility(View.GONE);
                     hideKeyboard();
-                    todolist.clearFocus();
+                    todoList.clearFocus();
                     adView= (AdView)findViewById(R.id.bannerAdView);
                     adView.requestFocus();
                     fab.setImageResource(R.drawable.ic_add_black_24dp);
@@ -830,7 +893,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     return false;
                 }
             });
-        }if(selectedId.size() == todolist.getCount()){
+        }if(selectedId.size() == todoList.getAdapter().getItemCount()){
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -852,22 +915,46 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+    public static void setCursorColor(EditText view, int color) {
+        try {
+            // Get the cursor resource id
+            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
+            field.setAccessible(true);
+            int drawableResId = field.getInt(view);
+
+            // Get the editor
+            field = TextView.class.getDeclaredField("mEditor");
+            field.setAccessible(true);
+            Object editor = field.get(view);
+
+            // Get the drawable and set a color filter
+            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
+            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+            Drawable[] drawables = {drawable, drawable};
+
+            // Set the drawables
+            field = editor.getClass().getDeclaredField("mCursorDrawable");
+            field.setAccessible(true);
+            field.set(editor, drawables);
+        } catch (Exception ignored) {
+
+        }
+    }
+
     public void setColorPreferences(){
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
         textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         textSize = sharedPreferences.getInt(getString(R.string.text_size_key),24);
         backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
-        todolist = (ListView)findViewById(R.id.todolist);
-        fab = (FloatingActionButton) findViewById(R.id.fab);
+
         /*
         set colors
          */
         LayoutInflater inflater = LayoutInflater.from(this);
         View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
-        navigationView.setItemTextColor(ColorStateList.valueOf(textColor));
-        navigationView.setItemIconTintList(ColorStateList.valueOf(textColor));
+        //navigationView.setItemTextColor(ColorStateList.valueOf(textColor));
+        navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
         int[] themeColors = {backgroundColor,themeColor};
         Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
         drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
@@ -880,39 +967,121 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         toolbar.setBackgroundColor(themeColor);
         input.setTextColor(textColor);
+        setCursorColor(input,themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();
         window.setStatusBarColor(themeColor);
         window.setNavigationBarColor(themeColor);
-        EmptextView.setTextColor(colorUtils.lighten(textColor,0.4));
-        todolist.setBackgroundColor(backgroundColor);
+        EmptextView.setTextColor(colorUtils.lighten(textColor,0.6));
+        todoList.setBackgroundColor(backgroundColor);
         navigationView.setBackgroundColor(backgroundColor);
         View listView= LayoutInflater.from(MainActivity.this).inflate(R.layout.todolist,null);
-        input.setLinkTextColor(themeColor);
         input.setHintTextColor(colorUtils.lighten(textColor,0.5));
-        input.setLinkTextColor(textColor);
+        input.setLinkTextColor(themeColor);
         input.setHighlightColor(colorUtils.lighten(themeColor,0.2));
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         int[] colors = {0, colorUtils.lighten(textColor,0.6), 0};
-        todolist.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
-        todolist.setDividerHeight(2);
+        //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
+        //todoList.setDividerHeight(2);
 }
+
+    public static String getMacAddr() {
+        try {
+            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface nif : all) {
+                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+
+                byte[] macBytes = nif.getHardwareAddress();
+                if (macBytes == null) {
+                    return "";
+                }
+
+                StringBuilder res1 = new StringBuilder();
+                for (byte b : macBytes) {
+                    res1.append(String.format("%02X:",b));
+                }
+
+                if (res1.length() > 0) {
+                    res1.deleteCharAt(res1.length() - 1);
+                }
+                return res1.toString();
+            }
+        } catch (Exception ex) {
+            //System.out.println("ex eoiii" + ex.getLocalizedMessage());
+        }
+        return "(Can't retrieve mac address)";
+    }
+
 
     public void showFeedBackDialog() {
         LayoutInflater inflater = this.getLayoutInflater();
         final View dialogView = inflater.inflate(R.layout.feedback_dialog, null);
         final EditText edt = (EditText) dialogView.findViewById(R.id.edit1);
         edt.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+        edt.setTextColor(textColor);
         edt.setHighlightColor(colorUtils.lighten(themeColor,0.2));
+        setCursorColor(edt,themeColor);
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.feedback_title))
                 .setMessage(getString(R.string.feedback_message))
                 .setPositiveButton(getString(R.string.send), new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        if(!edt.getText().toString().equals("")){
-                            FirebaseCrash.report(new Exception(edt.getText().toString()));
+                    public void onClick(final DialogInterface dialog, int whichButton) {
+                        if(!edt.getText().toString().equals("")) {
+                            FirebaseStorage storage = FirebaseStorage.getInstance();
+                            StorageReference storageRef = storage.getReference();// Create a storage reference from our app
+                            //FirebaseCrash.report(new Exception(edt.getText().toString()));
                             FirebaseCrash.log(edt.getText().toString());
-                            Toast.makeText(getApplicationContext(),getString(R.string.thx_for_feed),Toast.LENGTH_LONG).show();
+                            ProgressDialog uploadingDialog = null;
+                            try {
+                                String systemInfo ="";
+                                String macAddress = getMacAddr().replace(":","-");
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
+                                }else {
+                                    systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
+                                }
+                                String feedback =  edt.getText().toString() + "---------------" + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+                                byte[] feedbackBytes =feedback.getBytes("UTF-8");
+                                uploadingDialog = new ProgressDialog(MainActivity.this);
+                                uploadingDialog.setTitle(getString(R.string.reporting_feedback_title));
+                                uploadingDialog.setMessage(getString(R.string.please_wait));
+                                uploadingDialog.setCancelable(false);
+                                uploadingDialog.show();
+                                String uniqueID = UUID.randomUUID().toString();
+                                String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+                                String msg = edt.getText().toString().substring(0,20);
+                                if(!msg.equals(edt.getText().toString())){
+                                    msg = msg + "...";
+                                }
+
+                                StorageReference feedbackRef = storageRef.child("feedback/"+ msg + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + uniqueID +".txt");
+                                UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
+                                final ProgressDialog finalUploadingDialog = uploadingDialog;
+                                uploadTask.addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception exception) {
+                                        dialog.dismiss();
+                                        finalUploadingDialog.dismiss();
+                                        Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                                        // Handle unsuccessful uploads
+                                    }
+                                }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                                    @Override
+                                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                        dialog.dismiss();
+                                        finalUploadingDialog.dismiss();
+                                        Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
+                                        // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
+                                        Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                                    }
+                                });
+                            } catch (UnsupportedEncodingException e) {
+                                dialog.dismiss();
+                                uploadingDialog.dismiss();
+                                Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                                e.printStackTrace();
+                            }
+
                         }
                     }
                 })
@@ -921,6 +1090,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         //cancel
                     }
                 }).setCancelable(true).setView(dialogView).create();
+        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface d) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
+            }
+        });
         edt.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -1013,25 +1189,23 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+    /*
     public void displaySearchResults(final String filter){
         final Cursor cursor = todosql.getSearchResults(filter);
         if(cursor.getCount() == 0){
             EmptextView.setVisibility(View.VISIBLE);
             EmptextView.setText(R.string.empty_search_result);
-            todolist.removeAllViewsInLayout();//remove all items
-            todolist.setAdapter(null);
+            todoList.removeAllViewsInLayout();//remove all items
+            todoList.setAdapter(null);
         } else {
             EmptextView.setVisibility(View.GONE);
             EmptextView.setText("");
-            final TodoListAdapter todoListAdapter = new TodoListAdapter(this,R.layout.todolist,cursor,new String[] {todosql.TITLE},new int[]{R.id.titleText});
-            todolist.setAdapter(new TodoListAdapter(this,R.layout.todolist,cursor,new String[] {todosql.TITLE},new int[]{R.id.titleText}){
+            final TodoListAdapter todoListAdapter = (new TodoListAdapter(cursor){
                 @Override
-                public View getView(int position, View convertView, ViewGroup parent){
-                    View todoView = super.getView(position,convertView,parent);
-                    //super.bindView(convertView,super.mContext,cursor);
+                public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     CheckBox multiSelectionBox = (CheckBox)todoView.findViewById(R.id.multiSelectionBox);
                     TextView todoText = (TextView)todoView.findViewById(R.id.titleText);
-                    String cursorText = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+                    String cursorText = cursor.getString(cursor.getColumnIndex(TITLE));
                     int startPos = cursorText.toLowerCase(Locale.US).indexOf(filter.toLowerCase(Locale.US));
                     int endPos = startPos + filter.length();
                     todoText.setTextColor(textColor);
@@ -1067,94 +1241,165 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }else {
                         multiSelectionBox.setVisibility(View.GONE);
                     }
-                    return todoView;
+                    super.onBindViewHolder(holder, cursor);
                 }
             });
+            todoList.setAdapter(todoListAdapter);
         }
-    }
+    }*/
 
-    public void displayAllNotes(){
-        if(isInSearchMode && searchText != null){
-            displaySearchResults(searchText);
-        }else {
-            setColorPreferences();
-            sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-            boolean isOrderReguar = sharedPreferences.getBoolean(getString(R.string.order_key),true);
-            Cursor cs = null;
-            if(!isOrderReguar){
-                cs = todosql.getData();
-            } else{
-                cs = todosql.getDataDesc();
+    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {
+
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
+        }
+
+        @Override
+        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
+            finishData(viewHolder.getItemId());
+            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    insertData(finishedContent);
+                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
+                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                    displayAllNotes();
+                }
+            }).show();
+        }
+
+        @Override
+        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+            if (viewHolder.getAdapterPosition() == -1) {
+                return;
             }
-            //todolist = (ListView)findViewById(R.id.todolist);
-            EmptextView = (TextView)findViewById(R.id.emptyText);
-            if(cs.getCount()==0){//if database is empty, then clears the listView too
-                isEmpty =true;
-                System.out.println("empty database!");
-                EmptextView.setVisibility(View.VISIBLE);
-                EmptextView.setText(R.string.empty_todolist);
-                todolist.removeAllViewsInLayout();//remove all items
-                todolist.setAdapter(null);
-            } else {
-                EmptextView.setVisibility(View.GONE);
-                EmptextView.setText("");
-                isEmpty =false;
-                if(todolist.getAdapter() == null){
-                    //Toast.makeText(getApplicationContext(),"null",Toast.LENGTH_SHORT).show();
-                    final Cursor finalCs = cs;
-                    todoListAdapter = (new TodoListAdapter(this,R.layout.todolist, finalCs,new String[] {todosql.TITLE},new int[]{R.id.titleText}){
-                        @Override
-                        public View getView(int position, View convertView, ViewGroup parent){
-                           // super.newView(super.mContext, finalCs,parent);
-                           // super.bindView(convertView,super.mContext, finalCs);
-                            todoView = super.getView(position,convertView,parent);
-                            CheckBox multiSelectionBox = (CheckBox)todoView.findViewById(R.id.multiSelectionBox);
-                            ColorStateList colorStateList = new ColorStateList(
-                                    new int[][]{
-                                            new int[]{-android.R.attr.state_checked}, //disabled
-                                            new int[]{android.R.attr.state_checked} //enabled
-                                    },
-                                    new int[] {
-                                            Color.DKGRAY//disabled
-                                            ,themeColor //enabled
-                                    }
-                            );
-                            if(isInSelectionMode){
-                                multiSelectionBox.setVisibility(View.VISIBLE);
-                                multiSelectionBox.setBackgroundColor(backgroundColor);
-                                multiSelectionBox.setButtonTintList(colorStateList);
-                                multiSelectionBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                                    @Override
-                                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                                        returnSelected();
-                                    }
-                                });
-                            }else {
-                                multiSelectionBox.setVisibility(View.GONE);
-                                multiSelectionBox.setChecked(false);
+            View itemView = viewHolder.itemView;
+            Paint textPaint = new Paint();
+            textPaint.setStrokeWidth(2);
+            textPaint.setTextSize(80);
+            textPaint.setColor(themeColor);
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            Rect bounds = new Rect();
+            textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
+            Drawable finishIcon = ContextCompat.getDrawable(MainActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
+            finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+            int finishIconMargin = 40;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
+            int intrinsicWidth = finishIcon.getIntrinsicWidth();
+            int intrinsicHeight = finishIcon.getIntrinsicWidth();
+            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width();
+            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width();
+            int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+            int finishIconBottom = finishIconTop + intrinsicHeight;
+            finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
+            finishIcon.draw(c);
+            //fade out the view
+            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
+            viewHolder.itemView.setAlpha(alpha);
+            viewHolder.itemView.setTranslationX(dX);
+            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 34 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+        }
+
+    };
+
+
+
+        public void displayAllNotes(){
+        if(todoList.getAdapter() == null){
+            System.out.println("null called");
+            LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+            linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+            todoList.setLayoutManager(linearLayoutManager);
+            todoListAdapter = (new TodoListAdapter(null){
+                @Override
+                public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
+                    super.onBindViewHolder(holder, cursor);
+                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+                    holder.todoText.setTextColor(textColor);
+                    holder.cardView.setCardBackgroundColor(colorUtils.darken(backgroundColor,0.01));
+                    holder.todoText.setTextSize(textSize);
+                    if(isInSearchMode){
+                        Spannable spannable = new SpannableString(text);
+                        ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
+                        TextAppearanceSpan highlightSpan = new TextAppearanceSpan(null, Typeface.BOLD, -1, highlightColor, null);
+                        int startPos = text.indexOf(searchText);
+                        String textLow = text.toLowerCase();
+                        String searchTextLow = searchText.toLowerCase();
+                        //spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), startPos, startPos + searchTextLow.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        do{
+                            int start = Math.min(startPos, textLow.length());
+                            int end = Math.min(startPos + searchTextLow.length(), textLow.length());
+                            startPos = textLow.indexOf(searchTextLow,end);
+                            spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        }while (startPos > 0);
+                        holder.todoText.setText(spannable);
+                    }else {
+                        holder.todoText.setText(text);
+                    }
+                    System.out.println("null called");
+                    if(isInSelectionMode){
+                        holder.cBox.setVisibility(View.VISIBLE);
+                    }else {
+                        holder.cBox.setChecked(false);
+                        holder.cBox.setVisibility(View.GONE);
+                    }
+                    System.out.println(text+"|cursor read");
+                    holder.cBox.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            if (cb.isChecked()) {
+                                if(mContext.toString().contains("MainActivity")){
+                                    ((MainActivity)mContext).addSelectedId(id);
+                                }else if(mContext.toString().contains("HistoryActivity")){
+                                    ((HistoryActivity)mContext).addSelectedId(id);
+                                }
+                                System.out.println("checked " + id);
+                                // do some operations here
+                            } else if (!cb.isChecked()) {
+                                System.out.println("unchecked " + id);
+                                if(mContext.toString().contains("MainActivity")){
+                                    ((MainActivity)mContext).removeSelectedId(id);
+                                }else if(mContext.toString().contains("HistoryActivity")){
+                                    ((HistoryActivity)mContext).removeSelectedId(id);
+                                }                    // do some operations here
                             }
-                            TextView todoText = (TextView)todoView.findViewById(R.id.titleText);
-                            todoText.setTextColor(textColor);
-                            todoText.setTextSize(TypedValue.COMPLEX_UNIT_SP,textSize);
-                            return todoView;
                         }
                     });
-                    todolist.setAdapter(todoListAdapter);
-                }else {
-                    final Cursor finalCs = cs;
-                    Runnable runnable =new Runnable() {
-                        @Override
-                        public void run() {
-                            todoListAdapter.refreshCursor(finalCs);
-                            todoListAdapter.notifyDataSetChanged();
-                        }
-                    };
-                    runOnUiThread(runnable);
-                    //cs.close();
+                    ColorStateList colorStateList = new ColorStateList(
+                            new int[][]{
+                                    new int[]{-android.R.attr.state_checked}, //disabled
+                                    new int[]{android.R.attr.state_checked} //enabled
+                            },
+                            new int[] {
+                                    Color.DKGRAY//disabled
+                                    ,themeColor //enabled
+                            }
+                    );
+                    holder.cBox.setButtonTintList(colorStateList);
                 }
-            }
+            });
+            todoList.setAdapter(todoListAdapter);
+            getSupportLoaderManager().initLoader(123, null, this);
+            ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
+            mItemTouchHelper.attachToRecyclerView(todoList);
         }
-        //registerForContextMenu(todolist);
+        //getSupportLoaderManager().restartLoader(123,null,this);
+        EmptextView = (TextView)findViewById(R.id.emptyText);
+        if(todosql.getData().getCount()==0){//if database is empty, then clears the listView too
+            todoListAdapter.changeCursor(null);
+            System.out.println("empty database!");
+            EmptextView.setVisibility(View.VISIBLE);
+            EmptextView.setText(R.string.empty_todolist);
+            todoList.removeAllViewsInLayout();//remove all items
+            todoList.setAdapter(null);
+        } else {
+            EmptextView.setVisibility(View.GONE);
+            EmptextView.setText("");
+        }
     }
 
     public void finishSetOfData(){
@@ -1162,17 +1407,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         CLONESelectedContent.clear();
 
         for(long id : selectedId){
-            todosql.finishData(id);
+            finishData(id);
         }
         final int size = selectedId.size();
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
         displayAllNotes();
-        Snackbar.make(main, getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(main, String.valueOf(CLONESelectedContent.size()) + " "  + getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 for (String content : CLONESelectedContent){
-                    todosql.insertData(content);
+                    insertData(content);
                 }
                 todosql.deleteTheLastCoupleOnesFromHistory(size);
                 displayAllNotes();
@@ -1183,32 +1428,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public void deleteSetOfData(){
         CLONESelectedContent.clear();
         for(long id : selectedId){
-            todosql.deleteNote(id);
+            deleteData(id);
         }
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
         displayAllNotes();
-        Snackbar.make(main, getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_SHORT).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(main, String.valueOf(CLONESelectedContent.size()) + " " + getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 for (String content : CLONESelectedContent){
-                    todosql.insertData(content);
+                    insertData(content);
                 }
                 displayAllNotes();
             }
         }).show();
-    }
-
-    public boolean updateData(String id, String title){
-        boolean isUpdated = todosql.updateData(id, title);
-        displayAllNotes();
-        return isUpdated;
-    }
-
-    public void finishNote(final Long id){
-        Integer delRows = todosql.finishData(id);
-        displayAllNotes();
-        if(delRows==0) Toast.makeText(this,R.string.error_message,Toast.LENGTH_SHORT).show();
     }
 
     public void hideKeyboard() {
@@ -1224,7 +1457,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         if(newConfig.orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE){
-            todolist.setSelectionFromTop(firstVisibleItem,firstItemDiff);
+            //todoList.setSelectionFromTop(firstVisibleItem,firstItemDiff);
             if(!input.getText().toString().equals("")){
                 fab.setImageResource(R.drawable.ic_send_black_24dp);
                 input.setVisibility(View.VISIBLE);
@@ -1251,34 +1484,28 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             input.clearFocus();
             hideKeyboard();
             displayAllNotes();
-            if(input.getText().toString().equals("")){
-                fab.setImageResource(R.drawable.ic_add_black_24dp);
-                input.setVisibility(View.GONE);
+            if (input.getVisibility() == View.GONE){
                 justex = true;
-                modifyId.setText("");
-                etr = true;
-                hideKeyboard();
-            } else {
-                input.setText("");
-                modifyId.setText("");
-                justex=false;
-                etr=false;
-                hideKeyboard();
-            }if(etr){
-                fab.setImageResource(R.drawable.ic_add_black_24dp);
-                input.setVisibility(View.GONE);
-                input.setText("");
-                modifyId.setText("");
-                justex = true;
-                hideKeyboard();
-                etr = true;
+            }else {
+                if(input.getText().toString().equals("")){
+                    fab.setImageResource(R.drawable.ic_add_black_24dp);
+                    input.setVisibility(View.GONE);
+                    justex = false;
+                    modifyId.setText("");
+                    hideKeyboard();
+                } else {
+                    input.setText("");
+                    modifyId.setText("");
+                    justex=false;
+                    hideKeyboard();
+                }
             }
             new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     exit=0;
                 }
-            }, 2000);
+            }, 1500);
             if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
                 exit++;
                 Toast.makeText(getApplicationContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
@@ -1295,6 +1522,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -1306,11 +1534,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         hintText.setSpan( new ForegroundColorSpan(ColorUtils.darken(Color.WHITE,0.5)), 0, hintText.length(), 0 );
         searchView.setQueryHint(hintText);
-        MenuItem  searchMenuIem = menu.findItem(R.id.todo_search);
+        MenuItem searchMenuIem = menu.findItem(R.id.todo_search);
         MenuItemCompat.setOnActionExpandListener(searchMenuIem, new MenuItemCompat.OnActionExpandListener() {
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 isInSearchMode = true;
+                fab.setVisibility(View.INVISIBLE);
                 return true;
             }
 
@@ -1329,20 +1558,28 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             @Override
             public void onClick(View v) {
                 isInSearchMode = true;
+                fab.setVisibility(View.INVISIBLE);
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            Bundle bundle = new Bundle();
+
             @Override
             public boolean onQueryTextSubmit(String query) {
-                searchText = query;
+                query(query);
                 return false;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                searchText = newText;
-                displaySearchResults(newText);
+                query(newText);
                 return false;
+            }
+
+            private void query(String text) {
+                bundle.putString("QUERY", text);
+                searchText = text;
+                getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
             }
         });
         return true;
@@ -1368,6 +1605,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public void onResume(){
         if(!input.getText().toString().equals("") && input.getVisibility()==View.VISIBLE) showKeyboard();
         displayAllNotes();
+        int size = menuNav.size();
+        String sort = null;
+        if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+            sort = "_id DESC";
+        }
+        getSupportLoaderManager().restartLoader(123,null,this);
+        for (int i = 0; i < size; i++) {
+            menuNav.getItem(i).setChecked(false);
+        }
         if(isAdRemoved){
             Log.i("unlock","skipped ad");
         }
@@ -1385,12 +1631,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             Cursor cs = todosql.getData();
             if (cs.getCount()==0){
                 //first run codes
-                todosql.insertData(getString(R.string.tutorial_5));
-                todosql.insertData(getString(R.string.tutorial_4));
-                todosql.insertData(getString(R.string.tutorial_3));
-                todosql.insertData(getString(R.string.tutorial_2));
-                todosql.insertData(getString(R.string.tutorial_1));
-                todosql.insertData(getString(R.string.welcome_note));
+                insertData(getString(R.string.tutorial_6));
+                insertData(getString(R.string.tutorial_5));
+                insertData(getString(R.string.tutorial_4));
+                insertData(getString(R.string.tutorial_3));
+                insertData(getString(R.string.tutorial_2));
+                insertData(getString(R.string.tutorial_1));
+                insertData(getString(R.string.welcome_note));
                 displayAllNotes();
                 sharedPreferences.edit().putBoolean("first_run",false).commit();
             }else {
@@ -1407,8 +1654,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         adView.destroy();
         if (mService != null) {
             unbindService(mServiceConn);
-        }
-        if(mHelper != null){
             mHelper.disposeWhenFinished();
             mHelper = null;
         }
@@ -1421,8 +1666,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null;
     }
-
-
 
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -1457,11 +1700,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             startActivity(intent);
         }
         else if (id == R.id.unlock){
-            hideKeyboard();
-            //purchaseRemoveAds();
-            //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
-            isAdRemoved = true;
-            removeAd();
+            if(iapsetup){
+                hideKeyboard();
+                //purchaseRemoveAds();
+                //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
+                isAdRemoved = true;//
+                removeAd();//
+            }else {
+                Toast.makeText(getApplicationContext(),getString(R.string.purchase_unavailable),Toast.LENGTH_LONG).show();
+            }
+
         }
         else if (id == R.id.feedback){
             showFeedBackDialog();
@@ -1470,4 +1718,78 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        String sort = null;
+        setColorPreferences();
+        if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+            sort = "_id DESC";
+        }
+        if (args != null) {
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
+            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+        }
+        return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
+    }
+
+    public static String getThisPackageName(){
+        return MainActivity.class.getPackage().getName();
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if(data.getCount() == 0 && isInSearchMode){
+            EmptextView.setVisibility(View.VISIBLE);
+            EmptextView.setText(getString(R.string.empty_search_result));
+        }else if(data.getCount() == 0 && !isInSearchMode){
+            EmptextView.setVisibility(View.VISIBLE);
+            EmptextView.setText(R.string.empty_todolist);
+        }else {
+            EmptextView.setVisibility(View.GONE);
+            EmptextView.setText("");
+        }
+        todoListAdapter.changeCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        todoListAdapter.changeCursor(null);
+    }
+
+    //database handling
+    public int updateData(long id, String title){
+        if (!title.isEmpty()) {
+            ContentValues values = new ContentValues();
+            values.put(TITLE, title);
+            Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+            return getContentResolver().update(uri, values, null, null);
+        }else return -1;
+
+    }
+
+    public Uri insertData(String title) {
+        if (!title.isEmpty()) {
+            ContentValues values = new ContentValues();
+            values.put(TITLE, title);
+            return getContentResolver().insert(AppContract.Item.TODO_URI, values);
+        } else return null;
+    }
+
+    public void finishData(long id){
+        ContentValues cv = new ContentValues();
+        String data = todosql.getOneDataInTODO(Long.toString(id));
+        cv.put(TITLE,data);
+        System.out.println("finish data" + id);
+        deleteData(id);
+        getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
+    }
+
+    public void deleteData(long id){
+        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+        System.out.println("delete data" + id);
+        getContentResolver().delete(uri, null, null);
+        displayAllNotes();
+    }
 }
+

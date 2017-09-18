@@ -54,7 +54,7 @@
             android:summary="@string/text_size_content"
             android:title="@string/text_size_title">/>
         </Preference>
-        <ListPreference
+        <com.jackz314.todo.ThemeListPreference
             android:defaultValue="@array/theme_default_value"
             android:dialogIcon="@drawable/ic_color_lens_black_24dp"
             android:entries="@array/theme_entries"
@@ -122,6 +122,15 @@
             android:key="@string/restore_data_key"
             android:title="@string/restore_data_title"
             android:summary="@string/restore_data_content">/>
+        </Preference>
+        <Preference
+            android:id="@+id/restore_purchase"
+            android:enabled="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:key="@string/restore_purchase_key"
+            android:title="@string/restore_purchase_title"
+            android:summary="@string/restore_purchase_summary">/>
         </Preference>
     </com.jackz314.todo.MyPreferenceCategory>
 

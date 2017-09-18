@@ -62,6 +62,22 @@ public class ColorUtils {//modifies colors, input (int)color and (double)fractio
         }
     }
 
+    public static boolean colorIsSimilar(int color1, int color2){
+        int red1 = Color.red(color1);
+        int green1 = Color.green(color1);
+        int blue1 = Color.blue(color1);
+        int red2 = Color.red(color2);
+        int green2 = Color.green(color2);
+        int blue2 = Color.blue(color2);
+        double distance = Math.sqrt(Math.pow((red1 - red2),2) + Math.pow((green1 - green2),2) + Math.pow((blue1 - blue2),2));
+        System.out.println(distance + "DISTANCE");
+        if(distance < 100){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
     private static int darkenColor(int color, double fraction) {
         return (int)Math.max(color - (color * fraction), 0);
     }

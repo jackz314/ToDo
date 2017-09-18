@@ -25,6 +25,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.w3c.dom.Text;
 
+import static com.jackz314.todo.MainActivity.getMacAddr;
 import static com.jackz314.todo.R.color.colorPrimary;
 
 public class AboutActivity extends AppCompatActivity {
@@ -65,11 +66,12 @@ public class AboutActivity extends AppCompatActivity {
         introText.setTextColor(textColor);
         contactText.setTextColor(textColor);
         emailContact.setLinkTextColor(colorUtils.lighten(themeColor,0.2));
-        String systemInfo ="";
+        String systemInfo = "";
+        String macAddress = getMacAddr().replace(":","-");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            systemInfo = "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + ")";
+            systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
         }else {
-            systemInfo = "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + ") ";
+            systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             emailContact.setText(Html.fromHtml("<a href=\"mailto:"+"jackz314sci@gmail.com"+"?subject="+getString(R.string.email_subject)+"&body="+getString(R.string.email_content)+systemInfo+"\" >"+getString(R.string.email)+"</a>",Html.FROM_HTML_MODE_LEGACY));
