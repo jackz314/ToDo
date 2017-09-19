@@ -11,12 +11,12 @@
 
     <com.jackz314.todo.MyPreferenceCategory android:title="@string/history_category"
         android:id="@+id/hiscategory">
-        <SwitchPreference
+        <com.jackz314.todo.ColorSwitchPreference
             android:defaultValue="true"
             android:key="@string/main_history_switch"
             android:summary="@string/history_switch_content"
             android:title="@string/history_switch_title" />
-        <SwitchPreference
+        <com.jackz314.todo.ColorSwitchPreference
             android:defaultValue="false"
             android:key="@string/clear_history_switch_key"
             android:summary="@string/clear_history_switch_summary"
@@ -35,11 +35,10 @@
         </Preference>
     </com.jackz314.todo.MyPreferenceCategory>
 
-
     <com.jackz314.todo.MyPreferenceCategory
         android:title="@string/appearance_category"
         android:id="@+id/appcategory">
-        <SwitchPreference
+        <com.jackz314.todo.ColorSwitchPreference
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:defaultValue="true"
@@ -62,6 +61,13 @@
             android:key="@string/theme_selector_key"
             android:title="@string/theme_selector_title"
             android:summary="@string/custom"/>
+        <com.jackz314.todo.ColorSwitchPreference
+            android:defaultValue="false"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:key="@string/dark_theme_key"
+            android:title="@string/dark_theme_title"
+            android:summary="@string/dark_theme_content"/>
         <Preference
             android:id="@+id/theme_color"
             android:layout_width="wrap_content"

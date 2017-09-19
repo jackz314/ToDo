@@ -5,7 +5,6 @@ import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -32,22 +31,25 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.RemoteException;
-import android.support.annotation.ColorInt;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
-import android.support.v4.widget.SimpleCursorAdapter;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
+import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Editable;
 import android.text.Spannable;
@@ -56,27 +58,16 @@ import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.TextAppearanceSpan;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
-import android.view.View;
-import android.support.design.widget.NavigationView;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AbsListView;
-import android.widget.AdapterView;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -96,35 +87,24 @@ import com.jackz314.todo.util.IabResult;
 import com.jackz314.todo.util.Inventory;
 import com.jackz314.todo.util.Purchase;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.NetworkInterface;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static android.R.attr.data;
-import static com.jackz314.todo.dtb.HISTORY_TABLE;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
-import static com.jackz314.todo.dtb.TODO_TABLE;
 
 //   ┏┓　　　┏┓
 //┏┛┻━━━┛┻┓
@@ -953,7 +933,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
          */
         LayoutInflater inflater = LayoutInflater.from(this);
         View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        //navigationView.setItemTextColor(ColorStateList.valueOf(textColor));
+        if(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false)){
+            navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#fafafa")));
+        }else {
+            navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
+        }
         navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
         int[] themeColors = {backgroundColor,themeColor};
         Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
@@ -978,7 +962,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         View listView= LayoutInflater.from(MainActivity.this).inflate(R.layout.todolist,null);
         input.setHintTextColor(colorUtils.lighten(textColor,0.5));
         input.setLinkTextColor(themeColor);
-        input.setHighlightColor(colorUtils.lighten(themeColor,0.2));
+        input.setHighlightColor(colorUtils.lighten(themeColor,0.3));
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         int[] colors = {0, colorUtils.lighten(textColor,0.6), 0};
         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));

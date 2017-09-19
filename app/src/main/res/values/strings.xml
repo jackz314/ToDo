@@ -71,6 +71,7 @@
     <string name="clr_interval_dialog_title">History clear frequency</string>
     <string name="clr_interval_dialog_Message">Pick a time interval</string>
     <string name="disabled">Disabled</string>
+    <string name="one_day">1 Day(s)</string>
     <string name="custom">Custom</string>
     <string name="custom_theme_key">custom_theme_key</string>
     <string name="selection_mode_title">" Selected"</string>
@@ -188,7 +189,7 @@
     <string name="theme_selector_key">theme_selector_key</string>
     <string name="theme_selector_summary_key">theme_selector_summary_key</string>
     <string name="theme_selector_value_key">theme_selector_value_key</string>
-    <string name="theme_selector_default_summary">Dark Blue</string>
+    <string name="theme_selector_default_summary">Indigo</string>
     <string name="theme_selector_position_key">theme_selector_position_key</string>
     <string name="restore_purchase_key">restore_purchase_key</string>
     <string name="restore_purchase_title">Restore purchase</string>
@@ -200,13 +201,18 @@
     <string name="reporting_feedback_title">Sending feedback…</string>
     <string name="please_wait">Please wait…</string>
     <string name="todo_copied">Copied to Clipboard!</string>
+    <string name="dark_theme_key">dark_theme_key</string>
+    <string name="dark_theme_title">Dark theme</string>
+    <string name="dark_theme_content">Change to a darker theme</string>
 
     <string-array name="theme_default_value">
         <item>1</item>
     </string-array>
 
     <string-array name="theme_entries">
-        <item>Material Dark Blue</item>
+
+        <item>Starry Grey</item>
+        <item>Material Indigo</item>
         <item>Material Red</item>
         <item>Material Green</item>
         <item>Material Cyan</item>
@@ -224,11 +230,12 @@
         <item>Coffee Brown</item>
         <item>Navy Blue</item>
         <item>Wine Red</item>
-        <item>Starry Grey</item>
         <item>Piano Black</item>
     </string-array>
 
     <string-array name="theme_entries_value">
+
+        <item>#413f41</item>
         <item>#3F51B5</item>
         <item>#d50000</item>
         <item>#64dd17</item>
@@ -247,7 +254,6 @@
         <item>#753d01</item>
         <item>#020669</item>
         <item>#870032</item>
-        <item>#413f41</item>
         <item>#1d1b1d</item>
 
     </string-array>
