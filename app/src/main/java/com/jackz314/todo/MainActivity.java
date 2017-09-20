@@ -1515,8 +1515,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         SearchView searchView = (SearchView) menu.findItem(R.id.todo_search).getActionView();
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
         searchView.setIconifiedByDefault(true);
+        searchView.setMaxWidth(Integer.MAX_VALUE);
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
-        hintText.setSpan( new ForegroundColorSpan(ColorUtils.darken(Color.WHITE,0.5)), 0, hintText.length(), 0 );
+        if(colorUtils.determineBrightness(themeColor) > 127){//dark themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
+        }else {//light themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7F000000")), 0, hintText.length(), 0 );
+        }
         searchView.setQueryHint(hintText);
         MenuItem searchMenuIem = menu.findItem(R.id.todo_search);
         MenuItemCompat.setOnActionExpandListener(searchMenuIem, new MenuItemCompat.OnActionExpandListener() {
@@ -1546,7 +1551,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            Bundle bundle = new Bundle();
 
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -1560,11 +1564,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return false;
             }
 
-            private void query(String text) {
-                bundle.putString("QUERY", text);
-                searchText = text;
-                getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
-            }
+
         });
         return true;
     }
@@ -1585,6 +1585,28 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         return super.onOptionsItemSelected(item);
     }*/
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            handleVoiceSearch();
+        }
+        super.onNewIntent(intent);
+    }
+
+    private void query(String text) {
+        Bundle bundle = new Bundle();
+        bundle.putString("QUERY", text);
+        searchText = text;
+        getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
+    }
+
+    private void handleVoiceSearch(){
+        onSearchRequested();
+        Intent intent = getIntent();
+        String query = intent.getStringExtra(SearchManager.QUERY);
+        query(query);
+    }
 
     public void onResume(){
         if(!input.getText().toString().equals("") && input.getVisibility()==View.VISIBLE) showKeyboard();
