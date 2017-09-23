@@ -1214,7 +1214,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         ,ColorUtils.lighten(themeColorNum,0.32) //enabled
                 }
         );
-        //// TODO: 2017/8/29 CHANGE COLOR OF SWITCHPREFERENCE DYNAMICALLY
         if(pref.isEnabled()){
             //pref.setWidgetLayoutResource(R.layout.custom_switchpreference);
             Switch customSwitch = (Switch)getLayoutInflater().inflate(R.layout.custom_switchpreference,null);
