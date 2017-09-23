@@ -207,7 +207,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 selectedId.clear();
                                 selectedContent.clear();
                                 unSelectAll = true;
-                                historyList.getAdapter().notifyDataSetChanged();
+                                //historyList.getAdapter().notifyDataSetChanged();
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
                             }else if(selectAllBox.isChecked()){//check all
@@ -232,7 +232,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectAll = true;
-                                historyList.getAdapter().notifyDataSetChanged();
+                                //historyList.getAdapter().notifyDataSetChanged();
                                 Cursor cursor = todosql.getHistory();
                                 cursor.moveToFirst();
                                 do{
@@ -824,8 +824,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, id);
         getContentResolver().delete(uri, null, null);
-        historyList.getAdapter().notifyDataSetChanged();
-        getSupportLoaderManager().restartLoader(234,null,this);
+        //historyList.getAdapter().notifyDataSetChanged();
+        //getSupportLoaderManager().restartLoader(234,null,this);
         displayAllNotes();
         Bundle bundle = new Bundle();
         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "delete_history");

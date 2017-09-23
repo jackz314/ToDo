@@ -1277,11 +1277,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         int[] themeColors = {backgroundColor,themeColor};
         Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
         drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
+        Drawable navHeadImage = getDrawable(R.drawable.nav_header);
+        navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.MULTIPLY);
         View navHeader = navigationView.getHeaderView(0);
         TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
         navHeadText.setTextColor(textColor);
+        navHeader.setBackground(navHeadImage);
         //navHeadText.setTextSize(textSize);
-        navHeader.setBackground(drawHeadBG);
         //navHeader.setBackgroundColor(Color.RED);
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         toolbar.setBackgroundColor(themeColor);
@@ -1890,7 +1892,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     //TODO CHANGE COLORSELECTOR
     //TODO FIX THEMESELECTOR SUMMMARY TEXT COLOR
-    //TODO FIX HISTORY LIST BLINK
     //TODO SET SEARCHVIEW ANIMATION
     //TODO OPTIMIZE ALL CODE
     //TODO PROGUARD
