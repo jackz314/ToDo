@@ -14,7 +14,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.RadioButton;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -23,15 +22,18 @@ import java.util.Arrays;
  */
 
 public class ThemeListPreference extends ListPreference implements AdapterView.OnItemClickListener {
-
     Context mContext;
+    int textColor;
     public ThemeListPreference(Context context, AttributeSet attrs) {
         super(context, attrs);
         mContext =context;
+        //sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
     }
 
     public ThemeListPreference(Context context) {
         super(context);
+        //sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+        //textColor = sharedPreferences.getInt("text_color_key",Color.parseColor("#121212"));
         mContext = context;
     }
 
@@ -66,7 +68,10 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
 
             @Override
             public View getView(final int position, View row, ViewGroup parent) {
-
+                //sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+                //Spannable spannable = new SpannableString(getSummary().toString());
+                //spannable.setSpan( new ForegroundColorSpan(sharedPreferences.getInt("text_color_key",Color.parseColor("#121212"))), 0, spannable.length(), 0 );
+                //setSummary(spannable);
                 if (row == null) {
                     row = LayoutInflater.from(getContext()).inflate(R.layout.theme_selector_layout, parent, false);
                 }
@@ -109,220 +114,6 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
                         }
                 );
                 radioButton.setButtonTintList(colorStateList);
-                /*
-                switch (position) {
-                    case 0:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        //disabled
-                                        ,darkblue //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 1:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,red //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 2:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,green //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 3:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,cyan //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 4:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,orange //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 5:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,yellow //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 6:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,blue //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 7:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,pink //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 8:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,brown//enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 9:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,cyan_dark //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 10:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,brown_dark //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 11:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,purple //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    case 12:
-                        colorStateList = new ColorStateList(
-                                new int[][]{
-
-                                        new int[]{-android.R.attr.state_enabled}, //disabled
-                                        new int[]{android.R.attr.state_enabled} //enabled
-                                },
-                                new int[] {
-
-                                        Color.parseColor("#fafafa") //disabled
-                                        ,black //enabled
-
-                                }
-                        );
-                        radioButton.setButtonTintList(colorStateList);
-                        break;
-                    default:
-                        throw new IllegalStateException("Undefined theme");
-                }
-*/
                 return super.getView(position, row, parent);
             }
         };
@@ -330,6 +121,7 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
 
         super.onPrepareDialogBuilder(builder);
     }
+
 
 
     @Override

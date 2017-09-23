@@ -19,4 +19,11 @@
     <color name="black">#000000</color>
     <color name="divider_color">#1fffffff</color>
 
+    <!--Mock Google Logo Colors(for voice recognition)-->
+    <color name="color1">#3164d7</color>
+    <color name="color2">#d92d29</color>
+    <color name="color3">#eeaa10</color>
+    <color name="color4">#3164d7</color>
+    <color name="color5">#2e9641</color>
+
 </resources>
