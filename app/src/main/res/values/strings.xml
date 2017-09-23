@@ -204,6 +204,9 @@
     <string name="dark_theme_key">dark_theme_key</string>
     <string name="dark_theme_title">Dark theme</string>
     <string name="dark_theme_content">Change to a darker theme</string>
+    <string name="voice_search_prompt">Say something…</string>
+    <string name="speech_to_text_failed">Google voice recognizing service not installed or no internet connection, please try again later!</string>
+    <string name="voice_permission_request">We\'ll need the record audio permission to enable voice recognition!</string>
 
     <string-array name="theme_default_value">
         <item>1</item>
@@ -294,4 +297,13 @@
     <string name="reset_appearance_content">Reset all Appearance settings to default</string>
     <string name="reset_appearance_title">Reset</string>
     <string name="title_activity_history" translatable="false">historyActivity</string>
+
+    <!-- Resources for animations, don't change anything here! -->
+    <string name="plus_name">plus</string>
+    <string name="send_name">send</string>
+    <string name="done_name">done</string>
+    <string name="plus_path_data">M 5 11 L 11 11 L 11 5 L 13 5 L 13 11 L 19 11 L 19 12 L 19 13 L 19 13 L 13 13 L 13 19 L 11 19 L 11 13 L 5 13 L 5 11</string>
+    <string name="send_path_data">M 14.604 15.6 L 18.802 13.8 L 23 12 L 2.01 3 L 2 10 L 17 12 L 14 12.4 L 11 12.8 L 8 13.2 L 5 13.6 L 2 14 L 2.01 21 L 6.208 19.2 L 10.406 17.4 L 14.604 15.6</string>
+    <string name="done_path_Data">M 3.4 13.4 L 9 19 L 12 16 L 15 13 L 18 10 L 21 7 L 19.6 5.6 L 17.48 7.72 L 15.36 9.84 L 13.24 11.96 L 11.12 14.08 L 9 16.2 L 9 16.2 L 4.8 12 L 3.4 13.4</string>
+
 </resources>

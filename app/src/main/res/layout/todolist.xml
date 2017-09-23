@@ -33,6 +33,7 @@
                 android:layout_gravity="center"
                 android:layout_weight="1"
                 android:gravity="start"
+                android:layout_marginRight="8dp"
                 android:visibility="gone" />
 
             <TextView

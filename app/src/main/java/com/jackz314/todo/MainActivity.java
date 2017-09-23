@@ -1,6 +1,9 @@
 package com.jackz314.todo;
 
 
+import android.Manifest;
+import android.animation.LayoutTransition;
+import android.animation.ObjectAnimator;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.ClipData;
@@ -13,6 +16,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.database.Cursor;
@@ -22,6 +26,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.ConnectivityManager;
@@ -31,11 +36,15 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Vibrator;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
@@ -65,13 +74,17 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.vending.billing.IInAppBillingService;
+import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -81,6 +94,8 @@ import com.google.firebase.crash.FirebaseCrash;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
+import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 import com.jackz314.todo.util.IabBroadcastReceiver;
 import com.jackz314.todo.util.IabHelper;
 import com.jackz314.todo.util.IabResult;
@@ -98,10 +113,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
@@ -137,28 +154,33 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     int exit=0,doubleClickCout = 0;
     private static final String[] PROJECTION = new String[]{ID, TITLE};
     private static final String SELECTION = TITLE + " LIKE ?";
-    boolean justex = true;
+    boolean justex = false;
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     boolean isConnected = false;
     boolean justDoubleClicked = false;
+    boolean selectAll = false, unSelectAll = false;
     SharedPreferences sharedPreferences;
+    int resultCount = 0, cursorPos = 0;
     public String searchText;
+    String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
-    int firstVisibleItem,firstItemDiff;
     CoordinatorLayout main;
     SearchView searchView;
-    ColorUtils colorUtils;
+    Boolean noInterruption = true;
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
-    RecyclerView.LayoutManager todoLayoutManager;
     ActionBarDrawerToggle mDrawerToggle;
     TextView EmptextView, selectionTitle;
     CheckBox multiSelectionBox;
+    SpeechRecognizer speechRecognizer;
     AdView adView;
+    boolean isAdd = true;
     NavigationView navigationView;
+    ProgressFloatingActionButton proFab;
+    ProgressBar fabProgressBar;
     Menu menuNav;
     MenuItem navRemoveAD;
     IInAppBillingService mService;
@@ -177,6 +199,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        System.out.println("oncreatecalled");
         adView= (AdView)findViewById(R.id.bannerAdView);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         AdRequest adRequest = new AdRequest.Builder().build();
@@ -193,9 +216,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         EmptextView = (TextView)findViewById(R.id.emptyText);
         todoList = (RecyclerView) findViewById(R.id.todolist);
         todoList.setHasFixedSize(true);
-        fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab = (FloatingActionButton)findViewById(R.id.fab);
+        proFab = (ProgressFloatingActionButton)findViewById(R.id.progress_fab);
+        fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
+        final RecognitionProgressView recognitionProgressView;
         payload = "0x397821dc97276";
         setSupportActionBar(toolbar);
         // navheadText = (TextView)navigationView.findViewById(R.id.navHeadText);
@@ -262,7 +290,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 if(input.isCursorVisible()||input.isInEditMode()||input.isInputMethodTarget()||input.isFocused()||input.hasFocus()){
                     hideKeyboard();
                     if(input.getText().toString().equals("")&&input.getText().toString().isEmpty()){
-                        fab.setImageResource(R.drawable.ic_add_black_24dp);
+                        if(!isAdd){
+                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                            fab.setImageDrawable(d);
+                            isAdd = true;
+                            d.start();
+                        }
                         hideKeyboard();
                         input.setVisibility(View.GONE);
                     }
@@ -270,39 +303,193 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return false;
             }
         });
-        int[] colors = {0, colorUtils.lighten(textColor,0.6), 0}; // red for the example
-        //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
-        //todoList.setDividerHeight(2);
-        //todoList.setDivider(new ColorDrawable(colorUtils.lighten(textColor,0.5)));
-        //long click listener replaced by context menu due to suitable design concern
-        /*todoList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        recognitionProgressView.setVisibility(View.GONE);
+        recognitionProgressView.setSpeechRecognizer(speechRecognizer);
+        recognitionProgressView.setRecognitionListener(new RecognitionListenerAdapter() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                deleteNote(String.valueOf(id),id);
-                if(!modifyId.getText().toString().equals("")){
-                    if(modifyId.getText().toString().equals(String .valueOf(id))){
-                        modifyId.setText("");
-                        input.setText("");
-                        input.setVisibility(View.GONE);
-                        hideKeyboard();
-                        todoList.clearFocus();
-                        adView.requestFocus();
-                        fab.setImageResource(R.drawable.ic_add_black_24dp);
-                        Bundle bundle = new Bundle();
-                        bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "delete_notes");
-                        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "delete notes");
-                        bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
-                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+            public void onBeginningOfSpeech() {
+
+            }
+            public void onReadyForSpeech(Bundle params)
+            {
+            }
+            public void onRmsChanged(float rmsdB)
+            {
+            }
+            public void onBufferReceived(byte[] buffer)
+            {
+            }
+            public void onEndOfSpeech()
+            {
+
+            }
+            public void onError(int error)
+            {
+                recognitionProgressView.setVisibility(View.GONE);
+                proFab.setVisibility(View.VISIBLE);
+                fab.setVisibility(View.VISIBLE);
+                input.setEnabled(true);
+                //proFab.setVisibility(View.VISIBLE);
+                recognitionProgressView.stop();
+                recognitionProgressView.play();
+                if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
+                    if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_DENIED){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                        ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
+                    }
+
+                }
+                //Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
+            }
+            public void onResults(Bundle results)
+            {
+                String str = "";
+                input.setEnabled(false);
+                ArrayList data = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                if (data != null) {
+                    input.setEnabled(false);
+                    if(oldResult.isEmpty()){
+                        String originalText = input.getText().toString();
+                        if(!originalText.isEmpty()){
+                            Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
+                            if( input.getSelectionStart() == -1 || input.getSelectionStart()-1 == input.getText().toString().length() - 1){//cursor at last or not exist
+                                if(!Character.isWhitespace(originalText.charAt(originalText.length() - 1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(originalText.length() - 1)))){
+                                    input.append(" ");
+                                }
+                            }else {
+                                if(!Character.isWhitespace(originalText.charAt(input.getSelectionStart()-1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(input.getSelectionStart()-1)))){
+                                    input.getText().insert(input.getSelectionStart()," ");
+                                }
+                            }
+                        }
+                    }
+                    str = (String) data.get(0);
+                    Log.i("VOICERECOGNITION", ">"+str+"<");
+                    if(!oldResult.isEmpty()){
+                        String originalText = input.getText().toString();
+                        if(oldResult.length() <= str.length()){
+                            if(originalText.contains(oldResult)){
+                                input.getText().replace(originalText.indexOf(oldResult),originalText.indexOf(oldResult) + oldResult.length(),str);
+                            }
+                            //String newText = originalText.replace(oldResult,str);
+                        }else {
+                            input.append(str);
+                        }
+                    }else {
+                        input.getText().insert(input.getSelectionStart(),str);
+                    }
+                    input.setSelection(input.getSelectionStart());
+                    if(input.getSelectionStart() < input.getText().length()-1){
+                        if(!Character.isWhitespace(input.getText().charAt(input.getSelectionStart())) || Pattern.matches("\\p{Punct}", String.valueOf(input.getText().charAt(input.getSelectionStart())))){
+                            input.getText().insert(input.getSelectionStart()," ");
+                        }
                     }
                 }
-                return false;
+                oldResult = "";
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        recognitionProgressView.setVisibility(View.GONE);
+                        proFab.setVisibility(View.VISIBLE);
+                        recognitionProgressView.stop();
+                        recognitionProgressView.play();
+                    }
+                },500);
+                Handler delayHandler = new Handler();
+                noInterruption = true;
+                fabProgressBar.setVisibility(View.VISIBLE);
+                fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                fabProgressBar.setProgress(0);
+                fab.setVisibility(View.VISIBLE);
+                //fabProgressBar.setSecondaryProgress(100);
+                fakeProgress(1500);//fake progress bar for 2000ms
+                delayHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if(noInterruption && fab.getVisibility() == View.VISIBLE){
+                            fab.performClick();
+                            fabProgressBar.clearAnimation();
+                            fabProgressBar.setVisibility(View.INVISIBLE);
+                        }
+                    }
+                },1501);
+                input.setEnabled(true);
+
             }
-        });*/
+            public void onPartialResults(Bundle partialResults)
+            {
+                ArrayList<String> partialResultsList = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                String result = partialResultsList.get(0);
+
+                if (result.isEmpty()) {
+                } else {
+                    input.setEnabled(false);
+                    if(oldResult.isEmpty()){
+                        String originalText = input.getText().toString();
+                        if(!originalText.isEmpty()){
+                            Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
+                            if( input.getSelectionStart() == -1 || input.getSelectionStart() == input.getText().toString().length() - 1){//cursor at last or not exist
+                                if(!Character.isWhitespace(originalText.charAt(originalText.length() - 1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(originalText.length() - 1)))){
+                                    input.append(" ");
+                                }
+                            }else {
+                                if (input.getSelectionStart() == -1){
+                                    input.append(" ");
+                                }else{
+                                    if(!Character.isWhitespace(originalText.charAt(input.getSelectionStart()-1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(input.getSelectionStart()-1)))){
+                                        input.getText().insert(input.getSelectionStart()," ");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // resultCount++;
+                    Log.i("VOICERECOGNITION", "|"+result+"|");
+                    //Handler handler = new Handler();
+                    //   handler.post(new Runnable() {
+                    //   @Override
+                    // public void run() {
+                    //int currentCursorPos = input.getSelectionStart()-1;
+                    // System.out.println(currentCursorPos);
+                    if(input.getSelectionStart() == -1){
+                        if(result.toLowerCase().contains(oldResult.toLowerCase())){
+                            input.append(result.substring(oldResult.length()));
+                        }else {
+                            input.getText().replace(input.getText().length()-oldResult.length(),input.getText().length(),result);
+                        }
+                        input.setSelection(input.getText().length()-1);
+                    }else {
+                        if(result.toLowerCase().contains(oldResult.toLowerCase())){
+                            input.getText().insert(input.getSelectionStart(),result.substring(oldResult.length()));
+                            //input.setSelection(input.getSelectionStart() + result.length()-1-oldResult.length()-1);
+
+                        }else {
+                            input.getText().replace(input.getSelectionStart()-oldResult.length(),input.getSelectionStart(),result);
+                            //input.setSelection(input.getSelectionStart()+result.length()-1);
+                        }
+                    }
+                    //input.moveCursorToVisibleOffset();
+                    //  }
+                    //  });
+                    oldResult = result;
+                    //resultCount = 0;
+                }
+            }
+            public void onEvent(int eventType, Bundle params)
+            {
+            }
+        });
+        recognitionProgressView.play();
         doubleClickCout = 0;
         ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
+                unSelectAll = false;
+                selectAll = false;
                 if (isInSelectionMode) {
                     multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
@@ -322,7 +509,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }*/
                     // Toast.makeText(getApplicationContext(),selectedId.toString(),Toast.LENGTH_SHORT).show();
                 }else {
-                    doubleClickCout++;
+                    /*doubleClickCout++;
                     Handler handler = new Handler();
                     Runnable r = new Runnable() {
                         @Override
@@ -362,24 +549,34 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         }).show();
                         justDoubleClicked = true;
                         doubleClickCout = 0;
-                    }else if (doubleClickCout == 1) {
+                    }*/
+                    //else if (doubleClickCout == 1) {
                         //Single click
+                        if(isInSearchMode){
+                            setOutOfSearchMode();
+                        }
                         modifyId.setText(String.valueOf(id));
-                        fab.setImageResource(R.drawable.ic_send_black_24dp);
+                        if(isAdd){
+                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                            fab.setImageDrawable(d);
+                            isAdd = false;
+                            d.start();
+                        }
                         input.setVisibility(View.VISIBLE);
                         input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
-                        handler.postDelayed(r,250);//double click interval
-                        (new Handler()).postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                if(!justDoubleClicked){
-                                    input.requestFocus();
-                                    todoList.smoothScrollBy(view.getTop(),300);
-                                }
-                            }
-                        }, 250);
-                        justDoubleClicked = false;
-                    }
+                        input.requestFocus();
+                        todoList.smoothScrollBy(view.getPaddingTop(),300);
+                        //handler.postDelayed(r,250);//double click interval
+                        //(new Handler()).postDelayed(new Runnable() {
+                          //  @Override
+                         //   public void run() {
+                              //  if(!justDoubleClicked){
+
+                             //   }
+                           // }
+                        //}, 250);
+                        //justDoubleClicked = false;
+                   // }
                 }
             }
         });
@@ -388,6 +585,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
+                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                v.vibrate(30);
                 if(isInSelectionMode){
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(String.valueOf(id)));
@@ -395,13 +594,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
                     setOutOfSelectionMode();
-                    fab.setVisibility(View.INVISIBLE);
+                    proFab.setVisibility(View.GONE);
                     isInSelectionMode = true;
                     getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
-
                     selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -430,12 +628,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
+                            unSelectAll = false;
+                            selectAll = false;
                             if(!selectAllBox.isChecked()){//uncheck all
                                 selectAllBox.setChecked(false);
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
+                                unSelectAll = true;
+                                todoList.getAdapter().notifyDataSetChanged();
                             }else if(selectAllBox.isChecked()){//check all
                                 selectAllBox.setChecked(true);
                                 if(selectedId.size()==0){
@@ -452,15 +654,19 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                         }
                                     });
                                 }
-                                Long id;
+                                long id;
                                 selectedId.clear();
                                 selectedContent.clear();
-                                for(int i = 0; i < todoList.getAdapter().getItemCount(); i++){//add all the data
-                                    id = todoList.getAdapter().getItemId(i);
+                                selectAll = true;
+                                todoList.getAdapter().notifyDataSetChanged();
+                                Cursor cursor = todosql.getData();
+                                cursor.moveToFirst();
+                                do{
+                                    id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0,id);
                                     String data = todosql.getOneDataInTODO(Long.toString(id));
                                     selectedContent.add(0,data);
-                                }
+                                }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
                                 selectionTitle.setText(count + getString(R.string.selection_mode_title));
                             }
@@ -492,9 +698,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         input.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Toast.makeText(getApplicationContext(),"clicked",Toast.LENGTH_SHORT).show();
                 input.requestFocus();
+                interruptAutoSend();
                 showKeyboard();
-                fab.setImageResource(R.drawable.ic_send_black_24dp);
+                if(isAdd){
+                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                    fab.setImageDrawable(d);
+                    isAdd = false;
+                    d.start();
+                }
             }
         });
 
@@ -515,13 +728,36 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             });
         }
 
+        input.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                interruptAutoSend();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                interruptAutoSend();
+            }
+        });
+
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 setOutOfSelectionMode();
                 String inputText=input.getText().toString().trim();
+                interruptAutoSend();
                 if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
-                    fab.setImageResource(R.drawable.ic_send_black_24dp);
+                    if(isAdd){
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                        fab.setImageDrawable(d);
+                        isAdd = false;
+                        d.start();
+                    }
                     input.setVisibility(View.VISIBLE);
                     showKeyboard();
                     input.requestFocus();
@@ -538,7 +774,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         successModify = updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
                         success = insertData(input.getText().toString());
-                        int[] colors = {0, colorUtils.lighten(textColor,0.6), 0};
+                        int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
                         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
                         //todoList.setDividerHeight(2);
                         todoList.smoothScrollToPosition(0);
@@ -550,7 +786,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }if(success != null || successModify != -1){
                         hideKeyboard();
                         displayAllNotes();
-                        fab.setImageResource(R.drawable.ic_add_black_24dp);
+                        if(!isAdd){
+                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                            fab.setImageDrawable(d);
+                            isAdd = true;
+                            d.start();
+                        }
                         //input.clearFocus();
                         input.setVisibility(View.GONE);
                         input.setText("");
@@ -561,9 +802,42 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }
                 }
                 /*Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();*/
+
             }
         });
 
+        fab.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                vibrator.vibrate(20);
+                //speechRecognizer.stopListening();
+                interruptAutoSend();
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.getDefault().getLanguage().trim());
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Say something");
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                //if(input.getVisibility() != View.VISIBLE){
+                    //fab.setImageResource(le(R.drawable.avd_plus_to_sed));
+                //}
+                proFab.setVisibility(View.GONE);
+                recognitionProgressView.setVisibility(View.VISIBLE);
+                input.setVisibility(View.VISIBLE);
+                input.setEnabled(false);
+                fab.setVisibility(View.GONE);
+                if(isAdd){
+                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                    fab.setImageDrawable(d);
+                    isAdd = false;
+                    d.start();
+                }
+                speechRecognizer.startListening(intent);
+                return true;
+            }
+        });
 
         // Set the drawer toggle as the DrawerListener
         mDrawerLayout.setDrawerListener(mDrawerToggle);
@@ -589,7 +863,25 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         drawer.setDrawerListener(toggle);
         toggle.syncState();
 
+        recognitionProgressView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                recognitionProgressView.setVisibility(View.GONE);
+                proFab.setVisibility(View.VISIBLE);
+                speechRecognizer.stopListening();
+            }
+        });
+
         navigationView.setNavigationItemSelectedListener(this);
+
+        input.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                interruptAutoSend();
+                return false;
+            }
+        });
+
         input.setOnFocusChangeListener(new View.OnFocusChangeListener(){
             @Override
             public void onFocusChange(View v, boolean hasFocus){
@@ -610,7 +902,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         if(input.getText().toString().equals("")||input.getText().toString().isEmpty()){
                             //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
                             modifyId.setText("");
-                            fab.setImageResource(R.drawable.ic_add_black_24dp);
+                            if(!isAdd){
+                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                                fab.setImageDrawable(d);
+                                isAdd = true;
+                                d.start();
+                            }
                             //input.clearFocus();
                             hideKeyboard();
                             input.setVisibility(View.GONE);
@@ -621,8 +918,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
     }//--------end of onCreate!
-
-
 
     IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
@@ -649,6 +944,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return isAdRemoved;
     }
 
+    public void fakeProgress(int ms){
+        ObjectAnimator animator = ObjectAnimator.ofInt(fabProgressBar,"progress",0,1000);
+        animator.setDuration(ms);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.start();
+
+    }
+
     public void removeAd(){
         if(isAdRemoved){
             adView.destroy();
@@ -664,8 +967,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public void setOutOfSearchMode(){
-        fab.setVisibility(View.VISIBLE);
+        proFab.setVisibility(View.VISIBLE);
         isInSearchMode = false;
+        getSupportLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
         hideKeyboard();
     }
@@ -685,10 +989,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void setOutOfSelectionMode(){
         isInSelectionMode = false;
-        fab.setVisibility(View.VISIBLE);
+        proFab.setVisibility(View.VISIBLE);
         getSupportLoaderManager().restartLoader(123,null,this);
         selectedId.clear();
         selectedContent.clear();
+        selectAll = false;
+        unSelectAll = false;
         displayAllNotes();
         selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
         selectionToolBar.getMenu().clear();
@@ -873,7 +1179,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     return false;
                 }
             });
-        }if(selectedId.size() == todoList.getAdapter().getItemCount()){
+        }if(selectedId.size() == todosql.getData().getCount()){
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -882,9 +1188,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        selectAllBox.setChecked(false);
         String data = todosql.getOneDataInTODO(Long.toString(id));
         selectedContent.remove(selectedContent.indexOf(data));
+        if(selectedId.size() < todosql.getData().getCount()){
+            selectAllBox.setChecked(false);
+        }
         if (selectedId.size() == 0) {
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
             selectionToolBar.getMenu().clear();
@@ -931,9 +1239,36 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         /*
         set colors
          */
+        int[] colorsBACKUP = {// logo color
+                ContextCompat.getColor(this, R.color.color1),
+                ContextCompat.getColor(this, R.color.color2),
+                ContextCompat.getColor(this, R.color.color3),
+                ContextCompat.getColor(this, R.color.color4),
+                ContextCompat.getColor(this, R.color.color5)
+        };
+
+        int[] colors = {// logo color
+                 ColorUtils.lighten(themeColor, 0.3),
+                 ColorUtils.lighten(themeColor, 0.2),
+                 ColorUtils.lighten(themeColor, 0.15),
+                 ColorUtils.lighten(themeColor, 0.25),
+                 ColorUtils.lighten(themeColor, 0.4)
+        };
+
+        //int[] heights = { 20, 24, 18, 23, 16 };
+        int[] heights = { 30, 36, 27, 35, 24 };
+
+        RecognitionProgressView recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        recognitionProgressView.setColors(colors);
+        recognitionProgressView.setBarMaxHeightsInDp(heights);
+        recognitionProgressView.setCircleRadiusInDp(3);
+        recognitionProgressView.setSpacingInDp(3);
+        recognitionProgressView.setIdleStateAmplitudeInDp(2);
+        recognitionProgressView.setRotationRadiusInDp(12);
+        recognitionProgressView.play();
         LayoutInflater inflater = LayoutInflater.from(this);
-        View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        if(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false)){
+        //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
+        if(ColorUtils.determineBrightness(backgroundColor) < 0.5){
             navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#fafafa")));
         }else {
             navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
@@ -956,15 +1291,23 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         Window window = this.getWindow();
         window.setStatusBarColor(themeColor);
         window.setNavigationBarColor(themeColor);
-        EmptextView.setTextColor(colorUtils.lighten(textColor,0.6));
+        if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
+            EmptextView.setTextColor(Color.parseColor("#7FFFFFFF"));
+        }else {//bright
+            EmptextView.setTextColor(Color.parseColor("#61000000"));
+
+        }
         todoList.setBackgroundColor(backgroundColor);
         navigationView.setBackgroundColor(backgroundColor);
         View listView= LayoutInflater.from(MainActivity.this).inflate(R.layout.todolist,null);
-        input.setHintTextColor(colorUtils.lighten(textColor,0.5));
+        if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
+            input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.5));
+        }else {
+            input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.38));
+        }
         input.setLinkTextColor(themeColor);
-        input.setHighlightColor(colorUtils.lighten(themeColor,0.3));
+        input.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-        int[] colors = {0, colorUtils.lighten(textColor,0.6), 0};
         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
         //todoList.setDividerHeight(2);
 }
@@ -1003,7 +1346,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         final EditText edt = (EditText) dialogView.findViewById(R.id.edit1);
         edt.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         edt.setTextColor(textColor);
-        edt.setHighlightColor(colorUtils.lighten(themeColor,0.2));
+        edt.setHighlightColor(ColorUtils.lighten(themeColor,0.2));
         setCursorColor(edt,themeColor);
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.feedback_title))
@@ -1148,6 +1491,27 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode){
+            case 0:{
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_corporation),Toast.LENGTH_SHORT).show();
+                    fab.performLongClick();
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+
+                } else {
+                    Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                break;
+            }
+        }
+    }
+
     public void purchaseRemoveAds(){
         try {
             new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
@@ -1240,7 +1604,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
 
         @Override
+        public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+            if(isInSelectionMode) return 0; //prevent swipe in selection mode
+            return super.getSwipeDirs(recyclerView, viewHolder);
+        }
+
+        @Override
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            unSelectAll = false;
+            selectAll = false;
+            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
+                removeSelectedId(viewHolder.getItemId());
+            }
             final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
             finishData(viewHolder.getItemId());
             Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
@@ -1289,8 +1664,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     };
 
-
-
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
             System.out.println("null called");
@@ -1304,29 +1677,38 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
                     String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
                     holder.todoText.setTextColor(textColor);
-                    holder.cardView.setCardBackgroundColor(colorUtils.darken(backgroundColor,0.01));
+                    holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
                     if(isInSearchMode){
                         Spannable spannable = new SpannableString(text);
                         ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
-                        TextAppearanceSpan highlightSpan = new TextAppearanceSpan(null, Typeface.BOLD, -1, highlightColor, null);
-                        int startPos = text.indexOf(searchText);
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
-                        //spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), startPos, startPos + searchTextLow.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        do{
-                            int start = Math.min(startPos, textLow.length());
-                            int end = Math.min(startPos + searchTextLow.length(), textLow.length());
-                            startPos = textLow.indexOf(searchTextLow,end);
-                            spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        }while (startPos > 0);
-                        holder.todoText.setText(spannable);
+                        int startPos = textLow.indexOf(searchTextLow);
+                        if(startPos <0){
+                            return;
+                        }
+                        if(!(startPos <0)){
+                            do{
+                                int start = Math.min(startPos, textLow.length());
+                                int end = Math.min(startPos + searchTextLow.length(), textLow.length());
+                                startPos = textLow.indexOf(searchTextLow,end);
+                                spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            }while (startPos > 0);
+                            holder.todoText.setText(spannable);
+                        }
                     }else {
                         holder.todoText.setText(text);
                     }
                     System.out.println("null called");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
+                        if(selectAll){
+                            holder.cBox.setChecked(true);
+                        }
+                        if(unSelectAll){
+                            holder.cBox.setChecked(false);
+                        }
                     }else {
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
@@ -1335,12 +1717,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            unSelectAll = false;
+                            selectAll = false;
                             if (cb.isChecked()) {
-                                if(mContext.toString().contains("MainActivity")){
-                                    ((MainActivity)mContext).addSelectedId(id);
-                                }else if(mContext.toString().contains("HistoryActivity")){
-                                    ((HistoryActivity)mContext).addSelectedId(id);
-                                }
+                                addSelectedId(id);
                                 System.out.println("checked " + id);
                                 // do some operations here
                             } else if (!cb.isChecked()) {
@@ -1371,19 +1751,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
             mItemTouchHelper.attachToRecyclerView(todoList);
         }
-        //getSupportLoaderManager().restartLoader(123,null,this);
-        EmptextView = (TextView)findViewById(R.id.emptyText);
-        if(todosql.getData().getCount()==0){//if database is empty, then clears the listView too
-            todoListAdapter.changeCursor(null);
-            System.out.println("empty database!");
-            EmptextView.setVisibility(View.VISIBLE);
-            EmptextView.setText(R.string.empty_todolist);
-            todoList.removeAllViewsInLayout();//remove all items
-            todoList.setAdapter(null);
-        } else {
-            EmptextView.setVisibility(View.GONE);
-            EmptextView.setText("");
-        }
+        getSupportLoaderManager().restartLoader(123,null,this);
+    }
+
+    public void interruptAutoSend(){
+        noInterruption = false;
+        fabProgressBar.setVisibility(View.INVISIBLE);
+        //stop circle
     }
 
     public void finishSetOfData(){
@@ -1444,6 +1818,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             //todoList.setSelectionFromTop(firstVisibleItem,firstItemDiff);
             if(!input.getText().toString().equals("")){
                 fab.setImageResource(R.drawable.ic_send_black_24dp);
+                isAdd = false;
                 input.setVisibility(View.VISIBLE);
                 showKeyboard();
             }
@@ -1454,6 +1829,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onBackPressed() {
+        interruptAutoSend();
+        speechRecognizer.stopListening();
         if(isInSelectionMode || isInSearchMode){
             if(isInSelectionMode){
                 setOutOfSelectionMode();
@@ -1464,15 +1841,20 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }else {
             System.out.println(String.valueOf(exit));
             DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-            main.requestFocus();
-            input.clearFocus();
+            //main.requestFocus();
+            //input.clearFocus();
             hideKeyboard();
             displayAllNotes();
             if (input.getVisibility() == View.GONE){
                 justex = true;
             }else {
                 if(input.getText().toString().equals("")){
-                    fab.setImageResource(R.drawable.ic_add_black_24dp);
+                    if(!isAdd){
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                        fab.setImageDrawable(d);
+                        isAdd = true;
+                        d.start();
+                    }
                     input.setVisibility(View.GONE);
                     justex = false;
                     modifyId.setText("");
@@ -1494,7 +1876,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 exit++;
                 Toast.makeText(getApplicationContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
             }
-            justex = true;
+            //justex = true;
             if (drawer.isDrawerOpen(GravityCompat.START)) {
                 drawer.closeDrawer(GravityCompat.START);
             }
@@ -1506,7 +1888,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-
+    //TODO CHANGE COLORSELECTOR
+    //TODO FIX THEMESELECTOR SUMMMARY TEXT COLOR
+    //TODO FIX HISTORY LIST BLINK
+    //TODO SET SEARCHVIEW ANIMATION
+    //TODO OPTIMIZE ALL CODE
+    //TODO PROGUARD
+    //TODO IAP TEST
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -1516,11 +1904,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
+        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
-        if(colorUtils.determineBrightness(themeColor) > 127){//dark themeColor
-            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );
         }else {//light themeColor
-            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7F000000")), 0, hintText.length(), 0 );
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
         }
         searchView.setQueryHint(hintText);
         MenuItem searchMenuIem = menu.findItem(R.id.todo_search);
@@ -1528,7 +1918,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 isInSearchMode = true;
-                fab.setVisibility(View.INVISIBLE);
+                proFab.setVisibility(View.GONE);
                 return true;
             }
 
@@ -1547,7 +1937,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public void onClick(View v) {
                 isInSearchMode = true;
-                fab.setVisibility(View.INVISIBLE);
+                proFab.setVisibility(View.GONE);
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -1588,24 +1978,44 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     protected void onNewIntent(Intent intent) {
-        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            handleVoiceSearch();
-        }
         super.onNewIntent(intent);
+        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            handleVoiceSearch(intent);
+        }
     }
 
-    private void query(String text) {
+    public void query(String text) {
         Bundle bundle = new Bundle();
         bundle.putString("QUERY", text);
         searchText = text;
+        System.out.println("calledquery" + " " + text);
         getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
     }
 
-    private void handleVoiceSearch(){
-        onSearchRequested();
-        Intent intent = getIntent();
-        String query = intent.getStringExtra(SearchManager.QUERY);
-        query(query);
+    public void handleVoiceSearch(Intent intent){
+        //onSearchRequested();
+
+        final String query = intent.getStringExtra(SearchManager.QUERY);
+        if(query == null){
+            Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed),Toast.LENGTH_LONG).show();
+            return;
+        }
+        SearchView searchView = (SearchView)toolbar.getMenu().findItem(R.id.todo_search).getActionView();
+        if(query.trim().equals("")){
+            Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed),Toast.LENGTH_LONG).show();
+            return;
+        }else {
+            //Toast.makeText(getApplicationContext(),query,Toast.LENGTH_SHORT).show();
+            hideKeyboard();
+            searchView.setQuery(query,false);
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    query(query);
+                }
+            },1);// MAGIC TRICK THAT AVOIDS PROBLEMS, I assume the voice function paused the main thread for a little while, so my restartLoader didn't work? Fucking android, I spent 3 fucking hours for this shitty bug and now this magic trick saved me again, WOOHOO!
+        }
     }
 
     public void onResume(){
@@ -1615,6 +2025,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         String sort = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
+        }
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
         }
         getSupportLoaderManager().restartLoader(123,null,this);
         for (int i = 0; i < size; i++) {
@@ -1745,6 +2159,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
         if(data.getCount() == 0 && isInSearchMode){
             EmptextView.setVisibility(View.VISIBLE);
             EmptextView.setText(getString(R.string.empty_search_result));

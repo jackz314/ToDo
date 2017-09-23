@@ -26,12 +26,23 @@ public class ColorUtils {//modifies colors, input (int)color and (double)fractio
         }
     }
 
-    public static double determineBrightness(int color){
-        int red = Color.red(color);
+    public static int makeTransparent(int color, double fraction){
+        return android.support.v4.graphics.ColorUtils.setAlphaComponent(color,((int)(255 * fraction)));
+    }
+
+    public static double determineBrightness(int color){//from 0 to 1, 0 is black, 1 is white
+        /*int red = Color.red(color);
         int green = Color.green(color);
         int blue = Color.blue(color);
         double luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-        return luma;
+        return luma;*/
+        double red = Color.red(color) / 255.0;
+        red = red < 0.03928 ? red / 12.92 : Math.pow((red + 0.055) / 1.055, 2.4);
+        double green = Color.green(color) / 255.0;
+        green = green < 0.03928 ? green / 12.92 : Math.pow((green + 0.055) / 1.055, 2.4);
+        double blue = Color.blue(color) / 255.0;
+        blue = blue < 0.03928 ? blue / 12.92 : Math.pow((blue + 0.055) / 1.055, 2.4);
+        return (float) ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue));
     }
 
     public static double determineSimilarColor(int color1, int color2){
