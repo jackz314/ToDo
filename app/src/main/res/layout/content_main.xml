@@ -8,6 +8,7 @@
     android:layout_height="match_parent"
     android:contextClickable="true"
     android:focusable="true"
+
     android:focusableInTouchMode="true"
     android:theme="@style/Base.Theme.AppCompat"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
@@ -61,15 +62,15 @@
         android:id="@+id/todolist"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        tools:listitem="@layout/todolist"
         android:layout_marginEnd="8dp"
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="0dp"
-        android:scrollbars="vertical"
         android:stackFromBottom="false"
         android:visibility="visible"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+
         app:layout_constraintBottom_toTopOf="@+id/input"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -77,7 +78,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="1.0"
         app:layout_goneMarginBottom="8dp"
-        tools:listitem="@layout/todolist" />
+         />
 
     <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
         android:id="@+id/recognition_view"

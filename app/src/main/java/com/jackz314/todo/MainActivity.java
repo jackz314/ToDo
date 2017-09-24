@@ -28,7 +28,6 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -77,6 +76,7 @@ import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
+import android.widget.EdgeEffect;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -105,6 +105,7 @@ import com.jackz314.todo.util.Purchase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.NetworkInterface;
 import java.net.URL;
@@ -565,7 +566,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         input.setVisibility(View.VISIBLE);
                         input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
                         input.requestFocus();
-                        todoList.smoothScrollBy(view.getPaddingTop(),300);
+                        input.setSelection(input.getText().length());
+                        showKeyboard();
+                        todoList.smoothScrollToPosition((int) view.getY());
                         //handler.postDelayed(r,250);//double click interval
                         //(new Handler()).postDelayed(new Runnable() {
                           //  @Override
@@ -715,15 +718,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             todoList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
                 @Override
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-
+                    setEdgeEffect(todoList,themeColor);
                 }
             });
         }else {
             todoList.setOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
-                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-
-                    super.onScrolled(recyclerView, dx, dy);
+                public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                    super.onScrollStateChanged(recyclerView, newState);
+                    setEdgeEffect(todoList,themeColor);
                 }
             });
         }
@@ -1274,15 +1277,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
         }
         navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
-        int[] themeColors = {backgroundColor,themeColor};
-        Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
-        drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
-        Drawable navHeadImage = getDrawable(R.drawable.nav_header);
-        navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.MULTIPLY);
-        View navHeader = navigationView.getHeaderView(0);
-        TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
-        navHeadText.setTextColor(textColor);
-        navHeader.setBackground(navHeadImage);
+        //int[] themeColors = {backgroundColor,themeColor};
+        //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
+        //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
+        Handler handler = new Handler();
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Drawable navHeadImage = getDrawable(R.drawable.nav_header);
+                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.MULTIPLY);
+                View navHeader = navigationView.getHeaderView(0);
+                TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
+                navHeadText.setTextColor(textColor);
+                navHeader.setBackground(navHeadImage);
+            }
+        });
         //navHeadText.setTextSize(textSize);
         //navHeader.setBackgroundColor(Color.RED);
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
@@ -1762,6 +1771,27 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //stop circle
     }
 
+    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                final Class<?> clazz = RecyclerView.class;
+                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
+                    Method method = clazz.getDeclaredMethod(name);
+                    method.setAccessible(true);
+                    method.invoke(recyclerView);
+                }
+                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
+                    final Field field = clazz.getDeclaredField(name);
+                    field.setAccessible(true);
+                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
+                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
+                    fEdgeEffect.setAccessible(true);
+                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
+                }
+            } catch (final Exception ignored) {}
+        }
+    }
+
     public void finishSetOfData(){
 
         CLONESelectedContent.clear();
@@ -2022,6 +2052,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onResume(){
         if(!input.getText().toString().equals("") && input.getVisibility()==View.VISIBLE) showKeyboard();
         displayAllNotes();
+        setColorPreferences();
         int size = menuNav.size();
         String sort = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
