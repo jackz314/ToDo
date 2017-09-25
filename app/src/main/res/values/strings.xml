@@ -26,7 +26,7 @@
     <string name="backup_edit_text_hint">Enter a tag for your backup</string>
     <string name="backup_dialog_title">Backup..</string>
     <string name="backup_dialog_content1">Your backup will be saved at</string>
-    <string name="backup_dialog_content2"> /Todo/backup</string>
+    <string name="backup_dialog_content2"> /Swipe2Do/backup</string>
     <string name="backup_no_write_permission">Error saving the backup: No write permission!</string>
     <string name="backup_error">Backup error!</string>
     <string name="backup_select_path">Select a path for backup</string>
@@ -113,7 +113,7 @@
     <string name="empty_history">Nothing finished yet…\nYour finished items will be here</string>
     <string name="empty_todolist">Got nothing to do?</string>
     <string name="error_message">Something went wrong :-/</string>
-    <string name="about">This is a light-weighted Todo list app that you can customize however you want, Enjoy! \nPlease support or rate if you want!\nBy Jack ;)</string>
+    <string name="about">This is a light-weighted to-do list app that you can customize however you want, Enjoy! \nPlease support or rate if you want!\nBy Jack ;)</string>
     <string name="delete_all_notes">Delete All Notes</string>
     <string name="note_deleted_snack_text">Note Deleted</string>
     <string name="main_history_switch">main_history_switch</string>
@@ -143,8 +143,8 @@
     <string name="delete_menu_text">Delete</string>
     <string name="modify_menu_text">Modify</string>
     <string name="restore_menu_text">Restore</string>
-    <string name="share_subject">ToDo — An awesome todo list app</string>
-    <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable todo list app that can maximize your efficiency!</string>
+    <string name="share_subject">ToDo — An awesome to-do list app</string>
+    <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
     <string name="share_via">Share this app with other people!</string>
     <string name="feedback">Feedback &amp; Report</string>
     <string name="send">Send</string>
@@ -156,7 +156,7 @@
     <string name="feedback_message">Please describe the problems you met, or just throw your suggestions at me ;)\nFor more detailed messages that you wish to stress, please head to About and send me an email!</string>
     <string name="feedback_title">Feedback &amp; Report</string>
     <string name="feedback_hint">Your message goes here…</string>
-    <string name="txt_size_message">Change the todo list text size</string>
+    <string name="txt_size_message">Change the list text size</string>
     <string name="txt_size_title">Text Size</string>
     <string name="txt_size_hint">new text size</string>
     <string name="text_size_not_suitable">Are you sure? This text size may not be suitable for you</string>
@@ -181,7 +181,7 @@
     <string name="welcome_note">Welcome to ToDo! Here goes some simple tutorials</string>
     <string name="tutorial_1">Press \"+\" to create a new note</string>
     <string name="tutorial_2">Tap to modify</string>
-    <string name="tutorial_3">Double Tap to finish</string>
+    <string name="tutorial_3">Swipe left to finish</string>
     <string name="tutorial_4">Long tap to select multiple items</string>
     <string name="tutorial_5">Check out the settings to have your customized experience</string>
     <string name="tutorial_6">Now if you got everything, just remove all of the gibberish tutorials\nEnjoy! :)</string>
@@ -207,6 +207,8 @@
     <string name="voice_search_prompt">Say something…</string>
     <string name="speech_to_text_failed">Google voice recognizing service not installed or no internet connection, please try again later!</string>
     <string name="voice_permission_request">We\'ll need the record audio permission to enable voice recognition!</string>
+    <string name="note_added">Note added!</string>
+    <string name="google_now_request_code">com.google.android.gm.action.AUTO_SEND</string>
 
     <string-array name="theme_default_value">
         <item>1</item>

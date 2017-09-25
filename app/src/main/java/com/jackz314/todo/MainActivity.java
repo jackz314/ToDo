@@ -85,6 +85,7 @@ import android.widget.Toast;
 
 import com.android.vending.billing.IInAppBillingService;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
+import com.google.android.gms.actions.NoteIntents;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -194,7 +195,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     //public static int DELETE_CONTEXT_ID = 2;
     public boolean iapsetup = true;
     public boolean isAdRemoved = false;
-    View todoView;
     static int REMOVE_REQUEST_ID =1022;
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -221,6 +221,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         proFab = (ProgressFloatingActionButton)findViewById(R.id.progress_fab);
         fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        //todoList.addOnScrollListener(new RecyclerViewListener());
+
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
@@ -247,7 +249,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             menuNav.getItem(i).setChecked(false);
         }
         mHelper = new IabHelper(this, base64EncodedPublicKey);
-        
         mHelper.enableDebugLogging(false);
         mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener(){
             public void onIabSetupFinished(IabResult result) {
@@ -487,7 +488,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         doubleClickCout = 0;
         ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
-            public void onItemClicked(RecyclerView recyclerView, int position, final View view) {
+            public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
@@ -568,14 +569,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         input.requestFocus();
                         input.setSelection(input.getText().length());
                         showKeyboard();
-                        todoList.smoothScrollToPosition((int) view.getY());
+                        int top = view.getTop();
+                        todoList.smoothScrollBy(0,top);//scroll the clicked item to top
+                           //Toast.makeText(getApplicationContext(),String.valueOf(position),Toast.LENGTH_LONG).show();
                         //handler.postDelayed(r,250);//double click interval
                         //(new Handler()).postDelayed(new Runnable() {
                           //  @Override
                          //   public void run() {
                               //  if(!justDoubleClicked){
 
-                             //   }
+                             //   }]
                            // }
                         //}, 250);
                         //justDoubleClicked = false;
@@ -719,6 +722,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 @Override
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
                     setEdgeEffect(todoList,themeColor);
+
                 }
             });
         }else {
@@ -827,10 +831,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     //fab.setImageResource(le(R.drawable.avd_plus_to_sed));
                 //}
                 proFab.setVisibility(View.GONE);
+                fab.setVisibility(View.GONE);
                 recognitionProgressView.setVisibility(View.VISIBLE);
                 input.setVisibility(View.VISIBLE);
                 input.setEnabled(false);
-                fab.setVisibility(View.GONE);
                 if(isAdd){
                     AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                     fab.setImageDrawable(d);
@@ -1285,10 +1289,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public void run() {
                 Drawable navHeadImage = getDrawable(R.drawable.nav_header);
-                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.MULTIPLY);
+                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.ADD);
                 View navHeader = navigationView.getHeaderView(0);
                 TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
-                navHeadText.setTextColor(textColor);
+                navHeadText.setTextColor(Color.WHITE);
                 navHeader.setBackground(navHeadImage);
             }
         });
@@ -1677,7 +1681,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
-            System.out.println("null called");
+            //System.out.println("null called");
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             todoList.setLayoutManager(linearLayoutManager);
@@ -2010,9 +2014,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        System.out.println(intent.getAction()+" IDENTIFIII");
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             handleVoiceSearch(intent);
         }
+
     }
 
     public void query(String text) {
@@ -2021,6 +2027,27 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         searchText = text;
         System.out.println("calledquery" + " " + text);
         getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
+    }
+
+    public void handleGoogleNowCall(Intent intent){
+        String note = "";
+        if(intent.getStringExtra(Intent.EXTRA_TEXT) != null){
+            note = intent.getStringExtra(Intent.EXTRA_TEXT);
+            System.out.println("not null");
+        }
+        if(note != null){
+            Handler handler = new Handler();
+            final String finalNote = note;
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    insertData(finalNote);
+                    Toast.makeText(getApplicationContext(),getString(R.string.note_added),Toast.LENGTH_LONG).show();
+                }
+            }, 450);
+        }
+        System.out.println("intent real info: " + intent.getStringExtra(Intent.EXTRA_TEXT) + "{{" + note + "}}");
+        getIntent().removeExtra(Intent.EXTRA_TEXT);
     }
 
     public void handleVoiceSearch(Intent intent){
@@ -2055,6 +2082,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         setColorPreferences();
         int size = menuNav.size();
         String sort = null;
+        Intent voiceIntent = getIntent();
+        if(voiceIntent != null && voiceIntent.getExtras() != null){
+            System.out.println("intent information: " + voiceIntent.getData()+ "| |" + voiceIntent.getAction() + "| | "+ voiceIntent.toString() + "| noteintent| "+ voiceIntent.getStringExtra(NoteIntents.EXTRA_TEXT) + "| | " + voiceIntent.getExtras().toString());
+        }
+        if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null){
+            System.out.println("fucking text: ");
+            handleGoogleNowCall(voiceIntent);
+        }
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
         }
