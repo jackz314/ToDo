@@ -37,7 +37,7 @@ import java.util.ArrayList;
     @Override
     public TodoViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todolist,parent,false);
-        System.out.println("|cursor created");
+        //System.out.println("|cursor created");
         return new TodoViewHolder(view);
     }
 
@@ -47,7 +47,7 @@ import java.util.ArrayList;
         String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
         holder.todoText.setText(text);
         holder.todoText.setTextColor(Color.BLACK);
-        System.out.println(text+"|cursor read");
+        //System.out.println(text+"|cursor read");
         holder.cBox.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
@@ -57,10 +57,10 @@ import java.util.ArrayList;
                     }else if(mContext.toString().contains("HistoryActivity")){
                         ((HistoryActivity)mContext).addSelectedId(id);
                     }
-                    System.out.println("checked " + id);
+                    //System.out.println("checked " + id);
                     // do some operations here
                 } else if (!cb.isChecked()) {
-                    System.out.println("unchecked " + id);
+                    //System.out.println("unchecked " + id);
                     if(mContext.toString().contains("MainActivity")){
                         ((MainActivity)mContext).removeSelectedId(id);
                     }else if(mContext.toString().contains("HistoryActivity")){
@@ -91,10 +91,10 @@ import java.util.ArrayList;
                         }else if(context.toString().contains("HistoryActivity")){
                             ((HistoryActivity)context).addSelectedId(id);
                         }
-                        System.out.println("checked " + id);
+                        //System.out.println("checked " + id);
                         // do some operations here
                     } else if (!cb.isChecked()) {
-                        System.out.println("unchecked " + id);
+                        //System.out.println("unchecked " + id);
                         if(context.toString().contains("MainActivity")){
                             ((MainActivity)context).removeSelectedId(id);
                         }else if(context.toString().contains("HistoryActivity")){
@@ -140,11 +140,11 @@ import java.util.ArrayList;
                 newView(context,c,parent);
             }
             bindView(view,context,c);
-            //System.out.println("bindView!");
+            ////System.out.println("bindView!");
 
             final TextView todoText = (TextView) view.findViewById(R.id.titleText);
             final CheckBox cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox); // your CheckBox
-            System.out.println(c.getCount());
+            //System.out.println(c.getCount());
             final long id = getItemId(position);
             cBox.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -155,10 +155,10 @@ import java.util.ArrayList;
                         }else if(context.toString().contains("HistoryActivity")){
                             ((HistoryActivity)context).addSelectedId(id);
                         }
-                        System.out.println("checked " + id);
+                        //System.out.println("checked " + id);
                         // do some operations here
                     } else if (!cb.isChecked()) {
-                        System.out.println("unchecked " + id);
+                        //System.out.println("unchecked " + id);
                         if(context.toString().contains("MainActivity")){
                             ((MainActivity)context).removeSelectedId(id);
                         }else if(context.toString().contains("HistoryActivity")){
@@ -186,11 +186,11 @@ import java.util.ArrayList;
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             view = inflater.inflate(R.layout.todolist, null);
         }
-        System.out.println("bindView!");
+        //System.out.println("bindView!");
 
         final TextView todoText = (TextView) view.findViewById(R.id.titleText);
         final CheckBox cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox); // your CheckBox
-        System.out.println(c.getCount());
+        //System.out.println(c.getCount());
         final long id = getItemId(position);
         cBox.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -201,10 +201,10 @@ import java.util.ArrayList;
                     }else if(context.toString().contains("HistoryActivity")){
                         ((HistoryActivity)context).addSelectedId(id);
                     }
-                    System.out.println("checked " + id);
+                    //System.out.println("checked " + id);
                     // do some operations here
                 } else if (!cb.isChecked()) {
-                    System.out.println("unchecked " + id);
+                    //System.out.println("unchecked " + id);
                     if(context.toString().contains("MainActivity")){
                         ((MainActivity)context).removeSelectedId(id);
                     }else if(context.toString().contains("HistoryActivity")){

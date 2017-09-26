@@ -124,12 +124,12 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     multiSelectionBox = (CheckBox)v.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
                         removeSelectedId(id);
-                        //System.out.println("false" + id);
+                        ////System.out.println("false" + id);
                         multiSelectionBox.setChecked(false);
                     }else {
                         addSelectedId(id);
                         multiSelectionBox.setChecked(true);
-                        //System.out.println("true" + id);
+                        ////System.out.println("true" + id);
                     }
                     /*if(selectedId.contains(id)){
                         selectedId.remove(selectedId.indexOf(id));
@@ -185,7 +185,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.history_select_all_box);
                     selectAllBox.setVisibility(View.VISIBLE);
                     isInSelectionMode = true;
-                    //System.out.println(isInSelectionMode + "isInselectionmode");
+                    ////System.out.println(isInSelectionMode + "isInselectionmode");
                     getSupportLoaderManager().restartLoader(234,null,HistoryActivity.this);
                     displayAllNotes();
                     ColorStateList colorStateList = new ColorStateList(
@@ -358,7 +358,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     }else {
                         holder.todoText.setText(text);
                     }
-                    //System.out.println(isInSelectionMode + "DISPLAYALLNOTES");
+                    ////System.out.println(isInSelectionMode + "DISPLAYALLNOTES");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
                         if(selectAll){
@@ -372,7 +372,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
                     }
-                    //System.out.println(text+"|cursor read");
+                    ////System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
@@ -380,10 +380,10 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                             selectAll = false;
                             if (cb.isChecked()) {
                                     addSelectedId(id);
-                                //System.out.println("checked " + id);
+                                ////System.out.println("checked " + id);
                                 // do some operations here
                             } else if (!cb.isChecked()) {
-                                //System.out.println("unchecked " + id);
+                                ////System.out.println("unchecked " + id);
 
                                 removeSelectedId(id);
                                                  // do some operations here
@@ -409,7 +409,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             mItemTouchHelper.attachToRecyclerView(historyList);
         }
         if(todosql.getHistory().getCount()==0){//if database is empty, then clears the listView too
-            ////System.out.println("empty history!");
+            //////System.out.println("empty history!");
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(R.string.empty_history);
             historyList.removeAllViewsInLayout();//remove all items
@@ -534,11 +534,11 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     @Override
     public void onBackPressed() {
-        //System.out.println("BACKPRESSED");
+        ////System.out.println("BACKPRESSED");
         if (isInSelectionMode || isInSearchMode) {
             if (isInSelectionMode) {
                 setOutOfSelectionMode();
-                //System.out.println("set1out back");
+                ////System.out.println("set1out back");
             } else {
                 setOutOfSearchMode();
             }
@@ -549,7 +549,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     public void setOutOfSearchMode(){
         isInSearchMode = false;
-        //System.out.println("setfase search");
+        ////System.out.println("setfase search");
         getSupportLoaderManager().restartLoader(234,null,HistoryActivity.this);
         displayAllNotes();
     }
@@ -558,7 +558,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         unSelectAll = false;
         selectAll = false;
         isInSelectionMode = false;
-        //System.out.println("setfase selection");
+        ////System.out.println("setfase selection");
         selectedId.clear();
         selectedContent.clear();
         if(selectAllBox != null){
@@ -588,7 +588,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         final int size = selectedId.size();
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
-        //System.out.println("set1out restore");
+        ////System.out.println("set1out restore");
         displayAllNotes();
         Snackbar.make(historyView, getString(R.string.notes_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
@@ -609,7 +609,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
-        //System.out.println("set1out delete");
+        ////System.out.println("set1out delete");
         displayAllNotes();
         Snackbar.make(historyView, getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
@@ -726,7 +726,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             public boolean onMenuItemActionCollapse(MenuItem item) {
                 if(isInSelectionMode){
                     setOutOfSelectionMode();
-                    //System.out.println("set1out menu collapse");
+                    ////System.out.println("set1out menu collapse");
                     return false;
                 }else {
                     setOutOfSearchMode();
@@ -798,7 +798,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                     ,themeColor //enabled
                             }
                     );
-                    //System.out.println("null called");
+                    ////System.out.println("null called");
                     if(isInSelectionMode){
                         multiSelectionBox.setVisibility(View.VISIBLE);
                         multiSelectionBox.setBackgroundColor(backgroundColor);
@@ -827,13 +827,13 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         else {//on
             Cursor cs = todosql.getHistory();
             if(cs.getCount()==0) {
-                //System.out.println();
+                ////System.out.println();
             }
             else {
                 expireTime=sharedPreferences.getInt(getString(R.string.clear_interval_value_key),60*24);
                 while(cs.moveToNext()){
                     timestr = cs.getString(cs.getColumnIndex("datetime(deleted_timestamp,'localtime')"));
-                    ////System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
+                    //////System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
                     if(todosql.getTimeDifference(timestr)>=expireTime){//if bigger than set value, delete it!
                         deleteData(cs.getInt(cs.getColumnIndex(todosql.ID)));
                     }

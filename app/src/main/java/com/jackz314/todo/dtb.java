@@ -185,7 +185,7 @@ public class dtb extends SQLiteOpenHelper{
                 //currentDatabase.endTransaction();
             }
             currentDatabase.execSQL("ATTACH DATABASE '" + backupPath + "' AS backupDb");
-            System.out.println(currentDatabase.getAttachedDbs().toString());
+            //System.out.println(currentDatabase.getAttachedDbs().toString());
             attached = true;
             currentDatabase.execSQL("INSERT INTO " + TODO_TABLE + " (" + TITLE + ", " + CONTENT + ", " + IMPORTANCE + ") SELECT " + TITLE + ", " + CONTENT + ", " + IMPORTANCE + " FROM " + "backupDb" + "." + TODO_TABLE);
             Cursor cursor = backupDatabase.rawQuery("SELECT name FROM " + "" + "sqlite_master WHERE type = 'table'", null);
@@ -206,7 +206,7 @@ public class dtb extends SQLiteOpenHelper{
             if(attached){
                 currentDatabase.execSQL("DETACH backupDb");
             }
-            System.out.println(e.getLocalizedMessage());
+            //System.out.println(e.getLocalizedMessage());
             return e.getLocalizedMessage();
         }
         return null;
@@ -223,7 +223,7 @@ public class dtb extends SQLiteOpenHelper{
                 while (validateCursor.moveToNext()){
                     combinedString += validateCursor.getString(validateCursor.getColumnIndex("name"));
                 }
-                System.out.println(combinedString);
+                //System.out.println(combinedString);
                 if(combinedString.contains(TODO_TABLE)){
                     Cursor validateColumns = validateDatabase.rawQuery("SELECT * FROM " + TODO_TABLE + " ",null);
                     StringBuilder colBuilder = new StringBuilder();
@@ -232,7 +232,7 @@ public class dtb extends SQLiteOpenHelper{
                         colBuilder.append(",").append(each);
                     }
                     combinedString = colBuilder.deleteCharAt(0).toString();
-                    System.out.println(combinedString);
+                    //System.out.println(combinedString);
                     if(combinedString.contains(TITLE)){
                         return true;
                     }

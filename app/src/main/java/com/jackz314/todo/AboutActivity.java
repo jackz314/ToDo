@@ -1,9 +1,11 @@
 package com.jackz314.todo;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -11,10 +13,13 @@ import android.net.Uri;
 import android.os.Build;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.ActionBar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Html;
+import android.text.SpannableString;
 import android.text.method.LinkMovementMethod;
+import android.text.util.Linkify;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -30,7 +35,7 @@ import static com.jackz314.todo.R.color.colorPrimary;
 
 public class AboutActivity extends AppCompatActivity {
     Button supportBtn,rateBtn;
-    TextView introText,contactText,versionText,emailContact;
+    TextView introText,contactText,versionText,emailContact,licensesText;
     SharedPreferences sharedPreferences;
     int themeColor,textColor,backgroundColor;
     ConstraintLayout aboutView;
@@ -48,6 +53,7 @@ public class AboutActivity extends AppCompatActivity {
         contactText = (TextView)findViewById(R.id.contact_text);
         emailContact = (TextView)findViewById(R.id.email_contact);
         versionText = (TextView)findViewById(R.id.version_text);
+        licensesText = (TextView)findViewById(R.id.licenses);
         sharedPreferences = getSharedPreferences("settings_data",MODE_PRIVATE);
         themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
         textColor=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
@@ -85,6 +91,28 @@ public class AboutActivity extends AppCompatActivity {
         rateBtn.setBackgroundColor(colorUtils.darken(backgroundColor,0.3));
         rateBtn.setTextColor(textColor);
         aboutView.setBackgroundColor(backgroundColor);
+        //final SpannableString linkedMsg = new SpannableString(getString(R.string.library_license_txt));
+        //Linkify.addLinks(linkedMsg, Linkify.ALL);
+        licensesText.setPaintFlags(licensesText.getPaintFlags()| Paint.UNDERLINE_TEXT_FLAG);
+        licensesText.setTextColor(colorUtils.lighten(textColor,0.4));
+        licensesText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                View view = View.inflate(AboutActivity.this, R.layout.about_dialog, null);
+                TextView textView = (TextView) view.findViewById(R.id.message);
+                textView.setMovementMethod(LinkMovementMethod.getInstance());
+                textView.setText(R.string.library_license_txt);
+                textView.setLinkTextColor(colorUtils.lighten(themeColor,0.2));
+                final AlertDialog alertDialog = new AlertDialog.Builder(AboutActivity.this)
+                        .setView(view)
+                        .setTitle(getString(R.string.licenses))
+                        .setPositiveButton(getString(R.string.got_it), null)
+                        .show();
+                alertDialog.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColor);
+                ((TextView)alertDialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
+
+            }
+        });
         supportBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

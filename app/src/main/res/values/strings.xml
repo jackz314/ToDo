@@ -26,7 +26,7 @@
     <string name="backup_edit_text_hint">Enter a tag for your backup</string>
     <string name="backup_dialog_title">Backup..</string>
     <string name="backup_dialog_content1">Your backup will be saved at</string>
-    <string name="backup_dialog_content2"> /Swipe2Do/backup</string>
+    <string name="backup_dialog_content2"> /ToDo/backup</string>
     <string name="backup_no_write_permission">Error saving the backup: No write permission!</string>
     <string name="backup_error">Backup error!</string>
     <string name="backup_select_path">Select a path for backup</string>
@@ -75,6 +75,7 @@
     <string name="custom">Custom</string>
     <string name="custom_theme_key">custom_theme_key</string>
     <string name="selection_mode_title">" Selected"</string>
+    <string name="material_indigo">Material Indigo</string>
     <string name="selection_mode_empty_title">Select items </string>
     <string name="email_subject">Feedback for ToDo</string>
     <string name="email_content">Feedback goes under here, if it\'s a bug, then please state the situation clearly so that I can fix it faster:)\n</string>
@@ -207,6 +208,9 @@
     <string name="voice_search_prompt">Say something…</string>
     <string name="speech_to_text_failed">Google voice recognizing service not installed or no internet connection, please try again later!</string>
     <string name="voice_permission_request">We\'ll need the record audio permission to enable voice recognition!</string>
+    <string name="voice_recon_audio_record_err">There\'s a problem when trying to record audio, please try again later!</string>
+    <string name="voice_recon_internet_err">Can\'t connect to the server for now, please try again later!</string>
+    <string name="voice_recon_busy_err">Recognition failed, it could be because you don\'t have google services installed or can\'t connect to the voice recognizer service!</string>
     <string name="note_added">Note added!</string>
     <string name="google_now_request_code">com.google.android.gm.action.AUTO_SEND</string>
 
@@ -216,7 +220,6 @@
 
     <string-array name="theme_entries">
 
-        <item>Starry Grey</item>
         <item>Material Indigo</item>
         <item>Material Red</item>
         <item>Material Green</item>
@@ -235,12 +238,13 @@
         <item>Coffee Brown</item>
         <item>Navy Blue</item>
         <item>Wine Red</item>
+        <item>Starry Grey</item>
         <item>Piano Black</item>
+
     </string-array>
 
     <string-array name="theme_entries_value">
 
-        <item>#413f41</item>
         <item>#3F51B5</item>
         <item>#d50000</item>
         <item>#64dd17</item>
@@ -259,6 +263,7 @@
         <item>#753d01</item>
         <item>#020669</item>
         <item>#870032</item>
+        <item>#413f41</item>
         <item>#1d1b1d</item>
 
     </string-array>
@@ -299,6 +304,25 @@
     <string name="reset_appearance_content">Reset all Appearance settings to default</string>
     <string name="reset_appearance_title">Reset</string>
     <string name="title_activity_history" translatable="false">historyActivity</string>
+
+
+    <!--Legal information!-->
+    <string name="library_license_txt">ToDo uses the following open-source libraries:\n\n<a href='https://github.com/QuadFlask/colorpicker'>Color Picker by QuadFlask</a>\n\nLicense:\n
+        \nCopyright 2014-2017 QuadFlask
+        \nLicensed under the Apache License, Version 2.0 (the "License");
+\nyou may not use this file except in compliance with the License.
+\nYou may obtain a copy of the License at
+\n
+\n<a href='http://www.apache.org/licenses/LICENSE-2.0'>http://www.apache.org/licenses/LICENSE-2.0</a>
+\n
+\nUnless required by applicable law or agreed to in writing, software
+\ndistributed under the License is distributed on an "AS IS" BASIS,
+\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+\nSee the License for the specific language governing permissions and
+\nlimitations under the License.</string>
+
+    <string name="licenses">Licenses</string>
+    <string name="got_it">Got it!</string>
 
     <!-- Resources for animations, don't change anything here! -->
     <string name="plus_name">plus</string>

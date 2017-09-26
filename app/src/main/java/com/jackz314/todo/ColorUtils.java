@@ -12,7 +12,7 @@ public class ColorUtils {//modifies colors, input (int)color and (double)fractio
     public static int lighten(int color, double fraction) {
         double luma = determineBrightness(color);
         if(luma >= 220){//determine brightness and see if needed to convert to lighten from 0-255, 0 is black, 255 is white
-            System.out.println(luma + " luma");
+            //System.out.println(luma + " luma");
             return darken(color, fraction);
         }else {
             int red = Color.red(color);
@@ -81,7 +81,7 @@ public class ColorUtils {//modifies colors, input (int)color and (double)fractio
         int green2 = Color.green(color2);
         int blue2 = Color.blue(color2);
         double distance = Math.sqrt(Math.pow((red1 - red2),2) + Math.pow((green1 - green2),2) + Math.pow((blue1 - blue2),2));
-        System.out.println(distance + "DISTANCE");
+        //System.out.println(distance + "DISTANCE");
         if(distance < 100){
             return true;
         }else{

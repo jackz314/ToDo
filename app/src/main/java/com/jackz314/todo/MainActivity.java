@@ -200,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        System.out.println("oncreatecalled");
+        //System.out.println("oncreatecalled");
         adView= (AdView)findViewById(R.id.bannerAdView);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         AdRequest adRequest = new AdRequest.Builder().build();
@@ -253,12 +253,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener(){
             public void onIabSetupFinished(IabResult result) {
                 if(!result.isSuccess()||result.isFailure()){
-                    System.out.println("qazwsx"+3);
+                    //System.out.println("qazwsx"+3);
                     iapsetup = false;
                     return;
                 }
                 if(mHelper == null){
-                    System.out.println("qazwsx"+4);
+                    //System.out.println("qazwsx"+4);
                     iapsetup = false;
                     return;
                 }
@@ -267,7 +267,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     iapsetup = true;
                 } catch (IabHelper.IabAsyncInProgressException e) {
                     e.printStackTrace();
-                    System.out.println("qazwsx"+5);
+                    //System.out.println("qazwsx"+5);
                     iapsetup = false;
                 }
             }
@@ -341,6 +341,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
                     }
 
+                }else if(error == SpeechRecognizer.ERROR_AUDIO){
+                    Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
+                }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
+                    Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                }else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == SpeechRecognizer.ERROR_CLIENT){
+                    Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
                 }
                 //Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
             }
@@ -455,7 +461,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     //   @Override
                     // public void run() {
                     //int currentCursorPos = input.getSelectionStart()-1;
-                    // System.out.println(currentCursorPos);
+                    // //System.out.println(currentCursorPos);
                     if(input.getSelectionStart() == -1){
                         if(result.toLowerCase().contains(oldResult.toLowerCase())){
                             input.append(result.substring(oldResult.length()));
@@ -497,11 +503,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     if(multiSelectionBox.isChecked()){
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
-                        System.out.println("false" + id);
+                        //System.out.println("false" + id);
                     }else {
                         addSelectedId(id);
                         multiSelectionBox.setChecked(true);
-                        System.out.println("true" + id);
+                        //System.out.println("true" + id);
 
                     }
                     /*if(selectedId.contains(id)){
@@ -929,12 +935,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             if(mHelper == null){
-                System.out.println("qazwsx"+1);
+                //System.out.println("qazwsx"+1);
                 iapsetup = false;
                 return;
             }
             if(result.isFailure()||!result.isSuccess()){
-                System.out.println("qazwsx"+2);
+                //System.out.println("qazwsx"+2);
                 iapsetup = false;
                 return;
             }
@@ -1026,9 +1032,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return true;
     }
 
-    public void setLauncherIcon(){
+    /*public void setLauncherIcon(){
         Intent launcherIntent = new Intent();
-        launcherIntent.setClassName("com.jackz314.todo","MainActivity");
+        launcherIntent.setClassName("com.jackz314.todAAAo","MainActivity");
         launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Intent intent = new Intent();
         intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT,launcherIntent);
@@ -1040,7 +1046,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 )
         );
         getApplicationContext().sendBroadcast(intent);
-    }
+    }*/
 
     boolean verifyDeveloperPayload(Purchase p) {
         if(p.getDeveloperPayload().equals("0x397821dc97276")){
@@ -1289,7 +1295,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public void run() {
                 Drawable navHeadImage = getDrawable(R.drawable.nav_header);
-                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.ADD);
+                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
                 View navHeader = navigationView.getHeaderView(0);
                 TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
                 navHeadText.setTextColor(Color.WHITE);
@@ -1301,6 +1307,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         toolbar.setBackgroundColor(themeColor);
         input.setTextColor(textColor);
+        input.setTextSize(24);
         setCursorColor(input,themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();
@@ -1349,7 +1356,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return res1.toString();
             }
         } catch (Exception ex) {
-            //System.out.println("ex eoiii" + ex.getLocalizedMessage());
+            ////System.out.println("ex eoiii" + ex.getLocalizedMessage());
         }
         return "(Can't retrieve mac address)";
     }
@@ -1681,7 +1688,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
-            //System.out.println("null called");
+            ////System.out.println("null called");
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             todoList.setLayoutManager(linearLayoutManager);
@@ -1715,7 +1722,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }else {
                         holder.todoText.setText(text);
                     }
-                    System.out.println("null called");
+                    //System.out.println("null called");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
                         if(selectAll){
@@ -1728,7 +1735,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
                     }
-                    System.out.println(text+"|cursor read");
+                    //System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
@@ -1736,10 +1743,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             selectAll = false;
                             if (cb.isChecked()) {
                                 addSelectedId(id);
-                                System.out.println("checked " + id);
+                                //System.out.println("checked " + id);
                                 // do some operations here
                             } else if (!cb.isChecked()) {
-                                System.out.println("unchecked " + id);
+                                //System.out.println("unchecked " + id);
                                 if(mContext.toString().contains("MainActivity")){
                                     ((MainActivity)mContext).removeSelectedId(id);
                                 }else if(mContext.toString().contains("HistoryActivity")){
@@ -1858,7 +1865,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 input.setVisibility(View.VISIBLE);
                 showKeyboard();
             }
-            System.out.println("Orientation Changed!");
+            //System.out.println("Orientation Changed!");
         }
         super.onConfigurationChanged(newConfig);
      }
@@ -1875,7 +1882,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 setOutOfSearchMode();
             }
         }else {
-            System.out.println(String.valueOf(exit));
+            //System.out.println(String.valueOf(exit));
             DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
             //main.requestFocus();
             //input.clearFocus();
@@ -1924,7 +1931,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    //TODO CHANGE COLORSELECTOR
     //TODO FIX THEMESELECTOR SUMMMARY TEXT COLOR
     //TODO SET SEARCHVIEW ANIMATION
     //TODO OPTIMIZE ALL CODE
@@ -2014,7 +2020,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        System.out.println(intent.getAction()+" IDENTIFIII");
+        //System.out.println(intent.getAction()+" IDENTIFIII");
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             handleVoiceSearch(intent);
         }
@@ -2025,7 +2031,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         Bundle bundle = new Bundle();
         bundle.putString("QUERY", text);
         searchText = text;
-        System.out.println("calledquery" + " " + text);
+        //System.out.println("calledquery" + " " + text);
         getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
     }
 
@@ -2033,7 +2039,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         String note = "";
         if(intent.getStringExtra(Intent.EXTRA_TEXT) != null){
             note = intent.getStringExtra(Intent.EXTRA_TEXT);
-            System.out.println("not null");
+            //System.out.println("not null");
         }
         if(note != null){
             Handler handler = new Handler();
@@ -2046,7 +2052,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             }, 450);
         }
-        System.out.println("intent real info: " + intent.getStringExtra(Intent.EXTRA_TEXT) + "{{" + note + "}}");
+        //System.out.println("intent real info: " + intent.getStringExtra(Intent.EXTRA_TEXT) + "{{" + note + "}}");
         getIntent().removeExtra(Intent.EXTRA_TEXT);
     }
 
@@ -2084,10 +2090,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         String sort = null;
         Intent voiceIntent = getIntent();
         if(voiceIntent != null && voiceIntent.getExtras() != null){
-            System.out.println("intent information: " + voiceIntent.getData()+ "| |" + voiceIntent.getAction() + "| | "+ voiceIntent.toString() + "| noteintent| "+ voiceIntent.getStringExtra(NoteIntents.EXTRA_TEXT) + "| | " + voiceIntent.getExtras().toString());
+            //System.out.println("intent information: " + voiceIntent.getData()+ "| |" + voiceIntent.getAction() + "| | "+ voiceIntent.toString() + "| noteintent| "+ voiceIntent.getStringExtra(NoteIntents.EXTRA_TEXT) + "| | " + voiceIntent.getExtras().toString());
         }
         if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null){
-            System.out.println("fucking text: ");
+            //System.out.println("fucking text: ");
             handleGoogleNowCall(voiceIntent);
         }
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
@@ -2226,7 +2232,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
+        ////System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
         if(data.getCount() == 0 && isInSearchMode){
             EmptextView.setVisibility(View.VISIBLE);
             EmptextView.setText(getString(R.string.empty_search_result));
@@ -2268,14 +2274,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         ContentValues cv = new ContentValues();
         String data = todosql.getOneDataInTODO(Long.toString(id));
         cv.put(TITLE,data);
-        System.out.println("finish data" + id);
+        //System.out.println("finish data" + id);
         deleteData(id);
         getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
     }
 
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
-        System.out.println("delete data" + id);
+        //System.out.println("delete data" + id);
         getContentResolver().delete(uri, null, null);
         displayAllNotes();
     }

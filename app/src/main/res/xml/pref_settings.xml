@@ -60,7 +60,8 @@
             android:entryValues="@array/theme_entries_value"
             android:key="@string/theme_selector_key"
             android:title="@string/theme_selector_title"
-            android:summary="@string/custom"/>
+            android:summary="@string/custom"
+            android:negativeButtonText=""/>
         <com.jackz314.todo.ColorSwitchPreference
             android:defaultValue="false"
             android:layout_width="wrap_content"
