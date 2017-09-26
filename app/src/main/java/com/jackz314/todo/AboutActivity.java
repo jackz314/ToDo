@@ -3,7 +3,6 @@ package com.jackz314.todo;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
@@ -11,15 +10,13 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.Html;
-import android.text.SpannableString;
 import android.text.method.LinkMovementMethod;
-import android.text.util.Linkify;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -28,10 +25,7 @@ import android.widget.Toast;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
 
-import org.w3c.dom.Text;
-
 import static com.jackz314.todo.MainActivity.getMacAddr;
-import static com.jackz314.todo.R.color.colorPrimary;
 
 public class AboutActivity extends AppCompatActivity {
     Button supportBtn,rateBtn;
@@ -92,7 +86,7 @@ public class AboutActivity extends AppCompatActivity {
         rateBtn.setTextColor(textColor);
         aboutView.setBackgroundColor(backgroundColor);
         //final SpannableString linkedMsg = new SpannableString(getString(R.string.library_license_txt));
-        //Linkify.addLinks(linkedMsg, Linkify.ALL);
+        //Linkify.addLinks(linkedMsg, Linkify.ALL);test
         licensesText.setPaintFlags(licensesText.getPaintFlags()| Paint.UNDERLINE_TEXT_FLAG);
         licensesText.setTextColor(colorUtils.lighten(textColor,0.4));
         licensesText.setOnClickListener(new View.OnClickListener() {
