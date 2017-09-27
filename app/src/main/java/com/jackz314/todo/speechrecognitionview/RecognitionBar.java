@@ -30,7 +30,7 @@ public class RecognitionBar {
     private final int startY;
     final private RectF rect;
 
-    public RecognitionBar(int x, int y, int height, int maxHeight, int radius) {
+    RecognitionBar(int x, int y, int height, int maxHeight, int radius) {
         this.x = x;
         this.y = y;
         this.radius = radius;

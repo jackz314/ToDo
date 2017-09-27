@@ -85,7 +85,6 @@ import android.widget.Toast;
 
 import com.android.vending.billing.IInAppBillingService;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
-import com.google.android.gms.actions.NoteIntents;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -117,9 +116,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 import static com.jackz314.todo.dtb.ID;
@@ -189,12 +186,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     Toolbar selectionToolBar, toolbar;
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
-    private String payload = "HAHA! this is the real one, fuck you motherfucker";
+    private String payload = "HAHA! this is the real one, gotcha";
     IabBroadcastReceiver mBroadcastReceiver;
     //public static int MODIFY_CONTEXT_ID = 1;
     //public static int DELETE_CONTEXT_ID = 2;
     public boolean iapsetup = true;
     public boolean isAdRemoved = false;
+    ProgressDialog purchaseProgressDialog;
     static int REMOVE_REQUEST_ID =1022;
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -243,6 +241,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         base64EncodedPublicKey += "BIjAN" + bep.substring(2,bep.length()-1);
         input.setVisibility(View.GONE);
         menuNav = navigationView.getMenu();
+        payload += "CPMFnxQ5s0" +
+                "NBVs3kWNgN" +
+                "ivr1zfRbfk" +
+                "U1lCak93su" +
+                "RlMWFgHQMj" +
+                "ZWYDiMVeak" +
+                "rZ3bRGzfzz" +
+                "9IMuplWteD" +
+                "rBMyPRIDUm" +
+                "GcIdL4lDdR";
         navRemoveAD = menuNav.findItem(R.id.unlock);
         int size = menuNav.size();
         for (int i = 0; i < size; i++) {
@@ -252,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mHelper.enableDebugLogging(false);
         mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener(){
             public void onIabSetupFinished(IabResult result) {
-                if(!result.isSuccess()||result.isFailure()){
+                if((!result.isSuccess())||result.isFailure()){
                     //System.out.println("qazwsx"+3);
                     iapsetup = false;
                     return;
@@ -932,28 +940,45 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }//--------end of onCreate!
 
-    IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
+        IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
-            if(mHelper == null){
-                //System.out.println("qazwsx"+1);
-                iapsetup = false;
-                return;
-            }
-            if(result.isFailure()||!result.isSuccess()){
-                //System.out.println("qazwsx"+2);
-                iapsetup = false;
+            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    purchaseProgressDialog.dismiss();
+                }
+                //iapsetup = false;
                 return;
             }
             if(result.isSuccess()){
                 iapsetup = true;
                 Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
                 isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
-                removeAd();
+                if(unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU)){
+                    removeAd();
+                    return;
+                }else {
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                        purchaseProgressDialog.dismiss();
+                    }
+                }
+            }else {
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    purchaseProgressDialog.dismiss();
+                }
             }
         }
     };
 
     public boolean restorePurchase(){
+        try {
+            mHelper.queryInventoryAsync(mGotInventoryListener);
+        } catch (IabHelper.IabAsyncInProgressException e) {
+            e.printStackTrace();
+            return false;
+        }
         return isAdRemoved;
     }
 
@@ -971,6 +996,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             adView.setEnabled(false);
             adView.setVisibility(View.GONE);
             menuNav.removeItem(R.id.unlock);
+            if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                purchaseProgressDialog.dismiss();
+                Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_purchase),Toast.LENGTH_SHORT).show();
+            }
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
             params.bottomMargin = 80;
         }
@@ -1049,11 +1078,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }*/
 
     boolean verifyDeveloperPayload(Purchase p) {
-        if(p.getDeveloperPayload().equals("0x397821dc97276")){
+        if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
+            if(p.getDeveloperPayload().equals("0x397821dc97276"+"CPMFnxQ5s0" +
+                    "NBVs3kWNgN" +
+                    "ivr1zfRbfk" +
+                    "U1lCak93su" +
+                    "RlMWFgHQMj" +
+                    "ZWYDiMVeak" +
+                    "rZ3bRGzfzz" +
+                    "9IMuplWteD" +
+                    "rBMyPRIDUm" +
+                    "GcIdL4lDdR"))
             return true;
         }
         /*
-         * TODO: verify that the developer payload of the purchase is correct. It will be
+         *  verify that the developer payload of the purchase is correct. It will be
          * the same one that you sent when initiating the purchase.
          *
          * WARNING: Locally generating a random string when starting a purchase and
@@ -1080,18 +1119,34 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-            if (mHelper == null){
-                return;
-            }if(result.isFailure()){
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
-                return;
-            }if(!verifyDeveloperPayload(purchase)){
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+            //Toast.makeText(getApplicationContext(),"finished",Toast.LENGTH_SHORT).show();
+            if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
+                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
                 return;
             }
             if(purchase.getSku().equals(REMOVE_AD_SKU)){
-                isAdRemoved = true;
-                removeAd();
+                try {
+                    //Toast.makeText(getApplicationContext(),"SUCCESS",Toast.LENGTH_SHORT).show();
+                    mHelper.queryInventoryAsync(mGotInventoryListener);
+                    return;
+                    //iapsetup = true;
+                } catch (IabHelper.IabAsyncInProgressException e) {
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.dismiss();
+                    }
+                    //System.out.println("qazwsx"+5);
+                    iapsetup = false;
+                    return;
+                }
+            }
+            Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+            if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                purchaseProgressDialog.dismiss();
             }
         }
     };
@@ -1537,20 +1592,25 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void purchaseRemoveAds(){
         try {
             new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            e.printStackTrace();
+            Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
         }
         if(isConnected){
             try{
                 //Toast.makeText(getApplicationContext(),"ddd",Toast.LENGTH_LONG).show();
+                purchaseProgressDialog =  new ProgressDialog(MainActivity.this);
+                purchaseProgressDialog.setTitle(getString(R.string.please_wait));
+                purchaseProgressDialog.setMessage(getString(R.string.purchasing));
+                purchaseProgressDialog.setCancelable(false);
+                purchaseProgressDialog.show();
                 mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, payload);
             }
-            catch (IabHelper.IabAsyncInProgressException e) {
+            catch (Exception e) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
                 e.printStackTrace();
             }
         }else{
@@ -1934,8 +1994,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     //TODO FIX THEMESELECTOR SUMMMARY TEXT COLOR
     //TODO SET SEARCHVIEW ANIMATION
     //TODO OPTIMIZE ALL CODE
-    //TODO PROGUARD
-    //TODO IAP TEST
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -2195,10 +2253,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else if (id == R.id.unlock){
             if(iapsetup){
                 hideKeyboard();
-                //purchaseRemoveAds();
+                purchaseRemoveAds();
                 //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
-                isAdRemoved = true;//
-                removeAd();//
+                //isAdRemoved = true;//
+                //removeAd();//
             }else {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_unavailable),Toast.LENGTH_LONG).show();
             }
@@ -2210,6 +2268,20 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == REMOVE_REQUEST_ID){
+            if(resultCode == RESULT_CANCELED){
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    purchaseProgressDialog.dismiss();
+                }
+                isAdRemoved = false;
+            }
+        }
     }
 
     @Override

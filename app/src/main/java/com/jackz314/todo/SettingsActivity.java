@@ -264,7 +264,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         restorePurchase.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {
-                final boolean purchased = mainActivity.isAdRemoved;
+                final boolean purchased = mainActivity.restorePurchase();
                 if(purchased){
                     Toast.makeText(getApplicationContext(),getString(R.string.purchase_updated),Toast.LENGTH_SHORT).show();
                 } else {
@@ -944,6 +944,14 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 View dialogView = inflater.inflate(R.layout.restore_dialog,null);
                 final CheckBox replaceCheck = (CheckBox)dialogView.findViewById(R.id.replace_current_checkbox);
+                ColorStateList colorStateList = new ColorStateList(
+                        new int[][]{
+                                new int[]{android.R.attr.state_checked},
+                                new int[]{}
+                        },
+                        new int[]{themeColorNum,Color.GRAY}
+                );
+                replaceCheck.setButtonTintList(colorStateList);
                 Button selectBackup = (Button)dialogView.findViewById(R.id.select_backup_file_btn);
                 selectBackup.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1227,7 +1235,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         ,ColorUtils.lighten(themeColorNum,0.32) //enabled
                 }
         );
-        //// TODO: 2017/8/29 CHANGE COLOR OF SWITCHPREFERENCE DYNAMICALLY//fuck me, this shit is so hard
         if(pref.isEnabled()){
             //pref.setWidgetLayoutResource(R.layout.custom_switchpreference);
             /*Switch customSwitch = (Switch)getLayoutInflater().inflate(R.layout.custom_switchpreference,null);
