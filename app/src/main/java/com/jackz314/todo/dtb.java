@@ -1,19 +1,14 @@
 package com.jackz314.todo;
 
-import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.net.Uri;
-import android.widget.Toast;
 
 import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 
 /**
@@ -143,6 +138,13 @@ public class dtb extends SQLiteOpenHelper{
     public void deleteNote(Long id){
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
+    }
+
+    public void insertDataForSpecialMsgAction(String data){
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(TITLE,data);
+        db.insert(TODO_TABLE,null,cv);
     }
 
     public void restoreDataHToM(String id){

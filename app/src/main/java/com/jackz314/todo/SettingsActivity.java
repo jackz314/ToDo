@@ -156,7 +156,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         textColorNum=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColorNum=sharedPreferences.getInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
         chooseClrFrequency.setSummary(sharedPreferences.getString(getString(R.string.clear_interval_summary_key),getString(R.string.one_day)));
-        themeSelector.setSummary(sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.custom)));
+        themeSelector.setSummary(sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.material_indigo)));
         if(sharedPreferences.getBoolean(getString(R.string.custom_theme_key),true)){
             themeSelector.setSummary(getString(R.string.custom));
         }
@@ -312,7 +312,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 }
                 themeColorNum = Color.parseColor(newValue.toString());
                 editor.commit();
-                String themeSelectorSummary = sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.custom));
+                String themeSelectorSummary = sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.material_indigo));
                 themeSelector.setSummary(themeSelectorSummary);
                 setColorPreferencesSettings();
                 setColorForPref(themeSelector);

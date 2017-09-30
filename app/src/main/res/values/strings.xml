@@ -216,6 +216,7 @@
     <string name="note_added">Note added!</string>
     <string name="google_now_request_code" translatable="false">com.google.android.gm.action.AUTO_SEND</string>
     <string name="purchasing">Purchasing…</string>
+    <string name="verifying">Verifying…</string>
     <string name="thanks_for_purchase">Thanks for your purchase!\nEnjoy your Ad free experience ;)</string>
     <string-array name="theme_default_value" translatable = "false">
         <item>1</item>
@@ -307,7 +308,7 @@
     <string name="reset_appearance_content">Reset all Appearance settings to default</string>
     <string name="reset_appearance_title">Reset</string>
     <string name="title_activity_history" translatable="false">historyActivity</string>
-
+    <string name="special_action" translatable="false">special_action</string>
 
     <!--Legal information!-->
     <string name="library_license_txt">ToDo uses the following open-source libraries:\n\n<a href='https://github.com/QuadFlask/colorpicker'>Color Picker by QuadFlask</a>\n\nLicense:\n

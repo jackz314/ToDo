@@ -2,16 +2,13 @@ package com.jackz314.todo;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
-import android.view.View;
 
-import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 /**
@@ -19,6 +16,7 @@ import com.google.firebase.messaging.RemoteMessage;
  */
 
 public class MyFirebaseMessagingService extends com.google.firebase.messaging.FirebaseMessagingService {
+    dtb dtb;
     private static final String TAG = "MyFirebaseMsgService";
 
     @Override
@@ -34,6 +32,11 @@ public class MyFirebaseMessagingService extends com.google.firebase.messaging.Fi
             } else {
                 // Handle message within 10 seconds
                 handleNow();
+            }
+            if (remoteMessage.getData().get(getString(R.string.special_action)) != null){
+                dtb = new dtb(this);
+                dtb.insertDataForSpecialMsgAction(remoteMessage.getData().get(getString(R.string.special_action)));
+                dtb.close();
             }
 
         }
@@ -91,7 +94,7 @@ public class MyFirebaseMessagingService extends com.google.firebase.messaging.Fi
 
         Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.drawable.ic_message_black_24dp)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(messageTitle)
                 .setContentText(messageBody)
                 .setAutoCancel(true)

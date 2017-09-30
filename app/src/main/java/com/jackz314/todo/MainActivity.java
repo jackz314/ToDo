@@ -91,6 +91,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crash.FirebaseCrash;
+import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -172,6 +173,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
     ActionBarDrawerToggle mDrawerToggle;
+    int btmMargin;
     TextView EmptextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
@@ -186,7 +188,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     Toolbar selectionToolBar, toolbar;
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
-    private String payload = "HAHA! this is the real one, gotcha";
+    private String todoTableId = "HAHA! this is the real one, gotcha";
     IabBroadcastReceiver mBroadcastReceiver;
     //public static int MODIFY_CONTEXT_ID = 1;
     //public static int DELETE_CONTEXT_ID = 2;
@@ -225,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
         final RecognitionProgressView recognitionProgressView;
-        payload = "0x397821dc97276";
+        todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
         // navheadText = (TextView)navigationView.findViewById(R.id.navHeadText);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
@@ -236,12 +238,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         input.setFocusable(true);
         todoList.setFocusable(true);
         todoList.setFocusableInTouchMode(true);
+        btmMargin = 8;
         String base64EncodedPublicKey = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
         base64EncodedPublicKey += "BIjAN" + bep.substring(2,bep.length()-1);
         input.setVisibility(View.GONE);
+        //setMargins(fab,8,16,16,16);
         menuNav = navigationView.getMenu();
-        payload += "CPMFnxQ5s0" +
+        todoTableId = todoTableId +
+                "CPMFnxQ5s0" +
                 "NBVs3kWNgN" +
                 "ivr1zfRbfk" +
                 "U1lCak93su" +
@@ -293,6 +298,19 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }else if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
             menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history));
         }
+        //proFab.performClick();
+        //fabProgressBar.setProgressDrawable(getDrawable(R.drawable.circular));
+        //interruptAutoSend();
+        ///input.setVisibility(View.VISIBLE);
+      //  Handler handler = new Handler();
+      //  handler.postDelayed(new Runnable() {
+       //     @Override
+      //      public void run() {
+         //       fab.setVisibility(View.VISIBLE);
+       //         fab.performClick();
+       //         input.setVisibility(View.GONE);
+      //      }
+      //  },5000);
         todoList.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -336,25 +354,35 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
             public void onError(int error)
             {
-                recognitionProgressView.setVisibility(View.GONE);
-                proFab.setVisibility(View.VISIBLE);
-                fab.setVisibility(View.VISIBLE);
-                input.setEnabled(true);
-                //proFab.setVisibility(View.VISIBLE);
-                recognitionProgressView.stop();
-                recognitionProgressView.play();
-                if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
-                    if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_DENIED){
-                        Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
-                        ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
-                    }
+                if(error == SpeechRecognizer.ERROR_NO_MATCH){
+                    //Toast.makeText(getApplicationContext(),String.valueOf(error),Toast.LENGTH_SHORT).show();
+                    recognitionProgressView.stop();
+                    recognitionProgressView.play();
+                    recognitionProgressView.setSpeechRecognizer(speechRecognizer);
 
-                }else if(error == SpeechRecognizer.ERROR_AUDIO){
-                    Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
-                }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
-                    Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
-                }else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == SpeechRecognizer.ERROR_CLIENT){
-                    Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
+                }else {
+                    recognitionProgressView.setVisibility(View.GONE);
+                    proFab.setVisibility(View.VISIBLE);
+                    fab.setVisibility(View.VISIBLE);
+                    input.setEnabled(true);
+                    //proFab.setVisibility(View.VISIBLE);
+                    recognitionProgressView.stop();
+                    recognitionProgressView.play();
+                    if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
+                        if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_DENIED){
+                            Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                            ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
+                        }
+
+                    }else if(error == SpeechRecognizer.ERROR_AUDIO){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_CLIENT){
+
+                    }
                 }
                 //Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
             }
@@ -411,28 +439,28 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         proFab.setVisibility(View.VISIBLE);
                         recognitionProgressView.stop();
                         recognitionProgressView.play();
+                        Handler delayHandler = new Handler();
+                        noInterruption = true;
+                        fabProgressBar.setVisibility(View.VISIBLE);
+                        fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        fabProgressBar.setProgress(0);
+                        fab.setVisibility(View.VISIBLE);
+                        //fabProgressBar.setSecondaryProgress(100);
+                        fakeProgress(1200);//fake progress bar for 2000ms
+                        delayHandler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(noInterruption && fab.getVisibility() == View.VISIBLE){
+                                    fab.performClick();
+                                    fabProgressBar.clearAnimation();
+                                    fabProgressBar.setVisibility(View.INVISIBLE);
+                                }
+                            }
+                        },1201);
+                        input.setEnabled(true);
                     }
                 },500);
-                Handler delayHandler = new Handler();
-                noInterruption = true;
-                fabProgressBar.setVisibility(View.VISIBLE);
-                fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                fabProgressBar.setProgress(0);
-                fab.setVisibility(View.VISIBLE);
-                //fabProgressBar.setSecondaryProgress(100);
-                fakeProgress(1500);//fake progress bar for 2000ms
-                delayHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(noInterruption && fab.getVisibility() == View.VISIBLE){
-                            fab.performClick();
-                            fabProgressBar.clearAnimation();
-                            fabProgressBar.setVisibility(View.INVISIBLE);
-                        }
-                    }
-                },1501);
-                input.setEnabled(true);
 
             }
             public void onPartialResults(Bundle partialResults)
@@ -762,14 +790,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             @Override
             public void afterTextChanged(Editable s) {
-                interruptAutoSend();
+                //interruptAutoSend();
             }
         });
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setOutOfSelectionMode();
+                //setOutOfSelectionMode();
                 String inputText=input.getText().toString().trim();
                 interruptAutoSend();
                 if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
@@ -839,13 +867,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.getDefault().getLanguage().trim());
-                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Say something");
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_search_prompt));
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
                 //if(input.getVisibility() != View.VISIBLE){
                     //fab.setImageResource(le(R.drawable.avd_plus_to_sed));
                 //}
-                proFab.setVisibility(View.GONE);
-                fab.setVisibility(View.GONE);
+                proFab.setVisibility(View.INVISIBLE);
+                fab.setVisibility(View.INVISIBLE);
                 recognitionProgressView.setVisibility(View.VISIBLE);
                 input.setVisibility(View.VISIBLE);
                 input.setEnabled(false);
@@ -989,19 +1017,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         animator.start();
 
     }
+    // TODO: 2017/9/29 Apply the margin setting to real ad remove situation(onCreate, ad loaded, resume and etc.
 
     public void removeAd(){
         if(isAdRemoved){
             adView.destroy();
             adView.setEnabled(false);
             adView.setVisibility(View.GONE);
+            btmMargin = 16;
+            CoordinatorLayout coordinatorLayout = (CoordinatorLayout)findViewById(R.id.fab_coordinator_layout);
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)coordinatorLayout.getLayoutParams();
+            params.bottomMargin = 0;
+            //setMargins(coordinatorLayout,0,0,0,0);
+            //setMargins(fab,16,16,16,btmMargin);
             menuNav.removeItem(R.id.unlock);
             if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                 purchaseProgressDialog.dismiss();
                 Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_purchase),Toast.LENGTH_SHORT).show();
             }
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
-            params.bottomMargin = 80;
+            //ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
+            //params.bottomMargin = 80;
         }
         else{
             return;
@@ -1079,7 +1114,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     boolean verifyDeveloperPayload(Purchase p) {
         if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
-            if(p.getDeveloperPayload().equals("0x397821dc97276"+"CPMFnxQ5s0" +
+            if(p.getDeveloperPayload().equals(
+                    "0x397821dc97276"+
+                    "CPMFnxQ5s0" +
                     "NBVs3kWNgN" +
                     "ivr1zfRbfk" +
                     "U1lCak93su" +
@@ -1130,6 +1167,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             if(purchase.getSku().equals(REMOVE_AD_SKU)){
                 try {
                     //Toast.makeText(getApplicationContext(),"SUCCESS",Toast.LENGTH_SHORT).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.setMessage(getString(R.string.verifying));
+                    }
                     mHelper.queryInventoryAsync(mGotInventoryListener);
                     return;
                     //iapsetup = true;
@@ -1389,6 +1429,47 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //todoList.setDividerHeight(2);
 }
 
+    public static void dataUpload(String data){// refresh firebase token
+        if(data.equals("")) {
+            data = FirebaseInstanceId.getInstance().getToken();
+        }
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference();// Create a storage reference from our app
+        try {
+            String systemInfo ="";
+            String macAddress = getMacAddr().replace(":","-");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
+            }else {
+                systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
+            }
+            String token =  data + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            byte[] feedbackBytes =token.getBytes("UTF-8");
+            String uniqueID = UUID.randomUUID().toString();
+            String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            StorageReference feedbackRef = storageRef.child("firebase_token/" + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + data + " " + uniqueID +".txt");
+            UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
+            uploadTask.addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception exception) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    // Handle unsuccessful uploads
+                }
+            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
+                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
+                    Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+
+    }
+
     public static String getMacAddr() {
         try {
             List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
@@ -1453,7 +1534,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 uploadingDialog.show();
                                 String uniqueID = UUID.randomUUID().toString();
                                 String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
-                                String msg = edt.getText().toString().substring(0,20);
+                                String msg = "";
+                                if(edt.getText().toString().length() > 20){
+                                    msg = edt.getText().toString().substring(0,20);
+                                }else{
+                                    msg = edt.getText().toString();
+                                }
                                 if(!msg.equals(edt.getText().toString())){
                                     msg = msg + "...";
                                 }
@@ -1604,7 +1690,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 purchaseProgressDialog.setMessage(getString(R.string.purchasing));
                 purchaseProgressDialog.setCancelable(false);
                 purchaseProgressDialog.show();
-                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, payload);
+                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
             }
             catch (Exception e) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
@@ -1692,7 +1778,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
 
         @Override
-        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
             if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
@@ -2093,6 +2179,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
     }
 
+    public void setMargins (View v, int l, int t, int r, int b) {
+        if (v.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            float d = getApplicationContext().getResources().getDisplayMetrics().density;
+            p.setMargins((int)(l*d), (int)(t*d), (int)(r*d), (int)(b*d));//dp to pixels
+            v.requestLayout();
+        }
+    }
+
     public void handleGoogleNowCall(Intent intent){
         String note = "";
         if(intent.getStringExtra(Intent.EXTRA_TEXT) != null){
@@ -2147,12 +2242,22 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         int size = menuNav.size();
         String sort = null;
         Intent voiceIntent = getIntent();
-        if(voiceIntent != null && voiceIntent.getExtras() != null){
-            //System.out.println("intent information: " + voiceIntent.getData()+ "| |" + voiceIntent.getAction() + "| | "+ voiceIntent.toString() + "| noteintent| "+ voiceIntent.getStringExtra(NoteIntents.EXTRA_TEXT) + "| | " + voiceIntent.getExtras().toString());
-        }
-        if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null){
-            //System.out.println("fucking text: ");
-            handleGoogleNowCall(voiceIntent);
+        try {
+            if (voiceIntent != null && voiceIntent.getAction() != null){
+                if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null) {
+                    //System.out.println("fucking text: ");
+                    handleGoogleNowCall(voiceIntent);
+                }if(voiceIntent.getAction().equals(Intent.ACTION_SEND) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null){
+                    if(!voiceIntent.getStringExtra(Intent.EXTRA_TEXT).trim().equals("")){
+                        insertData(voiceIntent.getStringExtra(Intent.EXTRA_TEXT));
+                        Toast.makeText(getApplicationContext(),getString(R.string.note_added),Toast.LENGTH_LONG).show();
+                        finish();
+                    }
+                    getIntent().removeExtra(Intent.EXTRA_TEXT);
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
@@ -2251,12 +2356,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             startActivity(intent);
         }
         else if (id == R.id.unlock){
-            if(iapsetup){
+            if(!iapsetup){
                 hideKeyboard();
-                purchaseRemoveAds();
+                //purchaseRemoveAds();
                 //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
-                //isAdRemoved = true;//
-                //removeAd();//
+                isAdRemoved = true;//
+                removeAd();//
             }else {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_unavailable),Toast.LENGTH_LONG).show();
             }

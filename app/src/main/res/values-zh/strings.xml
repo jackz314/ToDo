@@ -216,4 +216,5 @@
     <string name="purchasing">购买进行中</string>
     <string name="purchase_canceled">内购已取消，再考虑考虑？</string>
     <string name="thanks_for_purchase">感谢您的购买！</string>
+    <string name="verifying">验证中…</string>
 </resources>
