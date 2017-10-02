@@ -68,7 +68,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 
-import static com.jackz314.todo.R.color.colorPrimary;
+import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.dtb.DATABASE_NAME;
 
 /**
@@ -152,7 +152,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     }
 
     public void setColorPreferencesSettings(){
-        themeColorNum=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
+        themeColorNum=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorActualPrimary));
         textColorNum=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColorNum=sharedPreferences.getInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
         chooseClrFrequency.setSummary(sharedPreferences.getString(getString(R.string.clear_interval_summary_key),getString(R.string.one_day)));
@@ -288,7 +288,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             @Override
             public boolean onPreferenceChange(Preference preference, Object newValue) {
                 //System.out.println("newVal" + newValue.toString());
-                themeSelector.setValue(String.valueOf(sharedPreferences.getInt(getString(R.string.theme_selector_value_key),getResources().getColor(colorPrimary))));
+                themeSelector.setValue(String.valueOf(sharedPreferences.getInt(getString(R.string.theme_selector_value_key),getResources().getColor(colorActualPrimary))));
                 SharedPreferences.Editor editor = sharedPreferences.edit();
                 String themeSummary;
                 int pos = Arrays.asList(themeSelector.getEntryValues()).indexOf(String.valueOf(newValue));
@@ -814,13 +814,13 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 SharedPreferences.Editor editor = sharedPreferences.edit();
                                 editor.putInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
                                 editor.putInt(getString(R.string.text_color_key),Color.BLACK);
-                                editor.putInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
+                                editor.putInt(getString(R.string.theme_color_key),getResources().getColor(colorActualPrimary));
                                 editor.putBoolean(getString(R.string.order_key),true);
                                 editor.putInt(getString(R.string.text_size_key),24);
                                 editor.putString(getString(R.string.theme_selector_summary_key),getString(R.string.material_indigo));
                                 editor.putString(getString(R.string.theme_selector_key),getString(R.string.material_indigo));
-                                editor.putInt(getString(R.string.theme_selector_value_key), getResources().getColor(R.color.colorPrimary));
-                                editor.putInt(getString(R.string.theme_selector_key), getResources().getColor(R.color.colorPrimary));
+                                editor.putInt(getString(R.string.theme_selector_value_key), getResources().getColor(R.color.colorActualPrimary));
+                                editor.putInt(getString(R.string.theme_selector_key), getResources().getColor(R.color.colorActualPrimary));
                                 editor.putInt(getString(R.string.theme_selector_position_key),0);
                                 editor.apply();
                                 setColorPreferencesSettings();

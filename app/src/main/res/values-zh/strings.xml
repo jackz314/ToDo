@@ -72,14 +72,12 @@
     <string name="nav_remove_ad">去除广告！</string>
     <string name="nav_settings">设置</string>
     <string name="nav_share">分享</string>
-    <string name="contact_me">如果您有任何详细的问题，建议或这任何其他您想获得的帮助，请用电子邮件联系我: zhangmengyu10@gmail.com</string>
+    <string name="contact_me">如果您有任何详细的问题，建议或这任何其他您想获得的帮助，请用电子邮件联系我</string>
     <string name="feedback_message">请描述您遇到的问题，或者尽管向我提其他意见 :) 如果您有其他更详细的信息想要告诉我，请在\"关于\"中通过电子邮件联系我！</string>
     <string name="aboutAct_name">关于</string>
     <string name="about">这是一个轻量级但高度定制化的待办事项应用。请随意支持我或在应用商店里为我打分支持</string>
     <string name="share_content">嗨！快来Google Play体验ToDo\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo—一款高度定制化的待办事项应用，最大限度提升您的效率！</string>
     <string name="share_subject">ToDo — 棒极了的待办事项应用！</string>
-
-
     <string-array name="theme_entries" >
 
         <item>（质感）靛蓝</item>
@@ -118,8 +116,8 @@
     <string name="purchase_failed">购买失败:(\\n请过一会再试或者向我报告错误</string>
     <string name="reconsider">让我再想想</string>
     <string name="welcome_note">欢迎来到ToDo，以下是一些简单的教程</string>
-    <string name="tutorial_1">按 \\\"+\\\"以添加新的内容</string>
-    <string name="tutorial_2">长按\\\"+\\\"以进行语音输入</string>
+    <string name="tutorial_1">按 \"+\"以添加新的内容</string>
+    <string name="tutorial_2">长按\"+\"以进行语音输入</string>
     <string name="tutorial_3">轻敲以修改</string>
     <string name="tutorial_4">打开菜单来获取更多个性化选项</string>
     <string name="backup_error">备份错误！</string>
@@ -148,6 +146,7 @@
     <string name="got_it">知道了！</string>
     <string name="history_switch_content">保留历史记录</string>
     <string name="history_switch_title">历史记录</string>
+    <string name="thanks_for_support">感谢您的支持! :-)</string>
     <string name="library_license_txt">ToDo 使用了以下的开源库:\n\n<a href='https://github.com/QuadFlask/colorpicker'>Color Picker by QuadFlask</a>\n\nLicense:\n
         \nCopyright 2014-2017 QuadFlask
         \nLicensed under the Apache License, Version 2.0 (the "License");
@@ -163,7 +162,7 @@
 \nlimitations under the License.</string>    <string name="licenses">法律许可</string>
     <string name="material_indigo">靛蓝</string>
     <string name="not_validate_backup">这不是有效的备份文件</string>
-    <string name="note_added">笔记已添加</string>
+    <string name="note_added">笔记已添加至ToDo!</string>
     <string name="notes_deleted_snack_text">项已删除</string>
     <string name="notes_finished_snack_text">项已完成</string>
     <string name="notes_restored_snack_text">项已还原</string>
@@ -194,7 +193,7 @@
     <string name="select_backup_file_button_text">选择一个备份</string>
     <string name="selected_wrong_path">选择的目录不支持保存备份，请重新选择 :(</string>
     <string name="selection_mode_empty_title">已选择</string>
-    <string name="selection_mode_title">\" 已选择\"</string>
+    <string name="selection_mode_title">" 已选择"</string>
     <string name="speech_to_text_failed">谷歌语音识别服务未安装或者无网络连接，请稍后重试！！</string>
     <string name="storage_permission_hint_bk">请授予存储权限来进行备份</string>
     <string name="storage_permission_hint_rs">请授予存储权限来进行还原</string>

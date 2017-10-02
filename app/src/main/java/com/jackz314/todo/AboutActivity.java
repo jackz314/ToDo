@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
@@ -49,7 +50,7 @@ public class AboutActivity extends AppCompatActivity {
         versionText = (TextView)findViewById(R.id.version_text);
         licensesText = (TextView)findViewById(R.id.licenses);
         sharedPreferences = getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
+        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
         textColor=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColor=sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
         aboutView = (ConstraintLayout)findViewById(R.id.aboutView);
@@ -115,6 +116,15 @@ public class AboutActivity extends AppCompatActivity {
                 bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "donate button");
                 bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "button");
                 mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://paypal.me/jackz314payme/1"));
+                startActivity(browserIntent);
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_support),Toast.LENGTH_SHORT).show();
+                    }
+                }, 3000);
                 //put donate method here!
             }
         });

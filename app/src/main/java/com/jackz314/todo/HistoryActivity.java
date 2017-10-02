@@ -56,7 +56,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
-import static com.jackz314.todo.R.color.colorPrimary;
+import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
@@ -89,7 +89,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         /*sharedPreferences) = sharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
+        themeColor=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
         textColor=sharedPreferences).getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColor=sharedPreferences).getInt(getString(R.string.theme_color_key),Color.WHITE);*/
         super.onCreate(savedInstanceState);
@@ -101,7 +101,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         historyList = (RecyclerView) findViewById(R.id.historyList);
         historyList.setHasFixedSize(true);
-
         emptyHistory = (TextView)findViewById(R.id.emptyHistory);
         LayoutInflater inflater =this.getLayoutInflater();
         historyView = (ConstraintLayout)findViewById(R.id.historyView);
@@ -159,7 +158,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = historyListAdapter.getItemId(position);
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                v.vibrate(300);
+                v.vibrate(30);
                 unSelectAll = false;
                 selectAll = false;
                 if(isInSelectionMode){
@@ -299,7 +298,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void setHistoryColorsPreferences(){
         //get colors
         sharedPreferences = getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
+        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorActualPrimary));
         textColor=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColor=sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
         textSize=sharedPreferences.getInt(getString(R.string.text_size_key),24);
@@ -412,7 +411,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             //////System.out.println("empty history!");
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(R.string.empty_history);
-            historyList.removeAllViewsInLayout();//remove all items
+            //historyList.removeAllViewsInLayout();//remove all items
             historyList.setAdapter(null);
         } else {
             emptyHistory.setVisibility(View.GONE);
@@ -706,6 +705,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
         searchView = (SearchView) menu.findItem(R.id.todo_search).getActionView();
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setIconifiedByDefault(true);
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
@@ -867,7 +867,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         Uri uri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, id);
         getContentResolver().delete(uri, null, null);
         //historyList.getAdapter().notifyDataSetChanged();
-        //getSupportLoaderManager().restartLoader(234,null,this);
+        getSupportLoaderManager().restartLoader(234,null,this);
         displayAllNotes();
         Bundle bundle = new Bundle();
         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "delete_history");
@@ -892,6 +892,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        emptyHistory.setVisibility(View.VISIBLE);
+        //Toast.makeText(getApplicationContext(),String.valueOf(data.getCount()) + String.valueOf(isInSearchMode),Toast.LENGTH_LONG).show();
         if(data.getCount() == 0 && isInSearchMode){
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(getString(R.string.empty_search_result));

@@ -6,6 +6,7 @@ import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentUris;
@@ -13,6 +14,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -85,6 +87,7 @@ import android.widget.Toast;
 
 import com.android.vending.billing.IInAppBillingService;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -97,7 +100,6 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
-import com.jackz314.todo.util.IabBroadcastReceiver;
 import com.jackz314.todo.util.IabHelper;
 import com.jackz314.todo.util.IabResult;
 import com.jackz314.todo.util.Inventory;
@@ -173,23 +175,24 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
     ActionBarDrawerToggle mDrawerToggle;
-    int btmMargin;
     TextView EmptextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
     AdView adView;
+
     boolean isAdd = true;
     NavigationView navigationView;
     ProgressFloatingActionButton proFab;
     ProgressBar fabProgressBar;
     Menu menuNav;
     MenuItem navRemoveAD;
+    BroadcastReceiver receiver;
     IInAppBillingService mService;
     Toolbar selectionToolBar, toolbar;
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
     private String todoTableId = "HAHA! this is the real one, gotcha";
-    IabBroadcastReceiver mBroadcastReceiver;
+    //IabBroadcastReceiver mBroadcastReceiver;
     //public static int MODIFY_CONTEXT_ID = 1;
     //public static int DELETE_CONTEXT_ID = 2;
     public boolean iapsetup = true;
@@ -203,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //System.out.println("oncreatecalled");
         adView= (AdView)findViewById(R.id.bannerAdView);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        AdRequest adRequest = new AdRequest.Builder().build();
+        final AdRequest adRequest = new AdRequest.Builder().build();
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         //layoutInflater.inflate(R.layout.nav_header_main,null);
@@ -232,16 +235,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // navheadText = (TextView)navigationView.findViewById(R.id.navHeadText);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
         //get colors
-        setColorPreferences();
-        displayAllNotes();
+
         input.setTextIsSelectable(true);
         input.setFocusable(true);
         todoList.setFocusable(true);
         todoList.setFocusableInTouchMode(true);
-        btmMargin = 8;
-        String base64EncodedPublicKey = "MII";
+        String historySettingPref = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
-        base64EncodedPublicKey += "BIjAN" + bep.substring(2,bep.length()-1);
+        historySettingPref += "BIjAN" + bep.substring(2,bep.length());
         input.setVisibility(View.GONE);
         //setMargins(fab,8,16,16,16);
         menuNav = navigationView.getMenu();
@@ -261,10 +262,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         for (int i = 0; i < size; i++) {
             menuNav.getItem(i).setChecked(false);
         }
-        mHelper = new IabHelper(this, base64EncodedPublicKey);
-        mHelper.enableDebugLogging(false);
-        mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener(){
+        mHelper = new IabHelper(this, historySettingPref);
+        mHelper.enableDebugLogging(true);
+        if (mHelper != null) mHelper.flagEndAsync();
+        mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
             public void onIabSetupFinished(IabResult result) {
+                //Toast.makeText(getApplicationContext(),String.valueOf(isConnected),Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(),"Finished",Toast.LENGTH_SHORT).show();
+                //System.out.println("finisheddd");
                 if((!result.isSuccess())||result.isFailure()){
                     //System.out.println("qazwsx"+3);
                     iapsetup = false;
@@ -272,12 +277,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
                 if(mHelper == null){
                     //System.out.println("qazwsx"+4);
+                    //System.out.println("finisheddd");
+
                     iapsetup = false;
                     return;
                 }
                 try {
+                    if (mHelper != null) mHelper.flagEndAsync();
                     mHelper.queryInventoryAsync(mGotInventoryListener);
-                    iapsetup = true;
                 } catch (IabHelper.IabAsyncInProgressException e) {
                     e.printStackTrace();
                     //System.out.println("qazwsx"+5);
@@ -285,11 +292,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             }
         });
-        if(isAdRemoved && navRemoveAD != null){
-            menuNav.removeItem(R.id.unlock);
-        }else {
-            adView.loadAd(adRequest);
-        }
+        setColorPreferences();
+        displayAllNotes();
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if(isAdRemoved && navRemoveAD != null){
+                    adView.destroy();
+                    displayAllNotes();
+                    menuNav.removeItem(R.id.unlock);
+                }else {
+                    adView.loadAd(adRequest);
+                }
+            }
+        },500);
         if(navRemoveAD != null && !iapsetup){
             //navRemoveAD.setEnabled(false);
         }
@@ -628,7 +645,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             }
         });
-
         ItemClickSupport.addTo(todoList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
@@ -642,7 +658,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
                     setOutOfSelectionMode();
-                    proFab.setVisibility(View.GONE);
+                    proFab.setVisibility(View.INVISIBLE);
                     isInSelectionMode = true;
                     getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
@@ -968,17 +984,50 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }//--------end of onCreate!
 
+    /*IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
+        public void onConsumeFinished(Purchase purchase, IabResult result) {
+            // if we were disposed of in the meantime, quit.
+            if (mHelper == null) return;
+            // We know this is the "gas" sku because it's the only one we consume,
+            // so we don't check which sku was consumed. If you have more than one
+            // sku, you probably should check...
+            if (result.isSuccess()) {
+                // successfully consumed, so we apply the effects of the item in our
+                // game world's logic, which in our case means filling the gas tank a bit
+                Toast.makeText(getApplicationContext(),"consumed",Toast.LENGTH_LONG).show();
+            }
+            else {
+            }
+
+        }
+    };*/
+
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
+            //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
+            /*if(consume){
+                try {
+                    mHelper.consumeAsync(inv.getPurchase(REMOVE_AD_SKU),mConsumeFinishedListener);
+                } catch (IabHelper.IabAsyncInProgressException e) {
+                    e.printStackTrace();
+                }
+            }*/
             if(result.isFailure()||(!result.isSuccess())|| mHelper == null){
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
                     purchaseProgressDialog.dismiss();
                 }
+                adView= (AdView)findViewById(R.id.bannerAdView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                adView.loadAd(adRequest);
+                adView.setVisibility(View.VISIBLE);
+                isAdRemoved = false;
                 //iapsetup = false;
                 return;
             }
             if(result.isSuccess()){
+                //Toast.makeText(getApplicationContext(),"dsds",Toast.LENGTH_LONG).show();
                 iapsetup = true;
                 Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
                 isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
@@ -986,14 +1035,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     removeAd();
                     return;
                 }else {
+                    adView= (AdView)findViewById(R.id.bannerAdView);
+                    AdRequest adRequest = new AdRequest.Builder().build();
+                    adView.loadAd(adRequest);
+                    adView.setVisibility(View.VISIBLE);
+                    isAdRemoved = false;
                     if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                         Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
                         purchaseProgressDialog.dismiss();
                     }
                 }
             }else {
+                adView= (AdView)findViewById(R.id.bannerAdView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                adView.loadAd(adRequest);
+                adView.setVisibility(View.VISIBLE);
+                isAdRemoved = false;
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
                     purchaseProgressDialog.dismiss();
                 }
             }
@@ -1002,8 +1063,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public boolean restorePurchase(){
         try {
+            if (mHelper != null) mHelper.flagEndAsync();
             mHelper.queryInventoryAsync(mGotInventoryListener);
-        } catch (IabHelper.IabAsyncInProgressException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
@@ -1024,7 +1086,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             adView.destroy();
             adView.setEnabled(false);
             adView.setVisibility(View.GONE);
-            btmMargin = 16;
             CoordinatorLayout coordinatorLayout = (CoordinatorLayout)findViewById(R.id.fab_coordinator_layout);
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)coordinatorLayout.getLayoutParams();
             params.bottomMargin = 0;
@@ -1159,6 +1220,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             //Toast.makeText(getApplicationContext(),"finished",Toast.LENGTH_SHORT).show();
             if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     purchaseProgressDialog.dismiss();
                 }
@@ -1170,12 +1232,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                         purchaseProgressDialog.setMessage(getString(R.string.verifying));
                     }
+                    if (mHelper != null) mHelper.flagEndAsync();
                     mHelper.queryInventoryAsync(mGotInventoryListener);
                     return;
                     //iapsetup = true;
-                } catch (IabHelper.IabAsyncInProgressException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
                     if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                         purchaseProgressDialog.dismiss();
                     }
@@ -1183,10 +1247,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     iapsetup = false;
                     return;
                 }
-            }
-            Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-            if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                purchaseProgressDialog.dismiss();
+            }else {
+                Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
             }
         }
     };
@@ -1339,7 +1405,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void setColorPreferences(){
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
+        themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
         textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         textSize = sharedPreferences.getInt(getString(R.string.text_size_key),24);
         backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
@@ -1690,10 +1756,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 purchaseProgressDialog.setMessage(getString(R.string.purchasing));
                 purchaseProgressDialog.setCancelable(false);
                 purchaseProgressDialog.show();
+                if (mHelper != null) mHelper.flagEndAsync();
                 mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
             }
             catch (Exception e) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"8" +e.getLocalizedMessage(),Toast.LENGTH_LONG).show();
+                //insertData(e.getLocalizedMessage());
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     purchaseProgressDialog.dismiss();
                 }
@@ -1702,6 +1771,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }else{
             //Toast.makeText(getApplicationContext(),"NO INTERNET",Toast.LENGTH_LONG).show();
             Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+            //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1849,7 +1919,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextSize(textSize);
                     if(isInSearchMode){
                         Spannable spannable = new SpannableString(text);
-                        ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
+                        //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
                         int startPos = textLow.indexOf(searchTextLow);
@@ -2103,7 +2173,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 isInSearchMode = true;
-                proFab.setVisibility(View.GONE);
+                proFab.setVisibility(View.INVISIBLE);
                 return true;
             }
 
@@ -2122,7 +2192,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public void onClick(View v) {
                 isInSearchMode = true;
-                proFab.setVisibility(View.GONE);
+                proFab.setVisibility(View.INVISIBLE);
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -2242,6 +2312,80 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         int size = menuNav.size();
         String sort = null;
         Intent voiceIntent = getIntent();
+        String historySettingPref = "MII";
+        String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+P2oT72hEaw5FwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
+        historySettingPref += "BIjAN" + bep.substring(2,bep.length());
+        adView.setAdListener(new AdListener(){//resume ad when got internet
+            @Override
+            public void onAdFailedToLoad(int i) {
+                adView.destroy();
+                adView.setVisibility(View.GONE);
+                //Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                receiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        try {
+                            new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(isConnected){
+                                    try {
+                                        try {
+                                            if (mHelper != null) mHelper.flagEndAsync();
+                                            mHelper.queryInventoryAsync(mGotInventoryListener);
+                                        }catch (Exception  e){
+                                            //Toast.makeText(getApplicationContext(),"fis" + e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+                                            e.printStackTrace();
+                                            if (mHelper != null) mHelper.flagEndAsync();
+                                            mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
+                                                @Override
+                                                public void onIabSetupFinished(IabResult result) {
+                                                    //Toast.makeText(getApplicationContext(),String.valueOf(isConnected),Toast.LENGTH_SHORT).show();
+                                                    //Toast.makeText(getApplicationContext(),"Finished",Toast.LENGTH_SHORT).show();
+                                                    //System.out.println("finisheddd");
+                                                    if((!result.isSuccess())||result.isFailure()){
+                                                        //System.out.println("qazwsx"+3);
+                                                        iapsetup = false;
+                                                        return;
+                                                    }
+                                                    if(mHelper == null){
+                                                        //System.out.println("qazwsx"+4);
+                                                        //System.out.println("finisheddd");
+
+                                                        iapsetup = false;
+                                                        return;
+                                                    }
+                                                    try {
+                                                        if (mHelper != null) mHelper.flagEndAsync();
+                                                        mHelper.queryInventoryAsync(mGotInventoryListener);
+                                                    } catch (Exception e) {
+                                                        e.printStackTrace();
+                                                        //System.out.println("qazwsx"+5);
+                                                        iapsetup = false;
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    } catch (Exception e) {
+                                        //Toast.makeText(getApplicationContext(),e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        },1005);
+                    }
+                };
+                IntentFilter filter = new IntentFilter();
+                filter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
+                registerReceiver(receiver,filter);
+                super.onAdFailedToLoad(i);
+            }
+        });
         try {
             if (voiceIntent != null && voiceIntent.getAction() != null){
                 if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null) {
@@ -2271,6 +2415,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             menuNav.getItem(i).setChecked(false);
         }
         if(isAdRemoved){
+            adView.destroy();
+            displayAllNotes();
             Log.i("unlock","skipped ad");
         }
         else{
@@ -2280,8 +2426,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         if(!sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) != null){
             navigationView.getMenu().removeItem(R.id.history);
-        }else if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
-            menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history));
+        }if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
+            //Toast.makeText(getApplicationContext(),"f",Toast.LENGTH_LONG).show();
+            menuNav = navigationView.getMenu();
+            menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history)).setIcon(R.drawable.ic_history_black_24dp);
         }
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todosql.getData();
@@ -2295,7 +2443,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 insertData(getString(R.string.tutorial_1));
                 insertData(getString(R.string.welcome_note));
                 displayAllNotes();
-                sharedPreferences.edit().putBoolean("first_run",false).commit();
+                sharedPreferences.edit().putBoolean("first_run",false).apply();
             }else {
                 setOutOfSelectionMode();
             }
@@ -2308,6 +2456,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         hideKeyboard();
         adView= (AdView)findViewById(R.id.bannerAdView);
         adView.destroy();
+        if (receiver != null) {
+            unregisterReceiver(receiver);
+            receiver = null;
+        }
         if (mService != null) {
             unbindService(mServiceConn);
             mHelper.disposeWhenFinished();
@@ -2316,12 +2468,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onDestroy();
     }
 
-    private boolean isNetworkAvailable() {
+    /*private boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager
                 = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null;
-    }
+    }*/
 
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -2356,12 +2508,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             startActivity(intent);
         }
         else if (id == R.id.unlock){
-            if(!iapsetup){
+            if(iapsetup){
                 hideKeyboard();
-                //purchaseRemoveAds();
+                purchaseRemoveAds();
                 //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
-                isAdRemoved = true;//
-                removeAd();//
+                //isAdRemoved = true;//
+                //removeAd();//
             }else {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_unavailable),Toast.LENGTH_LONG).show();
             }
@@ -2370,6 +2522,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else if (id == R.id.feedback){
             showFeedBackDialog();
         }
+        /*else if(id == R.id.consume){
+            try {
+                consume =true;
+                mHelper.queryInventoryAsync(mGotInventoryListener);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }*/
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
@@ -2379,9 +2539,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == REMOVE_REQUEST_ID){
+            if(resultCode == RESULT_OK){
+                if (!mHelper.handleActivityResult(requestCode, resultCode, data)) {
+                    // not handled, so handle it ourselves (here's where you'd
+                    // perform any handling of activity results not related to in-app
+                    // billing...
+                    super.onActivityResult(requestCode, resultCode, data);
+                }
+            }
             if(resultCode == RESULT_CANCELED){
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
                     purchaseProgressDialog.dismiss();
                 }
                 isAdRemoved = false;
