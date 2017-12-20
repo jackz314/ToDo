@@ -142,6 +142,9 @@ import static com.jackz314.todo.dtb.TITLE;
 //    ┗┓┓┏━┳┓┏┛
 //     ┃┫┫　┃┫┫
 //    ┗┻┛　┗┻┛
+
+
+
 // the great alpaca that saves me from the bugs
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener{
@@ -179,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
     AdView adView;
-
+    RecognitionProgressView recognitionProgressView;
     boolean isAdd = true;
     NavigationView navigationView;
     ProgressFloatingActionButton proFab;
@@ -225,11 +228,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         //todoList.addOnScrollListener(new RecyclerViewListener());
-
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
-        final RecognitionProgressView recognitionProgressView;
         todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
         // navheadText = (TextView)navigationView.findViewById(R.id.navHeadText);
@@ -350,6 +351,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
         recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         recognitionProgressView.setVisibility(View.GONE);
+        fab.setVisibility(View.VISIBLE);
+        proFab.setVisibility(View.VISIBLE);
         recognitionProgressView.setSpeechRecognizer(speechRecognizer);
         recognitionProgressView.setRecognitionListener(new RecognitionListenerAdapter() {
             @Override
@@ -386,11 +389,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     recognitionProgressView.stop();
                     recognitionProgressView.play();
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
-                        if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_DENIED){
-                            Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
-                            ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
-                        }
-
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                        ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
                     }else if(error == SpeechRecognizer.ERROR_AUDIO){
                         Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
                     }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
@@ -659,6 +659,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }else {
                     setOutOfSelectionMode();
                     proFab.setVisibility(View.INVISIBLE);
+                    input.setVisibility(View.GONE);
                     isInSelectionMode = true;
                     getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
@@ -933,6 +934,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             public void onClick(View v) {
                 recognitionProgressView.setVisibility(View.GONE);
                 proFab.setVisibility(View.VISIBLE);
+                fab.setVisibility(View.VISIBLE);
                 speechRecognizer.stopListening();
             }
         });
@@ -1432,7 +1434,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //int[] heights = { 20, 24, 18, 23, 16 };
         int[] heights = { 30, 36, 27, 35, 24 };
 
-        RecognitionProgressView recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         recognitionProgressView.setColors(colors);
         recognitionProgressView.setBarMaxHeightsInDp(heights);
         recognitionProgressView.setCircleRadiusInDp(3);
@@ -1526,7 +1528,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                     //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
                     // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
-                    Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                    //Uri downloadUrl = taskSnapshot.getDownloadUrl();
                 }
             });
         } catch (UnsupportedEncodingException e) {
@@ -2089,6 +2091,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public void onBackPressed() {
         interruptAutoSend();
+        if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
+            recognitionProgressView.setVisibility(View.GONE);
+            fab.setVisibility(View.VISIBLE);
+            proFab.setVisibility(View.VISIBLE);
+        }
         speechRecognizer.stopListening();
         if(isInSelectionMode || isInSearchMode){
             if(isInSelectionMode){

@@ -872,7 +872,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 final SimpleDateFormat timeStamp = new SimpleDateFormat("yyyy_MM_dd_HHmmssSSS");
                 final File storageRoot = Environment.getExternalStorageDirectory();
                 final String backupPathStr = Environment.getExternalStorageDirectory().getPath();
-                pathSelectorPath = backupPathStr + "/ToDo/backup";
+                pathSelectorPath = backupPathStr +getString(R.string.backup_dialog_content2);
                 backupDialog = new AlertDialog.Builder(SettingsActivity.this)
                         .setTitle(getString(R.string.backup_dialog_title))
                         .setMessage(getString(R.string.backup_dialog_content1) + " " + backupPathStr + getString(R.string.backup_dialog_content2))
@@ -883,14 +883,14 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 File databasePath = getDatabasePath(DATABASE_NAME);
                                 String backupFileName = "";
                                 if(edt.getText().toString().trim().isEmpty()){
-                                    backupFileName = "ToDo_BACKUP_ " + edt.getText().toString().trim() + "_" + timeStampName + ".db";
+                                    backupFileName = getString(R.string.app_name) + "_BACKUP_ " + edt.getText().toString().trim() + "_" + timeStampName + ".db";
                                 }else {
-                                    backupFileName = "ToDo_BACKUP_" + timeStampName + ".db";
+                                    backupFileName = getString(R.string.app_name) + "_BACKUP_ " + timeStampName + ".db";
                                 }
                                 String destinationPathStr = pathSelectorPath + "/" + backupFileName;
                                 File destinationPath = new File(destinationPathStr);
                                 File dstDir = new File(pathSelectorPath);
-                                if(pathSelectorPath.equals(backupPathStr + "/ToDo/backup") && !dstDir.exists() && !dstDir.isDirectory()){
+                                if(pathSelectorPath.equals(backupPathStr + getString(R.string.backup_dialog_content2)) && !dstDir.exists() && !dstDir.isDirectory()){
                                     dstDir.mkdirs();
                                 }
                                 try{
