@@ -1,6 +1,5 @@
 package com.jackz314.todo;
 
-import android.app.Service;
 import android.util.Log;
 
 import com.google.firebase.iid.FirebaseInstanceId;
@@ -25,6 +24,7 @@ public class MyFirebaseInstanceIDService extends FirebaseInstanceIdService {
         sendRegistrationToServer(refreshedToken);
     }
     private void sendRegistrationToServer(String token) {
+        MainActivity.dataUpload(token);
         // TODO: Implement this method to send token to your app server.
     }
 }

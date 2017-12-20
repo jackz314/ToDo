@@ -6,6 +6,9 @@ import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.preference.ListPreference;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -51,7 +54,7 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
 
         ArrayAdapter<CharSequence> adapter = new ArrayAdapter<CharSequence>(getContext(), R.layout.theme_selector_layout, R.id.theme_list_row_name, entries) {
             Resources resources = getContext().getResources();
-            int darkblue = resources.getColor(R.color.colorPrimary);
+            /*int darkblue = resources.getColor(R.color.colorPrimary);
             int red = resources.getColor(R.color.red);
             int green = resources.getColor(R.color.green);
             int cyan = resources.getColor(R.color.cyan);
@@ -63,7 +66,7 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
             int cyan_dark = resources.getColor(R.color.cyan_dark);
             int brown_dark = resources.getColor(R.color.brown_dark);
             int purple = resources.getColor(R.color.purple);
-            int black = resources.getColor(R.color.black);
+            int black = resources.getColor(R.color.black);*/
 
 
             @Override
@@ -77,13 +80,14 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
                 }
                 //RadioButton button = (RadioButton) row.findViewById(R.id.theme_list_row_radio);
                 //StateListDrawable drawable = (StateListDrawable) button.getCompoundDrawables()[0];
+
                 final RadioButton radioButton = (RadioButton)row.findViewById(R.id.theme_list_row_radio);
                 //System.out.println("ROW "+row.getContentDescription());
                 final SettingsActivity settingsActivity = (SettingsActivity)mContext;
                 final int listPos = settingsActivity.getListPos();
                 radioButton.setChecked(false);
                 if (position == listPos) {
-                    System.out.println("asdf "+listPos);
+                    //System.out.println("asdf "+listPos);
                     //radioButton = (RadioButton)row.findViewById(R.id.theme_list_row_radio);
                     radioButton.setChecked(true);
                 }
@@ -117,8 +121,9 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
                 return super.getView(position, row, parent);
             }
         };
+        Spannable spannable = new SpannableString("fuck");
+        spannable.setSpan(new ForegroundColorSpan(Color.BLUE),0,spannable.length(),0);
         builder.setAdapter(adapter, this);
-
         super.onPrepareDialogBuilder(builder);
     }
 

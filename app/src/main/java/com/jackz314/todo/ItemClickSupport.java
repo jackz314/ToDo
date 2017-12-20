@@ -7,7 +7,7 @@ import android.view.View;
  * Created by zhang on 2017/9/13.
  */
 
-public class ItemClickSupport {
+ class ItemClickSupport {
         private final RecyclerView mRecyclerView;
         private OnItemClickListener mOnItemClickListener;
         private OnItemLongClickListener mOnItemLongClickListener;

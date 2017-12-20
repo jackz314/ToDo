@@ -20,13 +20,13 @@
 
 
     <!-- Others settings -->
-    <string name="backup_data_key">backup_data_key</string>
+    <string name="backup_data_key" translatable="false">backup_data_key</string>
     <string name="backup_data_title">Backup</string>
     <string name="backup_data_content">Backup your precious notes</string>
     <string name="backup_edit_text_hint">Enter a tag for your backup</string>
     <string name="backup_dialog_title">Backup..</string>
     <string name="backup_dialog_content1">Your backup will be saved at</string>
-    <string name="backup_dialog_content2"> /Todo/backup</string>
+    <string name="backup_dialog_content2" translatable="false"> /ToDo/backup</string>
     <string name="backup_no_write_permission">Error saving the backup: No write permission!</string>
     <string name="backup_error">Backup error!</string>
     <string name="backup_select_path">Select a path for backup</string>
@@ -35,7 +35,7 @@
     <string name="selected_wrong_path">The selected directory does not support backup, pleas choose another one:(</string>
     <string name="select_backup_file_button_text">Select a backup</string>
     <string name="replace_all_checkbox">Replace current notes</string>
-    <string name="restore_data_key">restore_data_key</string>
+    <string name="restore_data_key" translatable="false">restore_data_key</string>
     <string name="restore_data_title">Restore</string>
     <string name="restore_data_content">Restore your previous notes from a backup</string>
     <string name="restore_dialog_title">Restore..</string>
@@ -63,21 +63,22 @@
     <string name="wipe_history">Wipe history</string>
     <string name="wipe_history_detail">Wipe all the history records!</string>
     <string name="wipe_history_key" translatable="false">wipe_history_key</string>
-    <string name="clear_interval_num_key">clear_interval_num_key</string>
-    <string name="clear_interval_value_key">clear_interval_value_key</string>
-    <string name="clear_interval_unit_key">clear_interval_unit_key</string>
-    <string name="clear_interval_unit_num_key">clear_interval_unit_num_key</string>
-    <string name="clear_interval_summary_key">clear_interval_summary_key</string>
+    <string name="clear_interval_num_key" translatable="false">clear_interval_num_key</string>
+    <string name="clear_interval_value_key" translatable="false">clear_interval_value_key</string>
+    <string name="clear_interval_unit_key" translatable="false">clear_interval_unit_key</string>
+    <string name="clear_interval_unit_num_key" translatable="false">clear_interval_unit_num_key</string>
+    <string name="clear_interval_summary_key" translatable="false">clear_interval_summary_key</string>
     <string name="clr_interval_dialog_title">History clear frequency</string>
     <string name="clr_interval_dialog_Message">Pick a time interval</string>
     <string name="disabled">Disabled</string>
     <string name="one_day">1 Day(s)</string>
     <string name="custom">Custom</string>
-    <string name="custom_theme_key">custom_theme_key</string>
+    <string name="custom_theme_key" translatable="false">custom_theme_key</string>
     <string name="selection_mode_title">" Selected"</string>
+    <string name="material_indigo">Material Indigo</string>
     <string name="selection_mode_empty_title">Select items </string>
     <string name="email_subject">Feedback for ToDo</string>
-    <string name="email_content">Feedback goes under here, if it\'s a bug, then please state the situation clearly so that I can fix it faster:)\n</string>
+    <string name="email_content">Feedback goes under here, if it\'s a bug, then please state the situation clearly so that we can fix it faster:)\n</string>
 
 
     <string-array name="interval_units">
@@ -102,7 +103,7 @@
         <item>604800</item>
         <item>1209600</item>
         <item>2592000</item>
-        <item>custom</item>
+        <item>@string/custom</item>
     </string-array>
 
 
@@ -113,10 +114,10 @@
     <string name="empty_history">Nothing finished yet…\nYour finished items will be here</string>
     <string name="empty_todolist">Got nothing to do?</string>
     <string name="error_message">Something went wrong :-/</string>
-    <string name="about">This is a light-weighted Todo list app that you can customize however you want, Enjoy! \nPlease support or rate if you want!\nBy Jack ;)</string>
+    <string name="about">This is a light-weighted to-do list app that you can customize however you want, Enjoy! \nPlease support or rate if you want!\nBy Jack ;)</string>
     <string name="delete_all_notes">Delete All Notes</string>
     <string name="note_deleted_snack_text">Note Deleted</string>
-    <string name="main_history_switch">main_history_switch</string>
+    <string name="main_history_switch" translatable="false">main_history_switch</string>
     <string name="history_switch_title">History Records</string>
     <string name="search_title">Search</string>
     <string name="search_hint">Search…</string>
@@ -137,14 +138,14 @@
     <string name="support_me">Support Me!</string>
     <string name="rate_this">Rate this!</string>
     <string name="select_all">Select All</string>
-    <string name="contact_me">"If you have any questions, suggestions or anything else you want, please contact me via "</string>
+    <string name="contact_me">"If you have any questions, suggestions or anything else you want, please contact me via</string>
     <string name="email">my email</string>
     <string name="impossible_text">Something completely wrong happened @_@</string>
     <string name="delete_menu_text">Delete</string>
     <string name="modify_menu_text">Modify</string>
     <string name="restore_menu_text">Restore</string>
-    <string name="share_subject">ToDo — An awesome todo list app</string>
-    <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable todo list app that can maximize your efficiency!</string>
+    <string name="share_subject">ToDo — An awesome to-do list app</string>
+    <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
     <string name="share_via">Share this app with other people!</string>
     <string name="feedback">Feedback &amp; Report</string>
     <string name="send">Send</string>
@@ -156,7 +157,7 @@
     <string name="feedback_message">Please describe the problems you met, or just throw your suggestions at me ;)\nFor more detailed messages that you wish to stress, please head to About and send me an email!</string>
     <string name="feedback_title">Feedback &amp; Report</string>
     <string name="feedback_hint">Your message goes here…</string>
-    <string name="txt_size_message">Change the todo list text size</string>
+    <string name="txt_size_message">Change the list text size</string>
     <string name="txt_size_title">Text Size</string>
     <string name="txt_size_hint">new text size</string>
     <string name="text_size_not_suitable">Are you sure? This text size may not be suitable for you</string>
@@ -177,44 +178,53 @@
     <string name="nav_more">More</string>
     <string name="aboutAct_name">About</string>
     <string name="purchase_failed">Purchase failed:(\nPlease try again later or report an error!</string>
+    <string name="purchase_canceled">Purchase canceled, need to reconsider?</string>
     <string name="version_text">Version: </string>
     <string name="welcome_note">Welcome to ToDo! Here goes some simple tutorials</string>
-    <string name="tutorial_1">Press \"+\" to create a new note</string>
-    <string name="tutorial_2">Tap to modify</string>
-    <string name="tutorial_3">Double Tap to finish</string>
-    <string name="tutorial_4">Long tap to select multiple items</string>
-    <string name="tutorial_5">Check out the settings to have your customized experience</string>
-    <string name="tutorial_6">Now if you got everything, just remove all of the gibberish tutorials\nEnjoy! :)</string>
+    <string name="tutorial_1">Tap \"+\" to create a new note</string>
+    <string name="tutorial_2">Long tap \"+\" to use voice input</string>
+    <string name="tutorial_3">Tap to modify</string>
+    <string name="tutorial_4">Swipe left to finish</string>
+    <string name="tutorial_5">Long tap to select multiple items</string>
+    <string name="tutorial_6">Check out the settings or history later to have your most customized experience!</string>
+    <string name="tutorial_7">Now if you got everything, just go ahead and remove all of the gibberish tutorials\n\nEnjoy Taking notes! :)</string>
     <string name="theme_selector_title">Preset Themes</string>
-    <string name="theme_selector_key">theme_selector_key</string>
-    <string name="theme_selector_summary_key">theme_selector_summary_key</string>
-    <string name="theme_selector_value_key">theme_selector_value_key</string>
+    <string name="theme_selector_key" translatable="false">theme_selector_key</string>
+    <string name="theme_selector_summary_key" translatable="false">theme_selector_summary_key</string>
+    <string name="theme_selector_value_key" translatable="false">theme_selector_value_key</string>
     <string name="theme_selector_default_summary">Indigo</string>
-    <string name="theme_selector_position_key">theme_selector_position_key</string>
-    <string name="restore_purchase_key">restore_purchase_key</string>
+    <string name="theme_selector_position_key" translatable="false">theme_selector_position_key</string>
+    <string name="restore_purchase_key" translatable="false">restore_purchase_key</string>
     <string name="restore_purchase_title">Restore purchase</string>
     <string name="restore_purchase_summary">Restore your previous purchase</string>
     <string name="purchase_updated">Purchase updated!</string>
     <string name="restore_purchase_failed">Restore procedure failed! if you purchased something and the problem persists, please contact us via the about page or the feedback!  </string>
-    <string name="err_msg_copied">LOG copied to clipboard!</string>
+    <string name="err_msg_copied">Error log copied to clipboard!</string>
     <string name="purchase_unavailable">Can\'t launch purchase for now, please try again later</string>
     <string name="reporting_feedback_title">Sending feedback…</string>
     <string name="please_wait">Please wait…</string>
     <string name="todo_copied">Copied to Clipboard!</string>
-    <string name="dark_theme_key">dark_theme_key</string>
+    <string name="dark_theme_key" translatable="false">dark_theme_key</string>
     <string name="dark_theme_title">Dark theme</string>
     <string name="dark_theme_content">Change to a darker theme</string>
     <string name="voice_search_prompt">Say something…</string>
     <string name="speech_to_text_failed">Google voice recognizing service not installed or no internet connection, please try again later!</string>
     <string name="voice_permission_request">We\'ll need the record audio permission to enable voice recognition!</string>
-
-    <string-array name="theme_default_value">
+    <string name="voice_recon_audio_record_err">There\'s a problem when trying to record audio, please try again later!</string>
+    <string name="voice_recon_internet_err">Can\'t connect to the server for now, please try again later!</string>
+    <string name="voice_recon_busy_err">Recognition failed, it could be because you don\'t have google services installed or can\'t connect to the voice recognizer service!</string>
+    <string name="note_added">Note added to ToDo!</string>
+    <string name="google_now_request_code" translatable="false">com.google.android.gm.action.AUTO_SEND</string>
+    <string name="purchasing">Purchasing…</string>
+    <string name="verifying">Verifying…</string>
+    <string name="thanks_for_purchase">Thanks for your purchase!\nEnjoy your Ad free experience ;)</string>
+    <string name="thanks_for_support">Thanks for your support! :-)</string>
+    <string-array name="theme_default_value" translatable = "false">
         <item>1</item>
     </string-array>
 
-    <string-array name="theme_entries">
+    <string-array name="theme_entries" >
 
-        <item>Starry Grey</item>
         <item>Material Indigo</item>
         <item>Material Red</item>
         <item>Material Green</item>
@@ -224,7 +234,7 @@
         <item>Material Blue</item>
         <item>Material Pink</item>
         <item>Material Brown</item>
-        <item>Material Cyan</item>
+        <item>Material Dark Cyan</item>
         <item>Material Dark Brown</item>
         <item>Material Purple</item>
         <item>Violet Purple</item>
@@ -233,12 +243,13 @@
         <item>Coffee Brown</item>
         <item>Navy Blue</item>
         <item>Wine Red</item>
+        <item>Starry Grey</item>
         <item>Piano Black</item>
+
     </string-array>
 
-    <string-array name="theme_entries_value">
+    <string-array name="theme_entries_value" translatable="false">
 
-        <item>#413f41</item>
         <item>#3F51B5</item>
         <item>#d50000</item>
         <item>#64dd17</item>
@@ -257,11 +268,12 @@
         <item>#753d01</item>
         <item>#020669</item>
         <item>#870032</item>
+        <item>#413f41</item>
         <item>#1d1b1d</item>
 
     </string-array>
 
-    <string-array name="theme_entries_value_color">
+    <string-array name="theme_entries_value_color" translatable="false">
         <item>@color/colorPrimary</item>
         <item>@color/red</item>
         <item>@color/green</item>
@@ -297,13 +309,32 @@
     <string name="reset_appearance_content">Reset all Appearance settings to default</string>
     <string name="reset_appearance_title">Reset</string>
     <string name="title_activity_history" translatable="false">historyActivity</string>
+    <string name="special_action" translatable="false">special_action</string>
+
+    <!--Legal information!-->
+    <string name="library_license_txt">ToDo uses the following open-source libraries:\n\n<a href='https://github.com/QuadFlask/colorpicker'>Color Picker by QuadFlask</a>\n\nLicense:\n
+        \nCopyright 2014-2017 QuadFlask
+        \nLicensed under the Apache License, Version 2.0 (the "License");
+\nyou may not use this file except in compliance with the License.
+\nYou may obtain a copy of the License at
+\n
+\n<a href='http://www.apache.org/licenses/LICENSE-2.0'>http://www.apache.org/licenses/LICENSE-2.0</a>
+\n
+\nUnless required by applicable law or agreed to in writing, software
+\ndistributed under the License is distributed on an "AS IS" BASIS,
+\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+\nSee the License for the specific language governing permissions and
+\nlimitations under the License.</string>
+
+    <string name="licenses">Licenses</string>
+    <string name="got_it">Got it!</string>
 
     <!-- Resources for animations, don't change anything here! -->
-    <string name="plus_name">plus</string>
-    <string name="send_name">send</string>
-    <string name="done_name">done</string>
-    <string name="plus_path_data">M 5 11 L 11 11 L 11 5 L 13 5 L 13 11 L 19 11 L 19 12 L 19 13 L 19 13 L 13 13 L 13 19 L 11 19 L 11 13 L 5 13 L 5 11</string>
-    <string name="send_path_data">M 14.604 15.6 L 18.802 13.8 L 23 12 L 2.01 3 L 2 10 L 17 12 L 14 12.4 L 11 12.8 L 8 13.2 L 5 13.6 L 2 14 L 2.01 21 L 6.208 19.2 L 10.406 17.4 L 14.604 15.6</string>
-    <string name="done_path_Data">M 3.4 13.4 L 9 19 L 12 16 L 15 13 L 18 10 L 21 7 L 19.6 5.6 L 17.48 7.72 L 15.36 9.84 L 13.24 11.96 L 11.12 14.08 L 9 16.2 L 9 16.2 L 4.8 12 L 3.4 13.4</string>
+    <string name="plus_name" translatable="false">plus</string>
+    <string name="send_name" translatable="false">send</string>
+    <string name="done_name" translatable="false">done</string>
+    <string name="plus_path_data" translatable="false">M 5 11 L 11 11 L 11 5 L 13 5 L 13 11 L 19 11 L 19 12 L 19 13 L 19 13 L 13 13 L 13 19 L 11 19 L 11 13 L 5 13 L 5 11</string>
+    <string name="send_path_data" translatable="false">M 14.604 15.6 L 18.802 13.8 L 23 12 L 2.01 3 L 2 10 L 17 12 L 14 12.4 L 11 12.8 L 8 13.2 L 5 13.6 L 2 14 L 2.01 21 L 6.208 19.2 L 10.406 17.4 L 14.604 15.6</string>
+    <string name="done_path_Data" translatable="false">M 3.4 13.4 L 9 19 L 12 16 L 15 13 L 18 10 L 21 7 L 19.6 5.6 L 17.48 7.72 L 15.36 9.84 L 13.24 11.96 L 11.12 14.08 L 9 16.2 L 9 16.2 L 4.8 12 L 3.4 13.4</string>
 
 </resources>

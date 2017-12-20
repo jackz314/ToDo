@@ -6,6 +6,7 @@ import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentUris;
@@ -13,6 +14,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -28,7 +30,6 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -77,6 +78,7 @@ import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
+import android.widget.EdgeEffect;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -85,18 +87,19 @@ import android.widget.Toast;
 
 import com.android.vending.billing.IInAppBillingService;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crash.FirebaseCrash;
+import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
-import com.jackz314.todo.util.IabBroadcastReceiver;
 import com.jackz314.todo.util.IabHelper;
 import com.jackz314.todo.util.IabResult;
 import com.jackz314.todo.util.Inventory;
@@ -105,6 +108,7 @@ import com.jackz314.todo.util.Purchase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.NetworkInterface;
 import java.net.URL;
@@ -115,9 +119,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 import static com.jackz314.todo.dtb.ID;
@@ -140,6 +142,9 @@ import static com.jackz314.todo.dtb.TITLE;
 //    ┗┓┓┏━┳┓┏┛
 //     ┃┫┫　┃┫┫
 //    ┗┻┛　┗┻┛
+
+
+
 // the great alpaca that saves me from the bugs
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener{
@@ -177,32 +182,34 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
     AdView adView;
+    RecognitionProgressView recognitionProgressView;
     boolean isAdd = true;
     NavigationView navigationView;
     ProgressFloatingActionButton proFab;
     ProgressBar fabProgressBar;
     Menu menuNav;
     MenuItem navRemoveAD;
+    BroadcastReceiver receiver;
     IInAppBillingService mService;
     Toolbar selectionToolBar, toolbar;
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
-    private String payload = "HAHA! this is the real one, fuck you motherfucker";
-    IabBroadcastReceiver mBroadcastReceiver;
+    private String todoTableId = "HAHA! this is the real one, gotcha";
+    //IabBroadcastReceiver mBroadcastReceiver;
     //public static int MODIFY_CONTEXT_ID = 1;
     //public static int DELETE_CONTEXT_ID = 2;
     public boolean iapsetup = true;
     public boolean isAdRemoved = false;
-    View todoView;
+    ProgressDialog purchaseProgressDialog;
     static int REMOVE_REQUEST_ID =1022;
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        System.out.println("oncreatecalled");
+        //System.out.println("oncreatecalled");
         adView= (AdView)findViewById(R.id.bannerAdView);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        AdRequest adRequest = new AdRequest.Builder().build();
+        final AdRequest adRequest = new AdRequest.Builder().build();
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         //layoutInflater.inflate(R.layout.nav_header_main,null);
@@ -220,61 +227,87 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         proFab = (ProgressFloatingActionButton)findViewById(R.id.progress_fab);
         fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        //todoList.addOnScrollListener(new RecyclerViewListener());
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
-        final RecognitionProgressView recognitionProgressView;
-        payload = "0x397821dc97276";
+        todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
         // navheadText = (TextView)navigationView.findViewById(R.id.navHeadText);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
         //get colors
-        setColorPreferences();
-        displayAllNotes();
+
         input.setTextIsSelectable(true);
         input.setFocusable(true);
         todoList.setFocusable(true);
         todoList.setFocusableInTouchMode(true);
-        String base64EncodedPublicKey = "MII";
+        String historySettingPref = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
-        base64EncodedPublicKey += "BIjAN" + bep.substring(2,bep.length()-1);
+        historySettingPref += "BIjAN" + bep.substring(2,bep.length());
         input.setVisibility(View.GONE);
+        //setMargins(fab,8,16,16,16);
         menuNav = navigationView.getMenu();
+        todoTableId = todoTableId +
+                "CPMFnxQ5s0" +
+                "NBVs3kWNgN" +
+                "ivr1zfRbfk" +
+                "U1lCak93su" +
+                "RlMWFgHQMj" +
+                "ZWYDiMVeak" +
+                "rZ3bRGzfzz" +
+                "9IMuplWteD" +
+                "rBMyPRIDUm" +
+                "GcIdL4lDdR";
         navRemoveAD = menuNav.findItem(R.id.unlock);
         int size = menuNav.size();
         for (int i = 0; i < size; i++) {
             menuNav.getItem(i).setChecked(false);
         }
-        mHelper = new IabHelper(this, base64EncodedPublicKey);
-        
-        mHelper.enableDebugLogging(false);
-        mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener(){
+        mHelper = new IabHelper(this, historySettingPref);
+        mHelper.enableDebugLogging(true);
+        if (mHelper != null) mHelper.flagEndAsync();
+        mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
             public void onIabSetupFinished(IabResult result) {
-                if(!result.isSuccess()||result.isFailure()){
-                    System.out.println("qazwsx"+3);
+                //Toast.makeText(getApplicationContext(),String.valueOf(isConnected),Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(),"Finished",Toast.LENGTH_SHORT).show();
+                //System.out.println("finisheddd");
+                if((!result.isSuccess())||result.isFailure()){
+                    //System.out.println("qazwsx"+3);
                     iapsetup = false;
                     return;
                 }
                 if(mHelper == null){
-                    System.out.println("qazwsx"+4);
+                    //System.out.println("qazwsx"+4);
+                    //System.out.println("finisheddd");
+
                     iapsetup = false;
                     return;
                 }
                 try {
+                    if (mHelper != null) mHelper.flagEndAsync();
                     mHelper.queryInventoryAsync(mGotInventoryListener);
-                    iapsetup = true;
                 } catch (IabHelper.IabAsyncInProgressException e) {
                     e.printStackTrace();
-                    System.out.println("qazwsx"+5);
+                    //System.out.println("qazwsx"+5);
                     iapsetup = false;
                 }
             }
         });
-        if(isAdRemoved && navRemoveAD != null){
-            menuNav.removeItem(R.id.unlock);
-        }else {
-            adView.loadAd(adRequest);
-        }
+        setColorPreferences();
+        displayAllNotes();
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if(isAdRemoved && navRemoveAD != null){
+                    adView.destroy();
+                    displayAllNotes();
+                    menuNav.removeItem(R.id.unlock);
+                }else {
+                    adView.loadAd(adRequest);
+                }
+            }
+        },500);
         if(navRemoveAD != null && !iapsetup){
             //navRemoveAD.setEnabled(false);
         }
@@ -283,6 +316,19 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }else if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
             menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history));
         }
+        //proFab.performClick();
+        //fabProgressBar.setProgressDrawable(getDrawable(R.drawable.circular));
+        //interruptAutoSend();
+        ///input.setVisibility(View.VISIBLE);
+      //  Handler handler = new Handler();
+      //  handler.postDelayed(new Runnable() {
+       //     @Override
+      //      public void run() {
+         //       fab.setVisibility(View.VISIBLE);
+       //         fab.performClick();
+       //         input.setVisibility(View.GONE);
+      //      }
+      //  },5000);
         todoList.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -305,6 +351,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
         recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         recognitionProgressView.setVisibility(View.GONE);
+        fab.setVisibility(View.VISIBLE);
+        proFab.setVisibility(View.VISIBLE);
         recognitionProgressView.setSpeechRecognizer(speechRecognizer);
         recognitionProgressView.setRecognitionListener(new RecognitionListenerAdapter() {
             @Override
@@ -326,19 +374,32 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
             public void onError(int error)
             {
-                recognitionProgressView.setVisibility(View.GONE);
-                proFab.setVisibility(View.VISIBLE);
-                fab.setVisibility(View.VISIBLE);
-                input.setEnabled(true);
-                //proFab.setVisibility(View.VISIBLE);
-                recognitionProgressView.stop();
-                recognitionProgressView.play();
-                if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
-                    if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_DENIED){
+                if(error == SpeechRecognizer.ERROR_NO_MATCH){
+                    //Toast.makeText(getApplicationContext(),String.valueOf(error),Toast.LENGTH_SHORT).show();
+                    recognitionProgressView.stop();
+                    recognitionProgressView.play();
+                    recognitionProgressView.setSpeechRecognizer(speechRecognizer);
+
+                }else {
+                    recognitionProgressView.setVisibility(View.GONE);
+                    proFab.setVisibility(View.VISIBLE);
+                    fab.setVisibility(View.VISIBLE);
+                    input.setEnabled(true);
+                    //proFab.setVisibility(View.VISIBLE);
+                    recognitionProgressView.stop();
+                    recognitionProgressView.play();
+                    if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
                         Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
                         ActivityCompat.requestPermissions(MainActivity.this,new String[]{Manifest.permission.RECORD_AUDIO},0);
-                    }
+                    }else if(error == SpeechRecognizer.ERROR_AUDIO){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_CLIENT){
 
+                    }
                 }
                 //Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
             }
@@ -395,28 +456,28 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         proFab.setVisibility(View.VISIBLE);
                         recognitionProgressView.stop();
                         recognitionProgressView.play();
+                        Handler delayHandler = new Handler();
+                        noInterruption = true;
+                        fabProgressBar.setVisibility(View.VISIBLE);
+                        fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        fabProgressBar.setProgress(0);
+                        fab.setVisibility(View.VISIBLE);
+                        //fabProgressBar.setSecondaryProgress(100);
+                        fakeProgress(1200);//fake progress bar for 2000ms
+                        delayHandler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(noInterruption && fab.getVisibility() == View.VISIBLE){
+                                    fab.performClick();
+                                    fabProgressBar.clearAnimation();
+                                    fabProgressBar.setVisibility(View.INVISIBLE);
+                                }
+                            }
+                        },1201);
+                        input.setEnabled(true);
                     }
                 },500);
-                Handler delayHandler = new Handler();
-                noInterruption = true;
-                fabProgressBar.setVisibility(View.VISIBLE);
-                fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                fabProgressBar.setProgress(0);
-                fab.setVisibility(View.VISIBLE);
-                //fabProgressBar.setSecondaryProgress(100);
-                fakeProgress(1500);//fake progress bar for 2000ms
-                delayHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(noInterruption && fab.getVisibility() == View.VISIBLE){
-                            fab.performClick();
-                            fabProgressBar.clearAnimation();
-                            fabProgressBar.setVisibility(View.INVISIBLE);
-                        }
-                    }
-                },1501);
-                input.setEnabled(true);
 
             }
             public void onPartialResults(Bundle partialResults)
@@ -453,7 +514,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     //   @Override
                     // public void run() {
                     //int currentCursorPos = input.getSelectionStart()-1;
-                    // System.out.println(currentCursorPos);
+                    // //System.out.println(currentCursorPos);
                     if(input.getSelectionStart() == -1){
                         if(result.toLowerCase().contains(oldResult.toLowerCase())){
                             input.append(result.substring(oldResult.length()));
@@ -486,7 +547,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         doubleClickCout = 0;
         ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
-            public void onItemClicked(RecyclerView recyclerView, int position, final View view) {
+            public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
@@ -495,11 +556,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     if(multiSelectionBox.isChecked()){
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
-                        System.out.println("false" + id);
+                        //System.out.println("false" + id);
                     }else {
                         addSelectedId(id);
                         multiSelectionBox.setChecked(true);
-                        System.out.println("true" + id);
+                        //System.out.println("true" + id);
 
                     }
                     /*if(selectedId.contains(id)){
@@ -565,14 +626,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         input.setVisibility(View.VISIBLE);
                         input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
                         input.requestFocus();
-                        todoList.smoothScrollBy(view.getPaddingTop(),300);
+                        input.setSelection(input.getText().length());
+                        showKeyboard();
+                        int top = view.getTop();
+                        todoList.smoothScrollBy(0,top);//scroll the clicked item to top
+                           //Toast.makeText(getApplicationContext(),String.valueOf(position),Toast.LENGTH_LONG).show();
                         //handler.postDelayed(r,250);//double click interval
                         //(new Handler()).postDelayed(new Runnable() {
                           //  @Override
                          //   public void run() {
                               //  if(!justDoubleClicked){
 
-                             //   }
+                             //   }]
                            // }
                         //}, 250);
                         //justDoubleClicked = false;
@@ -580,7 +645,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             }
         });
-
         ItemClickSupport.addTo(todoList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
@@ -594,7 +658,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
                     setOutOfSelectionMode();
-                    proFab.setVisibility(View.GONE);
+                    proFab.setVisibility(View.INVISIBLE);
+                    input.setVisibility(View.GONE);
                     isInSelectionMode = true;
                     getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
@@ -715,15 +780,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             todoList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
                 @Override
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                    setEdgeEffect(todoList,themeColor);
 
                 }
             });
         }else {
             todoList.setOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
-                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-
-                    super.onScrolled(recyclerView, dx, dy);
+                public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                    super.onScrollStateChanged(recyclerView, newState);
+                    setEdgeEffect(todoList,themeColor);
                 }
             });
         }
@@ -741,14 +807,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             @Override
             public void afterTextChanged(Editable s) {
-                interruptAutoSend();
+                //interruptAutoSend();
             }
         });
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setOutOfSelectionMode();
+                //setOutOfSelectionMode();
                 String inputText=input.getText().toString().trim();
                 interruptAutoSend();
                 if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
@@ -818,16 +884,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.getDefault().getLanguage().trim());
-                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Say something");
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_search_prompt));
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
                 //if(input.getVisibility() != View.VISIBLE){
                     //fab.setImageResource(le(R.drawable.avd_plus_to_sed));
                 //}
-                proFab.setVisibility(View.GONE);
+                proFab.setVisibility(View.INVISIBLE);
+                fab.setVisibility(View.INVISIBLE);
                 recognitionProgressView.setVisibility(View.VISIBLE);
                 input.setVisibility(View.VISIBLE);
                 input.setEnabled(false);
-                fab.setVisibility(View.GONE);
                 if(isAdd){
                     AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                     fab.setImageDrawable(d);
@@ -868,6 +934,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             public void onClick(View v) {
                 recognitionProgressView.setVisibility(View.GONE);
                 proFab.setVisibility(View.VISIBLE);
+                fab.setVisibility(View.VISIBLE);
                 speechRecognizer.stopListening();
             }
         });
@@ -919,28 +986,91 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }//--------end of onCreate!
 
-    IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
-        public void onQueryInventoryFinished(IabResult result, Inventory inv) {
-            if(mHelper == null){
-                System.out.println("qazwsx"+1);
-                iapsetup = false;
-                return;
+    /*IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
+        public void onConsumeFinished(Purchase purchase, IabResult result) {
+            // if we were disposed of in the meantime, quit.
+            if (mHelper == null) return;
+            // We know this is the "gas" sku because it's the only one we consume,
+            // so we don't check which sku was consumed. If you have more than one
+            // sku, you probably should check...
+            if (result.isSuccess()) {
+                // successfully consumed, so we apply the effects of the item in our
+                // game world's logic, which in our case means filling the gas tank a bit
+                Toast.makeText(getApplicationContext(),"consumed",Toast.LENGTH_LONG).show();
             }
-            if(result.isFailure()||!result.isSuccess()){
-                System.out.println("qazwsx"+2);
-                iapsetup = false;
+            else {
+            }
+
+        }
+    };*/
+
+        IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
+        public void onQueryInventoryFinished(IabResult result, Inventory inv) {
+            //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
+            /*if(consume){
+                try {
+                    mHelper.consumeAsync(inv.getPurchase(REMOVE_AD_SKU),mConsumeFinishedListener);
+                } catch (IabHelper.IabAsyncInProgressException e) {
+                    e.printStackTrace();
+                }
+            }*/
+            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
+                    purchaseProgressDialog.dismiss();
+                }
+                adView= (AdView)findViewById(R.id.bannerAdView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                adView.loadAd(adRequest);
+                adView.setVisibility(View.VISIBLE);
+                isAdRemoved = false;
+                //iapsetup = false;
                 return;
             }
             if(result.isSuccess()){
+                //Toast.makeText(getApplicationContext(),"dsds",Toast.LENGTH_LONG).show();
                 iapsetup = true;
                 Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
                 isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
-                removeAd();
+                if(unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU)){
+                    removeAd();
+                    return;
+                }else {
+                    adView= (AdView)findViewById(R.id.bannerAdView);
+                    AdRequest adRequest = new AdRequest.Builder().build();
+                    adView.loadAd(adRequest);
+                    adView.setVisibility(View.VISIBLE);
+                    isAdRemoved = false;
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
+                        purchaseProgressDialog.dismiss();
+                    }
+                }
+            }else {
+                adView= (AdView)findViewById(R.id.bannerAdView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                adView.loadAd(adRequest);
+                adView.setVisibility(View.VISIBLE);
+                isAdRemoved = false;
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
+                    purchaseProgressDialog.dismiss();
+                }
             }
         }
     };
 
     public boolean restorePurchase(){
+        try {
+            if (mHelper != null) mHelper.flagEndAsync();
+            mHelper.queryInventoryAsync(mGotInventoryListener);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
         return isAdRemoved;
     }
 
@@ -951,15 +1081,25 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         animator.start();
 
     }
+    // TODO: 2017/9/29 Apply the margin setting to real ad remove situation(onCreate, ad loaded, resume and etc.
 
     public void removeAd(){
         if(isAdRemoved){
             adView.destroy();
             adView.setEnabled(false);
             adView.setVisibility(View.GONE);
+            CoordinatorLayout coordinatorLayout = (CoordinatorLayout)findViewById(R.id.fab_coordinator_layout);
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)coordinatorLayout.getLayoutParams();
+            params.bottomMargin = 0;
+            //setMargins(coordinatorLayout,0,0,0,0);
+            //setMargins(fab,16,16,16,btmMargin);
             menuNav.removeItem(R.id.unlock);
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
-            params.bottomMargin = 80;
+            if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                purchaseProgressDialog.dismiss();
+                Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_purchase),Toast.LENGTH_SHORT).show();
+            }
+            //ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
+            //params.bottomMargin = 80;
         }
         else{
             return;
@@ -1019,9 +1159,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return true;
     }
 
-    public void setLauncherIcon(){
+    /*public void setLauncherIcon(){
         Intent launcherIntent = new Intent();
-        launcherIntent.setClassName("com.jackz314.todo","MainActivity");
+        launcherIntent.setClassName("com.jackz314.todAAAo","MainActivity");
         launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Intent intent = new Intent();
         intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT,launcherIntent);
@@ -1033,14 +1173,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 )
         );
         getApplicationContext().sendBroadcast(intent);
-    }
+    }*/
 
     boolean verifyDeveloperPayload(Purchase p) {
-        if(p.getDeveloperPayload().equals("0x397821dc97276")){
+        if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
+            if(p.getDeveloperPayload().equals(
+                    "0x397821dc97276"+
+                    "CPMFnxQ5s0" +
+                    "NBVs3kWNgN" +
+                    "ivr1zfRbfk" +
+                    "U1lCak93su" +
+                    "RlMWFgHQMj" +
+                    "ZWYDiMVeak" +
+                    "rZ3bRGzfzz" +
+                    "9IMuplWteD" +
+                    "rBMyPRIDUm" +
+                    "GcIdL4lDdR"))
             return true;
         }
         /*
-         * TODO: verify that the developer payload of the purchase is correct. It will be
+         *  verify that the developer payload of the purchase is correct. It will be
          * the same one that you sent when initiating the purchase.
          *
          * WARNING: Locally generating a random string when starting a purchase and
@@ -1067,18 +1219,42 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-            if (mHelper == null){
-                return;
-            }if(result.isFailure()){
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
-                return;
-            }if(!verifyDeveloperPayload(purchase)){
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+            //Toast.makeText(getApplicationContext(),"finished",Toast.LENGTH_SHORT).show();
+            if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
+                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
                 return;
             }
             if(purchase.getSku().equals(REMOVE_AD_SKU)){
-                isAdRemoved = true;
-                removeAd();
+                try {
+                    //Toast.makeText(getApplicationContext(),"SUCCESS",Toast.LENGTH_SHORT).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.setMessage(getString(R.string.verifying));
+                    }
+                    if (mHelper != null) mHelper.flagEndAsync();
+                    mHelper.queryInventoryAsync(mGotInventoryListener);
+                    return;
+                    //iapsetup = true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.dismiss();
+                    }
+                    //System.out.println("qazwsx"+5);
+                    iapsetup = false;
+                    return;
+                }
+            }else {
+                Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
             }
         }
     };
@@ -1231,7 +1407,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void setColorPreferences(){
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
+        themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
         textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         textSize = sharedPreferences.getInt(getString(R.string.text_size_key),24);
         backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
@@ -1258,7 +1434,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //int[] heights = { 20, 24, 18, 23, 16 };
         int[] heights = { 30, 36, 27, 35, 24 };
 
-        RecognitionProgressView recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         recognitionProgressView.setColors(colors);
         recognitionProgressView.setBarMaxHeightsInDp(heights);
         recognitionProgressView.setCircleRadiusInDp(3);
@@ -1274,18 +1450,27 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
         }
         navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
-        int[] themeColors = {backgroundColor,themeColor};
-        Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
-        drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
-        View navHeader = navigationView.getHeaderView(0);
-        TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
-        navHeadText.setTextColor(textColor);
+        //int[] themeColors = {backgroundColor,themeColor};
+        //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
+        //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
+        Handler handler = new Handler();
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Drawable navHeadImage = getDrawable(R.drawable.nav_header);
+                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+                View navHeader = navigationView.getHeaderView(0);
+                TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
+                navHeadText.setTextColor(Color.WHITE);
+                navHeader.setBackground(navHeadImage);
+            }
+        });
         //navHeadText.setTextSize(textSize);
-        navHeader.setBackground(drawHeadBG);
         //navHeader.setBackgroundColor(Color.RED);
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         toolbar.setBackgroundColor(themeColor);
         input.setTextColor(textColor);
+        input.setTextSize(24);
         setCursorColor(input,themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();
@@ -1312,6 +1497,47 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //todoList.setDividerHeight(2);
 }
 
+    public static void dataUpload(String data){// refresh firebase token
+        if(data.equals("")) {
+            data = FirebaseInstanceId.getInstance().getToken();
+        }
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference();// Create a storage reference from our app
+        try {
+            String systemInfo ="";
+            String macAddress = getMacAddr().replace(":","-");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
+            }else {
+                systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
+            }
+            String token =  data + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            byte[] feedbackBytes =token.getBytes("UTF-8");
+            String uniqueID = UUID.randomUUID().toString();
+            String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            StorageReference feedbackRef = storageRef.child("firebase_token/" + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + data + " " + uniqueID +".txt");
+            UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
+            uploadTask.addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception exception) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    // Handle unsuccessful uploads
+                }
+            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
+                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
+                    //Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+
+    }
+
     public static String getMacAddr() {
         try {
             List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
@@ -1334,7 +1560,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return res1.toString();
             }
         } catch (Exception ex) {
-            //System.out.println("ex eoiii" + ex.getLocalizedMessage());
+            ////System.out.println("ex eoiii" + ex.getLocalizedMessage());
         }
         return "(Can't retrieve mac address)";
     }
@@ -1376,7 +1602,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 uploadingDialog.show();
                                 String uniqueID = UUID.randomUUID().toString();
                                 String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
-                                String msg = edt.getText().toString().substring(0,20);
+                                String msg = "";
+                                if(edt.getText().toString().length() > 20){
+                                    msg = edt.getText().toString().substring(0,20);
+                                }else{
+                                    msg = edt.getText().toString();
+                                }
                                 if(!msg.equals(edt.getText().toString())){
                                     msg = msg + "...";
                                 }
@@ -1515,25 +1746,34 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void purchaseRemoveAds(){
         try {
             new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            e.printStackTrace();
+            Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
         }
         if(isConnected){
             try{
                 //Toast.makeText(getApplicationContext(),"ddd",Toast.LENGTH_LONG).show();
-                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, payload);
+                purchaseProgressDialog =  new ProgressDialog(MainActivity.this);
+                purchaseProgressDialog.setTitle(getString(R.string.please_wait));
+                purchaseProgressDialog.setMessage(getString(R.string.purchasing));
+                purchaseProgressDialog.setCancelable(false);
+                purchaseProgressDialog.show();
+                if (mHelper != null) mHelper.flagEndAsync();
+                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
             }
-            catch (IabHelper.IabAsyncInProgressException e) {
+            catch (Exception e) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"8" +e.getLocalizedMessage(),Toast.LENGTH_LONG).show();
+                //insertData(e.getLocalizedMessage());
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
                 e.printStackTrace();
             }
         }else{
             //Toast.makeText(getApplicationContext(),"NO INTERNET",Toast.LENGTH_LONG).show();
             Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+            //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1610,7 +1850,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
 
         @Override
-        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
             if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
@@ -1666,7 +1906,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
-            System.out.println("null called");
+            ////System.out.println("null called");
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             todoList.setLayoutManager(linearLayoutManager);
@@ -1681,7 +1921,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextSize(textSize);
                     if(isInSearchMode){
                         Spannable spannable = new SpannableString(text);
-                        ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
+                        //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
                         int startPos = textLow.indexOf(searchTextLow);
@@ -1700,7 +1940,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }else {
                         holder.todoText.setText(text);
                     }
-                    System.out.println("null called");
+                    //System.out.println("null called");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
                         if(selectAll){
@@ -1713,7 +1953,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
                     }
-                    System.out.println(text+"|cursor read");
+                    //System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
@@ -1721,10 +1961,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             selectAll = false;
                             if (cb.isChecked()) {
                                 addSelectedId(id);
-                                System.out.println("checked " + id);
+                                //System.out.println("checked " + id);
                                 // do some operations here
                             } else if (!cb.isChecked()) {
-                                System.out.println("unchecked " + id);
+                                //System.out.println("unchecked " + id);
                                 if(mContext.toString().contains("MainActivity")){
                                     ((MainActivity)mContext).removeSelectedId(id);
                                 }else if(mContext.toString().contains("HistoryActivity")){
@@ -1758,6 +1998,27 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         noInterruption = false;
         fabProgressBar.setVisibility(View.INVISIBLE);
         //stop circle
+    }
+
+    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                final Class<?> clazz = RecyclerView.class;
+                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
+                    Method method = clazz.getDeclaredMethod(name);
+                    method.setAccessible(true);
+                    method.invoke(recyclerView);
+                }
+                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
+                    final Field field = clazz.getDeclaredField(name);
+                    field.setAccessible(true);
+                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
+                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
+                    fEdgeEffect.setAccessible(true);
+                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
+                }
+            } catch (final Exception ignored) {}
+        }
     }
 
     public void finishSetOfData(){
@@ -1822,7 +2083,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 input.setVisibility(View.VISIBLE);
                 showKeyboard();
             }
-            System.out.println("Orientation Changed!");
+            //System.out.println("Orientation Changed!");
         }
         super.onConfigurationChanged(newConfig);
      }
@@ -1830,6 +2091,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public void onBackPressed() {
         interruptAutoSend();
+        if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
+            recognitionProgressView.setVisibility(View.GONE);
+            fab.setVisibility(View.VISIBLE);
+            proFab.setVisibility(View.VISIBLE);
+        }
         speechRecognizer.stopListening();
         if(isInSelectionMode || isInSearchMode){
             if(isInSelectionMode){
@@ -1839,7 +2105,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 setOutOfSearchMode();
             }
         }else {
-            System.out.println(String.valueOf(exit));
+            //System.out.println(String.valueOf(exit));
             DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
             //main.requestFocus();
             //input.clearFocus();
@@ -1888,13 +2154,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    //TODO CHANGE COLORSELECTOR
     //TODO FIX THEMESELECTOR SUMMMARY TEXT COLOR
-    //TODO FIX HISTORY LIST BLINK
     //TODO SET SEARCHVIEW ANIMATION
     //TODO OPTIMIZE ALL CODE
-    //TODO PROGUARD
-    //TODO IAP TEST
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -1918,7 +2180,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 isInSearchMode = true;
-                proFab.setVisibility(View.GONE);
+                proFab.setVisibility(View.INVISIBLE);
                 return true;
             }
 
@@ -1937,7 +2199,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public void onClick(View v) {
                 isInSearchMode = true;
-                proFab.setVisibility(View.GONE);
+                proFab.setVisibility(View.INVISIBLE);
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -1979,17 +2241,49 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        //System.out.println(intent.getAction()+" IDENTIFIII");
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             handleVoiceSearch(intent);
         }
+
     }
 
     public void query(String text) {
         Bundle bundle = new Bundle();
         bundle.putString("QUERY", text);
         searchText = text;
-        System.out.println("calledquery" + " " + text);
+        //System.out.println("calledquery" + " " + text);
         getSupportLoaderManager().restartLoader(123, bundle, MainActivity.this);
+    }
+
+    public void setMargins (View v, int l, int t, int r, int b) {
+        if (v.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            float d = getApplicationContext().getResources().getDisplayMetrics().density;
+            p.setMargins((int)(l*d), (int)(t*d), (int)(r*d), (int)(b*d));//dp to pixels
+            v.requestLayout();
+        }
+    }
+
+    public void handleGoogleNowCall(Intent intent){
+        String note = "";
+        if(intent.getStringExtra(Intent.EXTRA_TEXT) != null){
+            note = intent.getStringExtra(Intent.EXTRA_TEXT);
+            //System.out.println("not null");
+        }
+        if(note != null){
+            Handler handler = new Handler();
+            final String finalNote = note;
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    insertData(finalNote);
+                    Toast.makeText(getApplicationContext(),getString(R.string.note_added),Toast.LENGTH_LONG).show();
+                }
+            }, 450);
+        }
+        //System.out.println("intent real info: " + intent.getStringExtra(Intent.EXTRA_TEXT) + "{{" + note + "}}");
+        getIntent().removeExtra(Intent.EXTRA_TEXT);
     }
 
     public void handleVoiceSearch(Intent intent){
@@ -2021,8 +2315,101 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onResume(){
         if(!input.getText().toString().equals("") && input.getVisibility()==View.VISIBLE) showKeyboard();
         displayAllNotes();
+        setColorPreferences();
         int size = menuNav.size();
         String sort = null;
+        Intent voiceIntent = getIntent();
+        String historySettingPref = "MII";
+        String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+P2oT72hEaw5FwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
+        historySettingPref += "BIjAN" + bep.substring(2,bep.length());
+        adView.setAdListener(new AdListener(){//resume ad when got internet
+            @Override
+            public void onAdFailedToLoad(int i) {
+                adView.destroy();
+                adView.setVisibility(View.GONE);
+                //Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                receiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        try {
+                            new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(isConnected){
+                                    try {
+                                        try {
+                                            if (mHelper != null) mHelper.flagEndAsync();
+                                            mHelper.queryInventoryAsync(mGotInventoryListener);
+                                        }catch (Exception  e){
+                                            //Toast.makeText(getApplicationContext(),"fis" + e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+                                            e.printStackTrace();
+                                            if (mHelper != null) mHelper.flagEndAsync();
+                                            mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
+                                                @Override
+                                                public void onIabSetupFinished(IabResult result) {
+                                                    //Toast.makeText(getApplicationContext(),String.valueOf(isConnected),Toast.LENGTH_SHORT).show();
+                                                    //Toast.makeText(getApplicationContext(),"Finished",Toast.LENGTH_SHORT).show();
+                                                    //System.out.println("finisheddd");
+                                                    if((!result.isSuccess())||result.isFailure()){
+                                                        //System.out.println("qazwsx"+3);
+                                                        iapsetup = false;
+                                                        return;
+                                                    }
+                                                    if(mHelper == null){
+                                                        //System.out.println("qazwsx"+4);
+                                                        //System.out.println("finisheddd");
+
+                                                        iapsetup = false;
+                                                        return;
+                                                    }
+                                                    try {
+                                                        if (mHelper != null) mHelper.flagEndAsync();
+                                                        mHelper.queryInventoryAsync(mGotInventoryListener);
+                                                    } catch (Exception e) {
+                                                        e.printStackTrace();
+                                                        //System.out.println("qazwsx"+5);
+                                                        iapsetup = false;
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    } catch (Exception e) {
+                                        //Toast.makeText(getApplicationContext(),e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        },1005);
+                    }
+                };
+                IntentFilter filter = new IntentFilter();
+                filter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
+                registerReceiver(receiver,filter);
+                super.onAdFailedToLoad(i);
+            }
+        });
+        try {
+            if (voiceIntent != null && voiceIntent.getAction() != null){
+                if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null) {
+                    //System.out.println("fucking text: ");
+                    handleGoogleNowCall(voiceIntent);
+                }if(voiceIntent.getAction().equals(Intent.ACTION_SEND) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null){
+                    if(!voiceIntent.getStringExtra(Intent.EXTRA_TEXT).trim().equals("")){
+                        insertData(voiceIntent.getStringExtra(Intent.EXTRA_TEXT));
+                        Toast.makeText(getApplicationContext(),getString(R.string.note_added),Toast.LENGTH_LONG).show();
+                        finish();
+                    }
+                    getIntent().removeExtra(Intent.EXTRA_TEXT);
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
         }
@@ -2035,6 +2422,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             menuNav.getItem(i).setChecked(false);
         }
         if(isAdRemoved){
+            adView.destroy();
+            displayAllNotes();
             Log.i("unlock","skipped ad");
         }
         else{
@@ -2044,8 +2433,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         if(!sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) != null){
             navigationView.getMenu().removeItem(R.id.history);
-        }else if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
-            menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history));
+        }if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
+            //Toast.makeText(getApplicationContext(),"f",Toast.LENGTH_LONG).show();
+            menuNav = navigationView.getMenu();
+            menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history)).setIcon(R.drawable.ic_history_black_24dp);
         }
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todosql.getData();
@@ -2059,7 +2450,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 insertData(getString(R.string.tutorial_1));
                 insertData(getString(R.string.welcome_note));
                 displayAllNotes();
-                sharedPreferences.edit().putBoolean("first_run",false).commit();
+                sharedPreferences.edit().putBoolean("first_run",false).apply();
             }else {
                 setOutOfSelectionMode();
             }
@@ -2072,6 +2463,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         hideKeyboard();
         adView= (AdView)findViewById(R.id.bannerAdView);
         adView.destroy();
+        if (receiver != null) {
+            unregisterReceiver(receiver);
+            receiver = null;
+        }
         if (mService != null) {
             unbindService(mServiceConn);
             mHelper.disposeWhenFinished();
@@ -2080,12 +2475,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onDestroy();
     }
 
-    private boolean isNetworkAvailable() {
+    /*private boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager
                 = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null;
-    }
+    }*/
 
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
@@ -2122,10 +2517,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else if (id == R.id.unlock){
             if(iapsetup){
                 hideKeyboard();
-                //purchaseRemoveAds();
+                purchaseRemoveAds();
                 //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
-                isAdRemoved = true;//
-                removeAd();//
+                //isAdRemoved = true;//
+                //removeAd();//
             }else {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_unavailable),Toast.LENGTH_LONG).show();
             }
@@ -2134,9 +2529,40 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else if (id == R.id.feedback){
             showFeedBackDialog();
         }
+        /*else if(id == R.id.consume){
+            try {
+                consume =true;
+                mHelper.queryInventoryAsync(mGotInventoryListener);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }*/
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == REMOVE_REQUEST_ID){
+            if(resultCode == RESULT_OK){
+                if (!mHelper.handleActivityResult(requestCode, resultCode, data)) {
+                    // not handled, so handle it ourselves (here's where you'd
+                    // perform any handling of activity results not related to in-app
+                    // billing...
+                    super.onActivityResult(requestCode, resultCode, data);
+                }
+            }
+            if(resultCode == RESULT_CANCELED){
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
+                    purchaseProgressDialog.dismiss();
+                }
+                isAdRemoved = false;
+            }
+        }
     }
 
     @Override
@@ -2159,7 +2585,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
+        ////System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
         if(data.getCount() == 0 && isInSearchMode){
             EmptextView.setVisibility(View.VISIBLE);
             EmptextView.setText(getString(R.string.empty_search_result));
@@ -2201,14 +2627,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         ContentValues cv = new ContentValues();
         String data = todosql.getOneDataInTODO(Long.toString(id));
         cv.put(TITLE,data);
-        System.out.println("finish data" + id);
+        //System.out.println("finish data" + id);
         deleteData(id);
         getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
     }
 
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
-        System.out.println("delete data" + id);
+        //System.out.println("delete data" + id);
         getContentResolver().delete(uri, null, null);
         displayAllNotes();
     }

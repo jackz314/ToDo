@@ -19,6 +19,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Vibrator;
@@ -46,13 +47,16 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.CheckBox;
+import android.widget.EdgeEffect;
 import android.widget.TextView;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
-import static com.jackz314.todo.R.color.colorPrimary;
+import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
@@ -85,7 +89,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         /*sharedPreferences) = sharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorPrimary));
+        themeColor=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
         textColor=sharedPreferences).getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColor=sharedPreferences).getInt(getString(R.string.theme_color_key),Color.WHITE);*/
         super.onCreate(savedInstanceState);
@@ -97,7 +101,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         historyList = (RecyclerView) findViewById(R.id.historyList);
         historyList.setHasFixedSize(true);
-
         emptyHistory = (TextView)findViewById(R.id.emptyHistory);
         LayoutInflater inflater =this.getLayoutInflater();
         historyView = (ConstraintLayout)findViewById(R.id.historyView);
@@ -120,12 +123,12 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     multiSelectionBox = (CheckBox)v.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
                         removeSelectedId(id);
-                        //System.out.println("false" + id);
+                        ////System.out.println("false" + id);
                         multiSelectionBox.setChecked(false);
                     }else {
                         addSelectedId(id);
                         multiSelectionBox.setChecked(true);
-                        //System.out.println("true" + id);
+                        ////System.out.println("true" + id);
                     }
                     /*if(selectedId.contains(id)){
                         selectedId.remove(selectedId.indexOf(id));
@@ -155,7 +158,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = historyListAdapter.getItemId(position);
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                v.vibrate(300);
+                v.vibrate(30);
                 unSelectAll = false;
                 selectAll = false;
                 if(isInSelectionMode){
@@ -181,7 +184,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.history_select_all_box);
                     selectAllBox.setVisibility(View.VISIBLE);
                     isInSelectionMode = true;
-                    //System.out.println(isInSelectionMode + "isInselectionmode");
+                    ////System.out.println(isInSelectionMode + "isInselectionmode");
                     getSupportLoaderManager().restartLoader(234,null,HistoryActivity.this);
                     displayAllNotes();
                     ColorStateList colorStateList = new ColorStateList(
@@ -207,7 +210,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 selectedId.clear();
                                 selectedContent.clear();
                                 unSelectAll = true;
-                                historyList.getAdapter().notifyDataSetChanged();
+                                //historyList.getAdapter().notifyDataSetChanged();
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
                             }else if(selectAllBox.isChecked()){//check all
@@ -232,7 +235,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectAll = true;
-                                historyList.getAdapter().notifyDataSetChanged();
+                                //historyList.getAdapter().notifyDataSetChanged();
                                 Cursor cursor = todosql.getHistory();
                                 cursor.moveToFirst();
                                 do{
@@ -266,6 +269,23 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 return true;
             }
         });
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            historyList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                @Override
+                public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                    setEdgeEffect(historyList,themeColor);
+                }
+            });
+        }else {
+            historyList.setOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                    super.onScrollStateChanged(recyclerView, newState);
+                    setEdgeEffect(historyList,themeColor);
+                }
+            });
+        }
     }
 
     public void onResume(){
@@ -278,7 +298,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void setHistoryColorsPreferences(){
         //get colors
         sharedPreferences = getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
+        themeColor=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorActualPrimary));
         textColor=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColor=sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
         textSize=sharedPreferences.getInt(getString(R.string.text_size_key),24);
@@ -337,7 +357,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     }else {
                         holder.todoText.setText(text);
                     }
-                    //System.out.println(isInSelectionMode + "DISPLAYALLNOTES");
+                    ////System.out.println(isInSelectionMode + "DISPLAYALLNOTES");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
                         if(selectAll){
@@ -351,7 +371,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
                     }
-                    //System.out.println(text+"|cursor read");
+                    ////System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
@@ -359,10 +379,10 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                             selectAll = false;
                             if (cb.isChecked()) {
                                     addSelectedId(id);
-                                //System.out.println("checked " + id);
+                                ////System.out.println("checked " + id);
                                 // do some operations here
                             } else if (!cb.isChecked()) {
-                                //System.out.println("unchecked " + id);
+                                ////System.out.println("unchecked " + id);
 
                                 removeSelectedId(id);
                                                  // do some operations here
@@ -388,10 +408,10 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             mItemTouchHelper.attachToRecyclerView(historyList);
         }
         if(todosql.getHistory().getCount()==0){//if database is empty, then clears the listView too
-            ////System.out.println("empty history!");
+            //////System.out.println("empty history!");
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(R.string.empty_history);
-            historyList.removeAllViewsInLayout();//remove all items
+            //historyList.removeAllViewsInLayout();//remove all items
             historyList.setAdapter(null);
         } else {
             emptyHistory.setVisibility(View.GONE);
@@ -490,13 +510,34 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
     };
 
+    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                final Class<?> clazz = RecyclerView.class;
+                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
+                    Method method = clazz.getDeclaredMethod(name);
+                    method.setAccessible(true);
+                    method.invoke(recyclerView);
+                }
+                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
+                    final Field field = clazz.getDeclaredField(name);
+                    field.setAccessible(true);
+                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
+                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
+                    fEdgeEffect.setAccessible(true);
+                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
+                }
+            } catch (final Exception ignored) {}
+        }
+    }
+
     @Override
     public void onBackPressed() {
-        //System.out.println("BACKPRESSED");
+        ////System.out.println("BACKPRESSED");
         if (isInSelectionMode || isInSearchMode) {
             if (isInSelectionMode) {
                 setOutOfSelectionMode();
-                //System.out.println("set1out back");
+                ////System.out.println("set1out back");
             } else {
                 setOutOfSearchMode();
             }
@@ -507,7 +548,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     public void setOutOfSearchMode(){
         isInSearchMode = false;
-        //System.out.println("setfase search");
+        ////System.out.println("setfase search");
         getSupportLoaderManager().restartLoader(234,null,HistoryActivity.this);
         displayAllNotes();
     }
@@ -516,7 +557,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         unSelectAll = false;
         selectAll = false;
         isInSelectionMode = false;
-        //System.out.println("setfase selection");
+        ////System.out.println("setfase selection");
         selectedId.clear();
         selectedContent.clear();
         if(selectAllBox != null){
@@ -546,7 +587,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         final int size = selectedId.size();
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
-        //System.out.println("set1out restore");
+        ////System.out.println("set1out restore");
         displayAllNotes();
         Snackbar.make(historyView, getString(R.string.notes_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
@@ -567,7 +608,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
-        //System.out.println("set1out delete");
+        ////System.out.println("set1out delete");
         displayAllNotes();
         Snackbar.make(historyView, getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
@@ -664,6 +705,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
         searchView = (SearchView) menu.findItem(R.id.todo_search).getActionView();
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setIconifiedByDefault(true);
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
@@ -684,7 +726,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             public boolean onMenuItemActionCollapse(MenuItem item) {
                 if(isInSelectionMode){
                     setOutOfSelectionMode();
-                    //System.out.println("set1out menu collapse");
+                    ////System.out.println("set1out menu collapse");
                     return false;
                 }else {
                     setOutOfSearchMode();
@@ -756,7 +798,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                     ,themeColor //enabled
                             }
                     );
-                    //System.out.println("null called");
+                    ////System.out.println("null called");
                     if(isInSelectionMode){
                         multiSelectionBox.setVisibility(View.VISIBLE);
                         multiSelectionBox.setBackgroundColor(backgroundColor);
@@ -785,13 +827,13 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         else {//on
             Cursor cs = todosql.getHistory();
             if(cs.getCount()==0) {
-                //System.out.println();
+                ////System.out.println();
             }
             else {
                 expireTime=sharedPreferences.getInt(getString(R.string.clear_interval_value_key),60*24);
                 while(cs.moveToNext()){
                     timestr = cs.getString(cs.getColumnIndex("datetime(deleted_timestamp,'localtime')"));
-                    ////System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
+                    //////System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
                     if(todosql.getTimeDifference(timestr)>=expireTime){//if bigger than set value, delete it!
                         deleteData(cs.getInt(cs.getColumnIndex(todosql.ID)));
                     }
@@ -824,7 +866,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, id);
         getContentResolver().delete(uri, null, null);
-        historyList.getAdapter().notifyDataSetChanged();
+        //historyList.getAdapter().notifyDataSetChanged();
         getSupportLoaderManager().restartLoader(234,null,this);
         displayAllNotes();
         Bundle bundle = new Bundle();
@@ -850,6 +892,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        emptyHistory.setVisibility(View.VISIBLE);
+        //Toast.makeText(getApplicationContext(),String.valueOf(data.getCount()) + String.valueOf(isInSearchMode),Toast.LENGTH_LONG).show();
         if(data.getCount() == 0 && isInSearchMode){
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(getString(R.string.empty_search_result));

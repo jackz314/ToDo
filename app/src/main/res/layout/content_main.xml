@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -19,24 +20,21 @@
         style="@android:style/Widget.EditText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="70dp"
+        android:layout_marginBottom="12dp"
         android:layout_marginLeft="8dp"
-        android:layout_marginRight="70dp"
-        android:layout_marginStart="8dp"
         android:ems="10"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:hint="@string/input_hint_text"
         android:inputType="textMultiLine"
         android:selectAllOnFocus="false"
-        android:singleLine="true"
         android:textSize="24sp"
         android:visibility="visible"
         app:layout_constraintBottom_toTopOf="@+id/bannerAdView"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintHorizontal_bias="1.0" />
+        tools:ignore="RtlHardcoded"
+        app:layout_constraintRight_toLeftOf="@+id/fab_coordinator_layout"
+        android:layout_marginRight="0dp" />
 
     <TextView
         android:id="@+id/modifyId"
@@ -45,6 +43,35 @@
         android:visibility="invisible"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="0dp" />
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/todolist"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        tools:listitem="@layout/todolist"
+        android:layout_marginEnd="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginStart="8dp"
+        android:stackFromBottom="false"
+        android:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@+id/input"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+         />
+
+    <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
+        android:id="@+id/recognition_view"
+        android:layout_width="56dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="8dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bannerAdView"
+        android:layout_marginEnd="8dp" />
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/bannerAdView"
@@ -57,68 +84,40 @@
         app:layout_constraintRight_toRightOf="parent">
     </com.google.android.gms.ads.AdView>
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/todolist"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginRight="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="0dp"
-        android:scrollbars="vertical"
-        android:stackFromBottom="false"
-        android:visibility="visible"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        app:layout_constraintBottom_toTopOf="@+id/input"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0"
-        app:layout_goneMarginBottom="8dp"
-        tools:listitem="@layout/todolist" />
-
-    <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
-        android:id="@+id/recognition_view"
-        android:layout_width="56dp"
-        android:layout_height="66dp"
-        android:layout_gravity="center"
-        android:layout_marginBottom="45dp"
-        android:layout_marginRight="4dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
-
-    <com.dmitrymalkovich.android.ProgressFloatingActionButton
-        android:id="@+id/progress_fab"
+    <android.support.design.widget.CoordinatorLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginBottom="50dp"
-        android:layout_marginRight="4dp"
-        android:clickable="true"
-        app:layout_anchorGravity="bottom|right"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toRightOf="parent">
-
-        <android.support.design.widget.FloatingActionButton
-            android:id="@+id/fab"
+        android:id="@+id/fab_coordinator_layout"
+        android:layout_marginRight="8dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bannerAdView"
+        android:layout_marginBottom="0dp">
+        <com.dmitrymalkovich.android.ProgressFloatingActionButton
+            android:id="@+id/progress_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/avd_plus_to_send"
-            app:backgroundTint="@color/colorPrimary"
-            />
+            android:clickable="false">
 
-        <ProgressBar
-            android:id="@+id/fab_progress_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:max="1000"
-            android:progress="0"
-            android:progressDrawable="@drawable/circular"
-            android:visibility="invisible" />
-    </com.dmitrymalkovich.android.ProgressFloatingActionButton>
+            <ProgressBar
+                android:id="@+id/fab_progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:max="1000"
+                android:progress="0"
+                android:progressDrawable="@drawable/circular"
+                />
 
-
+            <android.support.design.widget.FloatingActionButton
+                android:id="@+id/fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="8dp"
+                android:layout_marginBottom="@dimen/fab_margin"
+                android:layout_marginLeft="8dp"
+                android:layout_marginTop="@dimen/fab_margin"
+                android:src="@drawable/avd_plus_to_send"
+                app:backgroundTint="@color/colorPrimary" />
+        </com.dmitrymalkovich.android.ProgressFloatingActionButton>
+    </android.support.design.widget.CoordinatorLayout>
 </android.support.constraint.ConstraintLayout>

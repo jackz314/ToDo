@@ -58,16 +58,16 @@ public class AppProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
         Context context = getContext();
-        System.out.println("AppProviderCalled");
+        //System.out.println("AppProviderCalled");
         if (context == null) {
-            System.out.println("context == null");
+            //System.out.println("context == null");
 
             return false;
         }
 
         mResolver = context.getContentResolver();
         if (mResolver == null) {
-            System.out.println("contentResolver == null");
+            //System.out.println("contentResolver == null");
 
             return false;
         }
@@ -183,9 +183,9 @@ public class AppProvider extends ContentProvider {
             default:
                 return 0;
         }
-        //System.out.println("selection = " + selection); // debug info
-       // System.out.println("uri.getpath = " + uri.getPath());
-        //System.out.println("matcher = " + sUriMatcher.match(uri));
+        ////System.out.println("selection = " + selection); // debug info
+       // //System.out.println("uri.getpath = " + uri.getPath());
+        ////System.out.println("matcher = " + sUriMatcher.match(uri));
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
