@@ -714,6 +714,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                                 finishSetOfData();
                                             }else if(item.getItemId() == R.id.selection_menu_delete){
                                                 deleteSetOfData();
+                                            }else if (item.getItemId() == R.id.selection_menu_share){
+                                                shareSetOfData();
                                             }
                                             return false;
                                         }
@@ -1351,6 +1353,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         finishSetOfData();
                     }else if(item.getItemId() == R.id.selection_menu_delete){
                         deleteSetOfData();
+                    }else if (item.getItemId() == R.id.selection_menu_share){
+                        shareSetOfData();
                     }
                     return false;
                 }
@@ -2061,6 +2065,23 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 displayAllNotes();
             }
         }).show();
+    }
+
+    public void shareSetOfData(){//share note function
+        Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+        sharingIntent.setType("text/plain");
+        String shareBody = null;
+        StringBuilder shareBodyBuilder = new StringBuilder();
+        shareBody = getString(R.string.note_share_content_header);
+        for(String data : selectedContent){
+            shareBodyBuilder.append(data);
+            shareBodyBuilder.append("\n\n");//empty line after each note
+        }
+        shareBody = shareBodyBuilder.toString();
+        String shareSub = getString(R.string.note_share_subject);
+        sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, shareSub);
+        sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+        startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
     }
 
     public void hideKeyboard() {

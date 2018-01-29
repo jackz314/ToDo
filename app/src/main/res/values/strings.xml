@@ -144,6 +144,8 @@
     <string name="delete_menu_text">Delete</string>
     <string name="modify_menu_text">Modify</string>
     <string name="restore_menu_text">Restore</string>
+    <string name="note_share_subject">Notes From ToDo</string>
+    <string name="note_share_content_header">Notes shared from ToDo: \n</string>
     <string name="share_subject">ToDo — An awesome to-do list app</string>
     <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
     <string name="share_via">Share this app with other people!</string>
@@ -151,6 +153,7 @@
     <string name="send">Send</string>
     <string name="cancel">Cancel</string>
     <string name="finish">Finish</string>
+    <string name="share">Share</string>
     <string name="restore">Restore</string>
     <string name="delete">Delete</string>
     <string name="thx_for_feed">Thanks for your feedback!</string>
