@@ -30,6 +30,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.pdf.PdfDocument;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -38,6 +39,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Vibrator;
+import android.print.PrintAttributes;
+import android.print.PrintManager;
+import android.print.pdf.PrintedPdfDocument;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
@@ -716,6 +720,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                                 deleteSetOfData();
                                             }else if (item.getItemId() == R.id.selection_menu_share){
                                                 shareSetOfData();
+                                            }else if (item.getItemId() == R.id.selection_menu_export){
+                                                boolean succ = exportOrPrint();
+                                                if (succ){
+                                                    Toast.makeText(getApplicationContext(),getString(R.string.export_succeed),Toast.LENGTH_SHORT).show();
+                                                }else {
+                                                    Toast.makeText(getApplicationContext(),getString(R.string.export_failed),Toast.LENGTH_LONG).show();
+                                                }
                                             }
                                             return false;
                                         }
@@ -1355,6 +1366,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         deleteSetOfData();
                     }else if (item.getItemId() == R.id.selection_menu_share){
                         shareSetOfData();
+                    }else if (item.getItemId() == R.id.selection_menu_export){
+                        exportOrPrint();
                     }
                     return false;
                 }
@@ -2067,6 +2080,24 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }).show();
     }
 
+    public boolean exportOrPrint(){//print list or export as pdf
+        //todo print list or export as pdf
+        String exportBody = null;
+        StringBuilder exportBodyBuilder = new StringBuilder();
+        exportBody = getString(R.string.note_export_content_header);
+        for(String data : selectedContent){
+            exportBodyBuilder.append(data);
+            exportBodyBuilder.append("\n\n");//empty line after each note
+        }
+        exportBody = exportBodyBuilder.toString();
+        PdfDocument document = new PdfDocument();
+        //todo change this part!
+        //PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(new Rect(0, 0, 100, 100), 1).create();
+        //PdfDocument.Page page = document.startPage(pageInfo);
+        //document.writeTo();
+        return false;
+    }
+
     public void shareSetOfData(){//share note function
         Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
         sharingIntent.setType("text/plain");
@@ -2175,7 +2206,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    //TODO FIX THEMESELECTOR SUMMMARY TEXT COLOR
+    //TODO FIX THEME SELECTOR SUMMMARY TEXT COLOR
     //TODO SET SEARCHVIEW ANIMATION
     //TODO OPTIMIZE ALL CODE
     @Override

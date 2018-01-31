@@ -146,6 +146,7 @@
     <string name="restore_menu_text">Restore</string>
     <string name="note_share_subject">Notes From ToDo</string>
     <string name="note_share_content_header">Notes shared from ToDo: \n</string>
+    <string name="note_export_content_header">ToDo\n</string>
     <string name="share_subject">ToDo — An awesome to-do list app</string>
     <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
     <string name="share_via">Share this app with other people!</string>
@@ -153,6 +154,7 @@
     <string name="send">Send</string>
     <string name="cancel">Cancel</string>
     <string name="finish">Finish</string>
+    <string name="exportnprint">Print/Export</string>
     <string name="share">Share</string>
     <string name="restore">Restore</string>
     <string name="delete">Delete</string>
@@ -172,6 +174,8 @@
     <string name="storage_permission_hint_rs">Please grant the storage permission in order to restore</string>
     <string name="storage_permission_refused_forever">You have to grant us the storage permission in order to proceed!</string>
     <string name="thanks_for_corporation">Thanks for your corporation!</string>
+    <string name="export_succeed">Export Succeed!</string>
+    <string name="export_failed">Export Failed, try again later!</string>
     <string name="color_conflict">Are you sure? This color setting might have conflicted with other color settings</string>
     <string name="nav_share">Share</string>
     <string name="nav_remove_ad">Remove Ads!</string>
