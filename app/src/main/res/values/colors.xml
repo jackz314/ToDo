@@ -19,6 +19,11 @@
     <color name="purple">#aa00ff</color>
     <color name="black">#000000</color>
     <color name="divider_color">#1fffffff</color>
+    <color name="dark_theme_background_default_color">#616161</color>
+    <color name="dark_theme_text_default_color">#eeeeee</color>
+    <color name="normal_theme_background_default_color">#fafafa</color>
+    <color name="normal_theme_text_default_color">#212121</color>
+
 
     <!--Mock Google Logo Colors(for voice recognition)-->
     <color name="color1">#3164d7</color>

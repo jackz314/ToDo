@@ -124,6 +124,7 @@ import java.net.NetworkInterface;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -2114,6 +2115,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return true;
     }
 
+    public Canvas generatePDFCanvas(Canvas canvas){
+
+        return null;
+    }
+
     public void shareSetOfData(){//share note function
         Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
         sharingIntent.setType("text/plain");
@@ -2142,7 +2148,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         private int pageHeight;
         private int pageWidth;
         public PdfDocument myPdfDocument;
-        public int totalpages = 1;
+        public int totalpages = 0;
 
         public ExportPrintAdapter(Context context)
         {
@@ -2165,17 +2171,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return;
             }
             totalpages = computePageCount(newAttributes);//get total page number
-            if (totalpages > 0) {
-                PrintDocumentInfo.Builder builder = new PrintDocumentInfo
-                        .Builder("todo_export.pdf")//exported file name
-                        .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                        .setPageCount(totalpages);//set page number
-
-                PrintDocumentInfo info = builder.build();
-                callback.onLayoutFinished(info, true);
-            } else {//handle page number == 0
-                callback.onLayoutFailed("Page count is zero.");
-            }
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+            PrintDocumentInfo.Builder builder = new PrintDocumentInfo
+                    .Builder(getString(R.string.export_file_name) + dateFormat.format(Calendar.getInstance().getTime()) + ".pdf")//exported file name
+                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                    .setPageCount(Integer.MAX_VALUE);//set page number todo to be determined
+            PrintDocumentInfo info = builder.build();
+            callback.onLayoutFinished(info, true);
         }
 
 
@@ -2197,7 +2199,24 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         myPdfDocument = null;
                         return;
                     }
-                    drawPage(page, i);
+                    //drawPage(page, i);//DEPRECIATED METHOD
+                    Canvas canvas = page.getCanvas();
+                    int titleBaseLine = 72;
+                    int leftMargin = 54;
+                    int verticalMargin = 16;
+                    Paint paint = new Paint();
+                    paint.setColor(Color.BLACK);
+                    paint.setTextSize(40);//set title font                    canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+                    canvas.drawText("ToDo Export", leftMargin, titleBaseLine + 35, paint);
+                    paint.setTextSize(14);
+                    for(String text : selectedContent){
+                        canvas.drawText(
+                                text,
+                                leftMargin,
+                                titleBaseLine,
+                                paint);
+                        if(canvas.getClipBounds().height()-verticalMargin >= pageHeight) return;
+                    }
                     myPdfDocument.finishPage(page);
                 }
             }
@@ -2224,10 +2243,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             int titleBaseLine = 72;
             int leftMargin = 54;
-
+            int dynamicTextSize = 0;//determine text size based on the content size
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
             Paint paint = new Paint();
             paint.setColor(Color.BLACK);
-            paint.setTextSize(40);
+            paint.setTextSize(dynamicTextSize);//set title font
             canvas.drawText(
                     "Test Print Document Page " + pagenumber,
                     leftMargin,
@@ -2237,18 +2264,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             paint.setTextSize(14);
             canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
 
-            if (pagenumber % 2 == 0)
-                paint.setColor(Color.RED);
-            else
-                paint.setColor(Color.GREEN);
+            //PdfDocument.PageInfo pageInfo = page.getInfo();
 
-            PdfDocument.PageInfo pageInfo = page.getInfo();
-
-
-            canvas.drawCircle(pageInfo.getPageWidth()/2,
+            /*canvas.drawCircle(pageInfo.getPageWidth()/2,
                     pageInfo.getPageHeight()/2,
                     150,
-                    paint);
+                    paint);*///draw circle todo mark on the page
         }
 
         private boolean pageInRange(PageRange[] pageRanges, int page)
@@ -2272,8 +2293,29 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
 
             // Determine number of print items
+            int finalPageNumber = 0;
             int printItemCount = selectedContent.size();
-            return 2; //todo temporary, change later
+            int pageHeight = pageSize.getHeightMils();
+            int dynamicTextSize = 0;//determine text size based on the content
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Toast.makeText(getApplicationContext(),printItemCount,Toast.LENGTH_LONG).show();
+            Paint fontPaint = new Paint();//determine content size'
+            Rect fontRect = new Rect();
+            fontPaint.setStyle(Paint.Style.FILL);
+            fontPaint.setColor(Color.BLACK);
+            fontPaint.setTextSize(dynamicTextSize);
+            fontPaint.getTextBounds(selectedContent.toString(),0,selectedContent.size(),fontRect);
+            int textTotalHeight = fontRect.height();
+            if (pageHeight >= textTotalHeight) finalPageNumber = 1;//in case the content is less than one page
+            else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
+            return finalPageNumber; //todo temporary, change later
             //return (int) Math.ceil(printItemCount / itemsPerPage);
         }
 

@@ -104,6 +104,7 @@ import static android.content.ContentValues.TAG;
 import static android.graphics.Color.BLACK;
 import static android.graphics.Color.luminance;
 import static com.jackz314.todo.R.color.colorPrimary;
+import static com.jackz314.todo.R.color.dark_theme_text_default_color;
 import static com.jackz314.todo.dtb.DATABASE_NAME;
 import static com.jackz314.todo.dtb.TODO_TABLE;
 
@@ -136,7 +137,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public SharedPreferences sharedPreferences;
     public boolean storageBackupPerDenied = false, storageRestorePerDenied = false;
     public String pathSelectorPath = "", fileSelected = "";
-    SwitchPreference autoClearSwitch,orderSwitch,mainHistorySwitch;
+    SwitchPreference autoClearSwitch,orderSwitch,mainHistorySwitch,darkThemeSwitch;
     ThemeListPreference themeSelector;
     Preference wipeButton,themeColor,textColor,backgroundColor,resetAppearanceData,textSize,backupData,restoreData,chooseClrFrequency,restorePurchase;
     MainActivity mainActivity;
@@ -197,9 +198,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     }
 
     public void setColorPreferencesSettings(){
-        themeColorNum=sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
-        textColorNum=sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
-        backgroundColorNum=sharedPreferences.getInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
+        themeColorNum = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
+        textColorNum = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
+        backgroundColorNum = sharedPreferences.getInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color));
         chooseClrFrequency.setSummary(sharedPreferences.getString(getString(R.string.clear_interval_summary_key),getString(R.string.disabled)));
         themeSelector.setSummary(sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.custom)));
         if(sharedPreferences.getBoolean(getString(R.string.custom_theme_key),true)){
@@ -219,6 +220,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         setColorForPref(orderSwitch);
         setColorForPref(textSize);
         setColorForPref(restorePurchase);
+        setColorForPref(darkThemeSwitch);
         Drawable themeColorD = getDrawable(R.drawable.ic_format_color_fill_black_24dp);
         themeColorD.setColorFilter(themeColorNum, PorterDuff.Mode.SRC);
         Drawable textColorD = getDrawable(R.drawable.ic_text_format_black_24dp);
@@ -277,9 +279,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         backupData = findPreference(getString(R.string.backup_data_key));
         restoreData = findPreference(getString(R.string.restore_data_key));
         restorePurchase = findPreference(getString(R.string.restore_purchase_key));
+        darkThemeSwitch = (SwitchPreference)findPreference(getString(R.string.dark_theme_key));
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setColorPreferencesSettings();
-
         Window window = this.getWindow();
         window.setStatusBarColor(themeColorNum);
         window.setNavigationBarColor(themeColorNum);
@@ -346,15 +348,15 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 editor.putInt(getString(R.string.theme_selector_position_key),themeSelector.findIndexOfValue(newValue.toString()));
                 editor.putBoolean(getString(R.string.custom_theme_key),false);
                 if(themeSummary.contains("(")){// dark theme
-                    editor.putInt(getString(R.string.text_color_key),Color.parseColor("#eeeeee"));
-                    editor.putInt(getString(R.string.background_color_key),Color.parseColor("#616161"));
-                    textColorNum = Color.parseColor("#eeeeee");
-                    backgroundColorNum = Color.parseColor("#616161");
-                }else {// bright theme
-                    editor.putInt(getString(R.string.text_color_key),Color.parseColor("#212121"));
-                    editor.putInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
-                    textColorNum = Color.parseColor("#212121");
-                    backgroundColorNum = Color.parseColor("#fafafa");
+                    editor.putInt(getString(R.string.text_color_key),ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_text_default_color));
+                    editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_background_default_color));
+                    textColorNum = ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_text_default_color);
+                    backgroundColorNum = ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_background_default_color);
+                }else {// normal theme
+                    editor.putInt(getString(R.string.text_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_text_default_color));
+                    editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color));
+                    textColorNum = ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_text_default_color);
+                    backgroundColorNum = ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color);
                 }
                 themeColorNum = Color.parseColor(newValue.toString());
                 editor.commit();
@@ -386,6 +388,32 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                     autoClearSwitch.setEnabled(true);
                 }
                 setColorPreferencesSettings();
+                return false;
+            }
+        });
+
+        darkThemeSwitch = (SwitchPreference)findPreference(getString(R.string.dark_theme_key));
+        setColorForPref(darkThemeSwitch);
+        darkThemeSwitch.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object o) {
+                SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putBoolean(getString(R.string.dark_theme_key),(boolean)o);
+                editor.commit();
+                darkThemeSwitch.setChecked(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false));
+                if(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false)){//if changed to dark theme
+                    editor.putInt(getString(R.string.text_color_key),ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_text_default_color));
+                    editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_background_default_color));
+                    textColorNum = ContextCompat.getColor(getApplicationContext(),dark_theme_text_default_color);//todo workaround this
+                    backgroundColorNum = ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_background_default_color);
+                }else {//if changed to normal theme
+                    editor.putInt(getString(R.string.text_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_text_default_color));
+                    editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color));
+                    textColorNum = ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_text_default_color);
+                    backgroundColorNum = ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color);
+                }
+                setColorPreferencesSettings();//refresh UI with new setting
                 return false;
             }
         });
@@ -530,9 +558,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 final NumberPicker numberPicker = (NumberPicker)dialogView.findViewById(R.id.numberPicker);
                 numberPicker.setMinValue(1);
                 numberPicker.setMaxValue(60);
-                numberPicker.setValue(sharedPreferences.getInt("text_size_key",24));
+                numberPicker.setValue(sharedPreferences.getInt("text_size_key",20));
 
-                //edt.setText(String.valueOf(sharedPreferences.getInt("text_size_key",24)));
+                //edt.setText(String.valueOf(sharedPreferences.getInt("text_size_key",20)));
                 //edt.selectAll();
                 final AlertDialog dialog = new AlertDialog.Builder(SettingsActivity.this)
                         .setTitle(getString(R.string.txt_size_title))
@@ -579,7 +607,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 numberPicker.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
                     @Override
                     public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                        if(newVal != oldVal && newVal != sharedPreferences.getInt("text_size_key",24)){
+                        if(newVal != oldVal && newVal != sharedPreferences.getInt("text_size_key",20)){
                             dialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(true);
                         }else {
                             //dialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(false);
@@ -797,11 +825,11 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             public void onClick(DialogInterface dialog, int which) {//YES
                                 SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
                                 SharedPreferences.Editor editor = sharedPreferences.edit();
-                                editor.putInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
+                                editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color));
                                 editor.putInt(getString(R.string.text_color_key),Color.BLACK);
                                 editor.putInt(getString(R.string.theme_color_key),getResources().getColor(colorPrimary));
                                 editor.putBoolean(getString(R.string.order_key),true);
-                                editor.putInt(getString(R.string.text_size_key),24);
+                                editor.putInt(getString(R.string.text_size_key),20);
                                 editor.apply();
                                 setColorPreferencesSettings();
                             }
@@ -1210,7 +1238,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         new int[]{android.R.attr.state_checked}, //enabled
                 },
                 new int[] {
-                        Color.parseColor("#fafafa")//disabled
+                        ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color)//disabled
                         ,ColorUtils.lighten(themeColorNum,0.32) //enabled
                 }
         );
@@ -1268,15 +1296,15 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         editor.putInt(getString(R.string.theme_selector_position_key),themeSelector.findIndexOfValue(newValue));
         editor.putBoolean(getString(R.string.custom_theme_key),false);
         if(themeSummary.contains("(")){// dark theme
-            editor.putInt(getString(R.string.text_color_key),Color.parseColor("#eeeeee"));
-            editor.putInt(getString(R.string.background_color_key),Color.parseColor("#616161"));
-            textColorNum = Color.parseColor("#eeeeee");
-            backgroundColorNum = Color.parseColor("#616161");
-        }else {// bright theme
-            editor.putInt(getString(R.string.text_color_key),Color.parseColor("#212121"));
-            editor.putInt(getString(R.string.background_color_key),Color.parseColor("#fafafa"));
-            textColorNum = Color.parseColor("#212121");
-            backgroundColorNum = Color.parseColor("#fafafa");
+            editor.putInt(getString(R.string.text_color_key),ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_text_default_color));
+            editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_background_default_color));
+            textColorNum = ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_text_default_color);
+            backgroundColorNum = ContextCompat.getColor(getApplicationContext(),R.color.dark_theme_background_default_color);
+        }else {// normal theme
+            editor.putInt(getString(R.string.text_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_text_default_color));
+            editor.putInt(getString(R.string.background_color_key),ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color));
+            textColorNum = ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_text_default_color);
+            backgroundColorNum = ContextCompat.getColor(getApplicationContext(),R.color.normal_theme_background_default_color);
         }
         themeColorNum = Color.parseColor(newValue);
         editor.commit();
