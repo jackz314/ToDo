@@ -20,9 +20,12 @@ public class dtb extends SQLiteOpenHelper{
     public static String TODO_TABLE = "todolist_table";
     public static String HISTORY_TABLE = "deleted_notes_table";
     public static String SAVED_FOR_LATER_TABLE = "saved_for_later";
+    public static String TAGS_TABLE = "tags_table";
     public static String ID = "_id";
     //public static String UNIQUE_ID = "special_id";
     public static String TITLE = "title";
+    public static String TAG = "tag";
+    public static String TAG_COLOR = "color";
     public static String CONTENT = "content";
     public static String IMPORTANCE = "importance";
     public static String CREATED_TIMESTAMP = "created_timestamp";
@@ -42,6 +45,7 @@ public class dtb extends SQLiteOpenHelper{
         db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ TAGS_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TAG + " TEXT," + TAG_COLOR + " TEXT," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
     }
 
     @Override
@@ -49,6 +53,7 @@ public class dtb extends SQLiteOpenHelper{
         db.execSQL("DROP TABLE IF EXISTS "+TODO_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+HISTORY_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+SAVED_FOR_LATER_TABLE);
+        db.execSQL("DROP TABLE IF EXISTS "+TAGS_TABLE);
         onCreate(db);
     }
     /*
@@ -368,8 +373,22 @@ public class dtb extends SQLiteOpenHelper{
         }
     }
 
+    public String returnTagColorIfExist(String tag){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );//search for the tag
+        if(cs.getCount() == 0) return "";
+        else {
+            return cs.getString(cs.getColumnIndex(TAG_COLOR));
+        }
+    }
 
-
+    public void createNewTag(String tag, String tagColor){
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(TAG,tag);
+        cv.put(TAG_COLOR,tagColor);
+        db.insert(TAGS_TABLE,null,cv);
+    }
 
     /* OLD METHOD
     public boolean updateData(String id, String title){

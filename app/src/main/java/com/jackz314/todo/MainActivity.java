@@ -129,6 +129,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -779,6 +780,24 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
 
+        input.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if(charSequence.equals("#")){
+                    Toast.makeText(getApplicationContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo implement ontextchangecolor method
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
 
         input.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1939,7 +1958,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
                     final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
@@ -1957,11 +1976,39 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 int start = Math.min(startPos, textLow.length());
                                 int end = Math.min(startPos + searchTextLow.length(), textLow.length());
                                 startPos = textLow.indexOf(searchTextLow,end);
-                                spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,
+                                        new ColorStateList(new int[][] {new int[] {}},
+                                                new int[] {Color.parseColor("#ef5350")})
+                                        ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight searched text
                             }while (startPos > 0);
                             holder.todoText.setText(spannable);
                         }
-                    }else {
+                    }
+                    Spannable taggedText = new SpannableString(text);//highlighting tags
+                    int start = text.indexOf("#");//find the position of the start point of the tag
+                    if(start != -1){//determine if contains tags
+                        while(start < text.length() && start > 0){//search for all tags{
+                            int end = text.substring(start).indexOf(" ") + start + 1;//find the position of end point of the tag
+                            if(end < 0){
+                                end = text.length()-1;
+                            }
+                            String tag = text.substring(start,end);
+                            String tagColor = todosql.returnTagColorIfExist(tag);
+                            if(tagColor.equals("")){//if tag doesn't exist
+                                Random random = new Random();//generate random color
+                                int nextInt = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
+                                tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
+                                todosql.createNewTag(tag, tagColor);//add new tag
+                            }
+                            taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                    new ColorStateList(new int[][] {new int[] {}},
+                                            new int[] {Color.parseColor(tagColor)})
+                                    ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                            holder.todoText.setText(taggedText);
+                            start = text.substring(end).indexOf("#") + end;//find the next index of the tag start point
+                        }
+                    }
+                   else {
                         holder.todoText.setText(text);
                     }
                     //System.out.println("null called");
@@ -2108,7 +2155,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             e.printStackTrace();
             return false;
         }
-        //todo change this part!
         //PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(new Rect(0, 0, 100, 100), 1).create();
         //PdfDocument.Page page = document.startPage(pageInfo);
         //document.writeTo();
@@ -2175,7 +2221,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             PrintDocumentInfo.Builder builder = new PrintDocumentInfo
                     .Builder(getString(R.string.export_file_name) + dateFormat.format(Calendar.getInstance().getTime()) + ".pdf")//exported file name
                     .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                    .setPageCount(Integer.MAX_VALUE);//set page number todo to be determined
+                    .setPageCount(totalpages);//set page number
             PrintDocumentInfo info = builder.build();
             callback.onLayoutFinished(info, true);
         }
@@ -2207,7 +2253,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     Paint paint = new Paint();
                     paint.setColor(Color.BLACK);
                     paint.setTextSize(40);//set title font                    canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
-                    canvas.drawText("ToDo Export", leftMargin, titleBaseLine + 35, paint);
+                    canvas.drawText(getString(R.string.export_title), leftMargin, titleBaseLine + 35, paint);
                     paint.setTextSize(14);
                     for(String text : selectedContent){
                         canvas.drawText(
@@ -2235,8 +2281,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             setOutOfSelectionMode();
         }
 
-        private void drawPage(PdfDocument.Page page,
-                              int pagenumber) {//todo change this draw page method
+        private void drawPage(PdfDocument.Page page, int pagenumber) {//DEPRECIATED method, see onWrite() part
             Canvas canvas = page.getCanvas();
 
             pagenumber++; // Make sure page numbers start at 1
@@ -2413,7 +2458,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    //TODO FIX THEME SELECTOR SUMMMARY TEXT COLOR
+    //TODO FIX THEME SELECTOR SUMMARY TEXT COLOR
     //TODO SET SEARCHVIEW ANIMATION
     //TODO OPTIMIZE ALL CODE
     @Override

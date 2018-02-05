@@ -409,7 +409,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 if(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false)){//if changed to dark theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(dark_theme_text_default_color));
                     editor.putInt(getString(R.string.background_color_key), getResources().getColor(dark_theme_background_default_color));
-                    textColorNum = getResources().getColor(dark_theme_text_default_color);//todo workaround this
+                    textColorNum = getResources().getColor(dark_theme_text_default_color);
                     backgroundColorNum = getResources().getColor(dark_theme_background_default_color);
                 }else {//if changed to normal theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(normal_theme_text_default_color));

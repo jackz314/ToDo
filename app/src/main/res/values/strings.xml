@@ -178,6 +178,7 @@
     <string name="exporting">Exporting…</string>
     <string name="export_succeed">Export Succeed!</string>
     <string name="export_failed">Export Failed, try again later!</string>
+    <string name="export_title">ToDo Export</string>
     <string name="print_failed_message">Print failed, page count is zero.</string>
     <string name="color_conflict">Are you sure? This color setting might have conflicted with other color settings</string>
     <string name="nav_share">Share</string>
