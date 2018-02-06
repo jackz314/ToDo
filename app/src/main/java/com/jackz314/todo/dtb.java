@@ -378,7 +378,11 @@ public class dtb extends SQLiteOpenHelper{
         Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );//search for the tag
         if(cs.getCount() == 0) return "";
         else {
-            return cs.getString(cs.getColumnIndex(TAG_COLOR));
+            try{
+                return cs.getString(cs.getColumnIndex(TAG_COLOR));
+            }catch (Exception e){
+                return "";
+            }
         }
     }
 
