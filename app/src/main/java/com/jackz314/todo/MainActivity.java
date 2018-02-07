@@ -1984,21 +1984,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             holder.todoText.setText(spannable);
                         }
                     }
-                    int start = text.indexOf("#");//find the position of the start point of the tag
-                    if(start != -1){//determine if contains tags
-                        while(start < text.length() && start > 0){//search for all tags{
-                            int end = text.substring(start).indexOf(" ") + start + 1;//find the position of end point of the tag
-                            if(end < 0){
-                                end = text.length()-1;
+                    int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+                    if(tagStartPos >= 0){//determine if contains tags
+                        Spannable taggedText = new SpannableString(text);//highlighting tags
+                        while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                            int tagEndPos = -1;//assume neither enter nor space exists
+                            if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                                tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break todo WHY WHY WHY??? WHY DO I NEED TO +1 at the end?
+                            }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                                tagEndPos = text.indexOf("\n",tagStartPos);
+                            }else {//contains only space
+                                tagEndPos = text.indexOf(" ",tagStartPos);
                             }
-                            int innerStart = start;
-                            start = text.substring(end).indexOf("#");
-                            if(start < 0){
-                                start = -1;//no more tags, return
-                            }else {
-                                start += end;
+                            if(tagEndPos < 0){//if the tag is the last section of the note
+                                tagEndPos = text.length() - 1;
+                            }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                                continue;
                             }
-                            String tag = text.substring(innerStart,end);
+                            //System.out.println(tagStartPos + " AND " + tagEndPos);
+                            String tag = text.substring(tagStartPos,tagEndPos + 1);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            //System.out.println("TEXT: " + text + "****" + tag + "********");
                             String tagColor = todosql.returnTagColorIfExist(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 Random random = new Random();//generate random color
@@ -2006,15 +2011,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
                                 todosql.createNewTag(tag, tagColor);//add new tag
                             }
-                            Spannable taggedText = new SpannableString(text);//highlighting tags
                             taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                     new ColorStateList(new int[][] {new int[] {}},
                                             new int[] {Color.parseColor(tagColor)})
-                                    ,null), innerStart, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
-                            holder.todoText.setText(taggedText);
-                            //todo performance issue
-                            //start = text.substring(end).indexOf("#") + end;//find the next index of the tag start point
+                                    ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                            tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                            //todo performance issue, change the color of different tags
                         }
+                        holder.todoText.setText(taggedText);
                     }
                    else {
                         holder.todoText.setText(text);
@@ -2809,6 +2813,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else if (id == R.id.settings){
             hideKeyboard();
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
+        }
+
+        else if (id == R.id.tags){
+            hideKeyboard();
+            Intent intent = new Intent(MainActivity.this, TagsActivity.class);
             startActivity(intent);
         }
 

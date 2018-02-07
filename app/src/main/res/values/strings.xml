@@ -186,6 +186,7 @@
     <string name="nav_about">About</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
+    <string name="nav_tags">Tags</string>
     <string name="nav_more">More</string>
     <string name="aboutAct_name">About</string>
     <string name="purchase_failed">Purchase failed:(\nPlease try again later or report an error!</string>
@@ -230,11 +231,11 @@
     <string name="verifying">Verifying…</string>
     <string name="thanks_for_purchase">Thanks for your purchase!\nEnjoy your Ad free experience ;)</string>
     <string name="thanks_for_support">Thanks for your support! :-)</string>
-    <string-array name="theme_default_value" translatable = "false">
+    <string-array name="theme_default_value" translatable="false">
         <item>1</item>
     </string-array>
 
-    <string-array name="theme_entries" >
+    <string-array name="theme_entries">
 
         <item>Material Indigo</item>
         <item>Material Red</item>
@@ -347,5 +348,6 @@
     <string name="plus_path_data" translatable="false">M 5 11 L 11 11 L 11 5 L 13 5 L 13 11 L 19 11 L 19 12 L 19 13 L 19 13 L 13 13 L 13 19 L 11 19 L 11 13 L 5 13 L 5 11</string>
     <string name="send_path_data" translatable="false">M 14.604 15.6 L 18.802 13.8 L 23 12 L 2.01 3 L 2 10 L 17 12 L 14 12.4 L 11 12.8 L 8 13.2 L 5 13.6 L 2 14 L 2.01 21 L 6.208 19.2 L 10.406 17.4 L 14.604 15.6</string>
     <string name="done_path_Data" translatable="false">M 3.4 13.4 L 9 19 L 12 16 L 15 13 L 18 10 L 21 7 L 19.6 5.6 L 17.48 7.72 L 15.36 9.84 L 13.24 11.96 L 11.12 14.08 L 9 16.2 L 9 16.2 L 4.8 12 L 3.4 13.4</string>
+    <string name="title_activity_tags">TagsActivity</string>
 
 </resources>
