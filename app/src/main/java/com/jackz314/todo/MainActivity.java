@@ -1984,7 +1984,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             holder.todoText.setText(spannable);
                         }
                     }
-                    Spannable taggedText = new SpannableString(text);//highlighting tags
                     int start = text.indexOf("#");//find the position of the start point of the tag
                     if(start != -1){//determine if contains tags
                         while(start < text.length() && start > 0){//search for all tags{
@@ -1992,7 +1991,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             if(end < 0){
                                 end = text.length()-1;
                             }
-                            String tag = text.substring(start,end);
+                            int innerStart = start;
+                            start = text.substring(end).indexOf("#");
+                            if(start < 0){
+                                start = -1;//no more tags, return
+                            }else {
+                                start += end;
+                            }
+                            String tag = text.substring(innerStart,end);
                             String tagColor = todosql.returnTagColorIfExist(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 Random random = new Random();//generate random color
@@ -2000,12 +2006,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
                                 todosql.createNewTag(tag, tagColor);//add new tag
                             }
+                            Spannable taggedText = new SpannableString(text);//highlighting tags
                             taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                     new ColorStateList(new int[][] {new int[] {}},
                                             new int[] {Color.parseColor(tagColor)})
-                                    ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                                    ,null), innerStart, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
                             holder.todoText.setText(taggedText);
-                            start = text.substring(end).indexOf("#") + end;//find the next index of the tag start point
+                            //todo performance issue
+                            //start = text.substring(end).indexOf("#") + end;//find the next index of the tag start point
                         }
                     }
                    else {
