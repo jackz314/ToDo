@@ -126,6 +126,15 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.jackz314.todo.MainActivity" />
         </activity>
+        <activity
+            android:name=".TagSelectionActivity"
+            android:label="@string/title_activity_tag_selection"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.jackz314.todo.MainActivity" />
+        </activity>
     </application>
 
 </manifest>

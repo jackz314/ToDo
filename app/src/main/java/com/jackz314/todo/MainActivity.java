@@ -160,28 +160,33 @@ import static com.jackz314.todo.dtb.TITLE;
 // the great alpaca that saves me from the bugs
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener{
+    private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
+    private static final String[] PROJECTION = new String[]{ID, TITLE};
+    private static final String SELECTION = TITLE + " LIKE ?";
+    static int REMOVE_REQUEST_ID =1022;
+    public boolean isInSearchMode = false, isInSelectionMode = false;
+    public ArrayList<Long> selectedId = new ArrayList<>();
+    public ArrayList<String> selectedContent = new ArrayList<>();
+    public ArrayList<String> CLONESelectedContent = new ArrayList<>();
+    public String searchText;
+    //IabBroadcastReceiver mBroadcastReceiver;
+    //public static int MODIFY_CONTEXT_ID = 1;
+    //public static int DELETE_CONTEXT_ID = 2;
+    public boolean iapsetup = true;
+    public boolean isAdRemoved = false;
     dtb todosql;
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
     RecyclerView todoList;
-    private FirebaseAnalytics mFirebaseAnalytics;
     IabHelper mHelper;
-    private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
     int exit=0,doubleClickCout = 0;
-    private static final String[] PROJECTION = new String[]{ID, TITLE};
-    private static final String SELECTION = TITLE + " LIKE ?";
     boolean justex = false;
-    public boolean isInSearchMode = false, isInSelectionMode = false;
-    public ArrayList<Long> selectedId = new ArrayList<>();
-    public ArrayList<String> selectedContent = new ArrayList<>();
-    public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     boolean isConnected = false;
     boolean justDoubleClicked = false;
     boolean selectAll = false, unSelectAll = false;
     SharedPreferences sharedPreferences;
     int resultCount = 0, cursorPos = 0;
-    public String searchText;
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
     CoordinatorLayout main;
@@ -206,14 +211,343 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     Toolbar selectionToolBar, toolbar;
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
-    private String todoTableId = "HAHA! this is the real one, gotcha";
-    //IabBroadcastReceiver mBroadcastReceiver;
-    //public static int MODIFY_CONTEXT_ID = 1;
-    //public static int DELETE_CONTEXT_ID = 2;
-    public boolean iapsetup = true;
-    public boolean isAdRemoved = false;
     ProgressDialog purchaseProgressDialog;
-    static int REMOVE_REQUEST_ID =1022;
+        IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
+        public void onQueryInventoryFinished(IabResult result, Inventory inv) {
+            //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
+            /*if(consume){
+                try {
+                    mHelper.consumeAsync(inv.getPurchase(REMOVE_AD_SKU),mConsumeFinishedListener);
+                } catch (IabHelper.IabAsyncInProgressException e) {
+                    e.printStackTrace();
+                }
+            }*/
+            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
+                    purchaseProgressDialog.dismiss();
+                }
+                adView= (AdView)findViewById(R.id.bannerAdView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                adView.loadAd(adRequest);
+                adView.setVisibility(View.VISIBLE);
+                isAdRemoved = false;
+                //iapsetup = false;
+                return;
+            }
+            if(result.isSuccess()){
+                //Toast.makeText(getApplicationContext(),"dsds",Toast.LENGTH_LONG).show();
+                iapsetup = true;
+                Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
+                isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
+                if(unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU)){
+                    removeAd();
+                    return;
+                }else {
+                    adView= (AdView)findViewById(R.id.bannerAdView);
+                    AdRequest adRequest = new AdRequest.Builder().build();
+                    adView.loadAd(adRequest);
+                    adView.setVisibility(View.VISIBLE);
+                    isAdRemoved = false;
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
+                        purchaseProgressDialog.dismiss();
+                    }
+                }
+            }else {
+                adView= (AdView)findViewById(R.id.bannerAdView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                adView.loadAd(adRequest);
+                adView.setVisibility(View.VISIBLE);
+                isAdRemoved = false;
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
+                    purchaseProgressDialog.dismiss();
+                }
+            }
+        }
+    };
+    IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
+        public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
+            //Toast.makeText(getApplicationContext(),"finished",Toast.LENGTH_SHORT).show();
+            if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
+                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
+                return;
+            }
+            if(purchase.getSku().equals(REMOVE_AD_SKU)){
+                try {
+                    //Toast.makeText(getApplicationContext(),"SUCCESS",Toast.LENGTH_SHORT).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.setMessage(getString(R.string.verifying));
+                    }
+                    if (mHelper != null) mHelper.flagEndAsync();
+                    mHelper.queryInventoryAsync(mGotInventoryListener);
+                    return;
+                    //iapsetup = true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.dismiss();
+                    }
+                    //System.out.println("qazwsx"+5);
+                    iapsetup = false;
+                    return;
+                }
+            }else {
+                Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
+            }
+        }
+    };
+    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {//draw the options after swipe left
+
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
+        }
+
+        @Override
+        public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+            if(isInSelectionMode) return 0; //prevent swipe in selection mode
+            return super.getSwipeDirs(recyclerView, viewHolder);
+        }
+
+        @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            unSelectAll = false;
+            selectAll = false;
+            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
+                removeSelectedId(viewHolder.getItemId());
+            }
+            final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
+            finishData(viewHolder.getItemId());
+            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    insertData(finishedContent);
+                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
+                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                    displayAllNotes();
+                }
+            }).show();
+        }
+
+        @Override
+        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+            if (viewHolder.getAdapterPosition() == -1) {
+                return;
+            }
+            View itemView = viewHolder.itemView;
+            Paint textPaint = new Paint();
+            textPaint.setStrokeWidth(2);
+            textPaint.setTextSize(80);
+            textPaint.setColor(themeColor);
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            Rect bounds = new Rect();
+            textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
+            Drawable finishIcon = ContextCompat.getDrawable(MainActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
+            finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+            int finishIconMargin = 40;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
+            int intrinsicWidth = finishIcon.getIntrinsicWidth();
+            int intrinsicHeight = finishIcon.getIntrinsicWidth();
+            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width();
+            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width();
+            int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+            int finishIconBottom = finishIconTop + intrinsicHeight;
+            finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
+            finishIcon.draw(c);
+            //fade out the view
+            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
+            viewHolder.itemView.setAlpha(alpha);
+            viewHolder.itemView.setTranslationX(dX);
+            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 34 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+        }
+
+    };
+
+    /*IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
+        public void onConsumeFinished(Purchase purchase, IabResult result) {
+            // if we were disposed of in the meantime, quit.
+            if (mHelper == null) return;
+            // We know this is the "gas" sku because it's the only one we consume,
+            // so we don't check which sku was consumed. If you have more than one
+            // sku, you probably should check...
+            if (result.isSuccess()) {
+                // successfully consumed, so we apply the effects of the item in our
+                // game world's logic, which in our case means filling the gas tank a bit
+                Toast.makeText(getApplicationContext(),"consumed",Toast.LENGTH_LONG).show();
+            }
+            else {
+            }
+
+        }
+    };*/
+    private FirebaseAnalytics mFirebaseAnalytics;
+    private String todoTableId = "HAHA! this is the real one, gotcha";
+
+    public static void setCursorColor(EditText view, int color) {//REFLECTION METHOD USED
+        try {
+            // Get the cursor resource id
+            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
+            field.setAccessible(true);
+            int drawableResId = field.getInt(view);
+
+            // Get the editor
+            field = TextView.class.getDeclaredField("mEditor");
+            field.setAccessible(true);
+            Object editor = field.get(view);
+
+            // Get the drawable and set a color filter
+            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
+            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+            Drawable[] drawables = {drawable, drawable};
+
+            // Set the drawables
+            field = editor.getClass().getDeclaredField("mCursorDrawable");
+            field.setAccessible(true);
+            field.set(editor, drawables);
+        } catch (Exception ignored) {
+
+        }
+    }
+    // TODO: 2017/9/29 Apply the margin setting to real ad remove situation(onCreate, ad loaded, resume and etc.
+
+    public static void dataUpload(String data){// refresh firebase token
+        if(data.equals("")) {
+            data = FirebaseInstanceId.getInstance().getToken();
+        }
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference();// Create a storage reference from our app
+        try {
+            String systemInfo ="";
+            String macAddress = getMacAddr().replace(":","-");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
+            }else {
+                systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
+            }
+            String token =  data + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            byte[] feedbackBytes =token.getBytes("UTF-8");
+            String uniqueID = UUID.randomUUID().toString();
+            String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            StorageReference feedbackRef = storageRef.child("firebase_token/" + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + data + " " + uniqueID +".txt");
+            UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
+            uploadTask.addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception exception) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    // Handle unsuccessful uploads
+                }
+            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
+                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
+                    //Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+
+    }
+
+    public static String getMacAddr() {
+        try {
+            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface nif : all) {
+                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+
+                byte[] macBytes = nif.getHardwareAddress();
+                if (macBytes == null) {
+                    return "";
+                }
+
+                StringBuilder res1 = new StringBuilder();
+                for (byte b : macBytes) {
+                    res1.append(String.format("%02X:",b));
+                }
+
+                if (res1.length() > 0) {
+                    res1.deleteCharAt(res1.length() - 1);
+                }
+                return res1.toString();
+            }
+        } catch (Exception ex) {
+            ////System.out.println("ex eoiii" + ex.getLocalizedMessage());
+        }
+        return "(Can't retrieve mac address)";
+    }
+
+    /*
+    public View getViewByPosition(int pos) {
+        //final int firstListItemPosition = todoList.getFirstVisiblePosition();
+        final int lastListItemPosition = firstListItemPosition + todoList.getChildCount() - 1;
+
+        if (pos < firstListItemPosition || pos > lastListItemPosition ) {
+            return todoList.getAdapter().getView(pos, null, todoList);
+        } else {
+            final int childIndex = pos - firstListItemPosition;
+            return todoList.getChildAt(childIndex);
+        }
+    }*/
+
+    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                final Class<?> clazz = RecyclerView.class;
+                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
+                    Method method = clazz.getDeclaredMethod(name);
+                    method.setAccessible(true);
+                    method.invoke(recyclerView);
+                }
+                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
+                    final Field field = clazz.getDeclaredField(name);
+                    field.setAccessible(true);
+                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
+                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
+                    fEdgeEffect.setAccessible(true);
+                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
+                }
+            } catch (final Exception ignored) {}
+        }
+    }
+
+    public static String getThisPackageName(){
+        return MainActivity.class.getPackage().getName();
+    }
+
+    /*public void setLauncherIcon(){
+        Intent launcherIntent = new Intent();
+        launcherIntent.setClassName("com.jackz314.todAAAo","MainActivity");
+        launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent intent = new Intent();
+        intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT,launcherIntent);
+        intent.putExtra(
+                Intent.EXTRA_SHORTCUT_ICON_RESOURCE,
+                Intent.ShortcutIconResource.fromContext(
+                    getApplicationContext(),
+                    R.drawable.common_google_signin_btn_icon_light_normal
+                )
+        );
+        getApplicationContext().sendBroadcast(intent);
+    }*/
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -1025,83 +1359,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }//--------end of onCreate!
 
-    /*IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
-        public void onConsumeFinished(Purchase purchase, IabResult result) {
-            // if we were disposed of in the meantime, quit.
-            if (mHelper == null) return;
-            // We know this is the "gas" sku because it's the only one we consume,
-            // so we don't check which sku was consumed. If you have more than one
-            // sku, you probably should check...
-            if (result.isSuccess()) {
-                // successfully consumed, so we apply the effects of the item in our
-                // game world's logic, which in our case means filling the gas tank a bit
-                Toast.makeText(getApplicationContext(),"consumed",Toast.LENGTH_LONG).show();
-            }
-            else {
-            }
-
-        }
-    };*/
-
-        IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
-        public void onQueryInventoryFinished(IabResult result, Inventory inv) {
-            //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
-            /*if(consume){
-                try {
-                    mHelper.consumeAsync(inv.getPurchase(REMOVE_AD_SKU),mConsumeFinishedListener);
-                } catch (IabHelper.IabAsyncInProgressException e) {
-                    e.printStackTrace();
-                }
-            }*/
-            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
-                    purchaseProgressDialog.dismiss();
-                }
-                adView= (AdView)findViewById(R.id.bannerAdView);
-                AdRequest adRequest = new AdRequest.Builder().build();
-                adView.loadAd(adRequest);
-                adView.setVisibility(View.VISIBLE);
-                isAdRemoved = false;
-                //iapsetup = false;
-                return;
-            }
-            if(result.isSuccess()){
-                //Toast.makeText(getApplicationContext(),"dsds",Toast.LENGTH_LONG).show();
-                iapsetup = true;
-                Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
-                isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
-                if(unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU)){
-                    removeAd();
-                    return;
-                }else {
-                    adView= (AdView)findViewById(R.id.bannerAdView);
-                    AdRequest adRequest = new AdRequest.Builder().build();
-                    adView.loadAd(adRequest);
-                    adView.setVisibility(View.VISIBLE);
-                    isAdRemoved = false;
-                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                        Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                        //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
-                        purchaseProgressDialog.dismiss();
-                    }
-                }
-            }else {
-                adView= (AdView)findViewById(R.id.bannerAdView);
-                AdRequest adRequest = new AdRequest.Builder().build();
-                adView.loadAd(adRequest);
-                adView.setVisibility(View.VISIBLE);
-                isAdRemoved = false;
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
-                    purchaseProgressDialog.dismiss();
-                }
-            }
-        }
-    };
-
     public boolean restorePurchase(){
         try {
             if (mHelper != null) mHelper.flagEndAsync();
@@ -1112,191 +1369,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         return isAdRemoved;
     }
-
-    public void fakeProgress(int ms){
-        ObjectAnimator animator = ObjectAnimator.ofInt(fabProgressBar,"progress",0,1000);
-        animator.setDuration(ms);
-        animator.setInterpolator(new DecelerateInterpolator());
-        animator.start();
-
-    }
-    // TODO: 2017/9/29 Apply the margin setting to real ad remove situation(onCreate, ad loaded, resume and etc.
-
-    public void removeAd(){
-        if(isAdRemoved){
-            adView.destroy();
-            adView.setEnabled(false);
-            adView.setVisibility(View.GONE);
-            CoordinatorLayout coordinatorLayout = (CoordinatorLayout)findViewById(R.id.fab_coordinator_layout);
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)coordinatorLayout.getLayoutParams();
-            params.bottomMargin = 0;
-            //setMargins(coordinatorLayout,0,0,0,0);
-            //setMargins(fab,16,16,16,btmMargin);
-            menuNav.removeItem(R.id.unlock);
-            if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                purchaseProgressDialog.dismiss();
-                Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_purchase),Toast.LENGTH_SHORT).show();
-            }
-            //ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
-            //params.bottomMargin = 80;
-        }
-        else{
-            return;
-        }
-    }
-
-    public void setOutOfSearchMode(){
-        proFab.setVisibility(View.VISIBLE);
-        isInSearchMode = false;
-        getSupportLoaderManager().restartLoader(123,null,this);
-        displayAllNotes();
-        hideKeyboard();
-    }
-
-    /*
-    public View getViewByPosition(int pos) {
-        //final int firstListItemPosition = todoList.getFirstVisiblePosition();
-        final int lastListItemPosition = firstListItemPosition + todoList.getChildCount() - 1;
-
-        if (pos < firstListItemPosition || pos > lastListItemPosition ) {
-            return todoList.getAdapter().getView(pos, null, todoList);
-        } else {
-            final int childIndex = pos - firstListItemPosition;
-            return todoList.getChildAt(childIndex);
-        }
-    }*/
-
-    public void setOutOfSelectionMode(){
-        isInSelectionMode = false;
-        proFab.setVisibility(View.VISIBLE);
-        getSupportLoaderManager().restartLoader(123,null,this);
-        selectedId.clear();
-        selectedContent.clear();
-        selectAll = false;
-        unSelectAll = false;
-        displayAllNotes();
-        selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
-        selectionToolBar.getMenu().clear();
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
-        selectionToolBar.setVisibility(View.GONE);
-        if(selectAllBox != null){
-            selectAllBox.setChecked(false);
-        }
-        toolbar.setVisibility(View.VISIBLE);
-        todoList.requestFocus();
-    }
-
-    @Override
-    public boolean onSupportNavigateUp() {
-        if(isInSearchMode && isInSelectionMode){
-            setOutOfSelectionMode();
-        }else if(isInSearchMode){
-            setOutOfSearchMode();
-        }else {
-            setOutOfSelectionMode();
-        }
-        return true;
-    }
-
-    /*public void setLauncherIcon(){
-        Intent launcherIntent = new Intent();
-        launcherIntent.setClassName("com.jackz314.todAAAo","MainActivity");
-        launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Intent intent = new Intent();
-        intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT,launcherIntent);
-        intent.putExtra(
-                Intent.EXTRA_SHORTCUT_ICON_RESOURCE,
-                Intent.ShortcutIconResource.fromContext(
-                    getApplicationContext(),
-                    R.drawable.common_google_signin_btn_icon_light_normal
-                )
-        );
-        getApplicationContext().sendBroadcast(intent);
-    }*/
-
-    boolean verifyDeveloperPayload(Purchase p) {
-        if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
-            if(p.getDeveloperPayload().equals(
-                    "0x397821dc97276"+
-                    "CPMFnxQ5s0" +
-                    "NBVs3kWNgN" +
-                    "ivr1zfRbfk" +
-                    "U1lCak93su" +
-                    "RlMWFgHQMj" +
-                    "ZWYDiMVeak" +
-                    "rZ3bRGzfzz" +
-                    "9IMuplWteD" +
-                    "rBMyPRIDUm" +
-                    "GcIdL4lDdR"))
-            return true;
-        }
-        /*
-         *  verify that the developer payload of the purchase is correct. It will be
-         * the same one that you sent when initiating the purchase.
-         *
-         * WARNING: Locally generating a random string when starting a purchase and
-         * verifying it here might seem like a good approach, but this will fail in the
-         * case where the user purchases an item on one device and then uses your app on
-         * a different device, because on the other device you will not have access to the
-         * random string you originally generated.
-         *
-         * So a good developer payload has these characteristics:
-         *
-         * 1. If two different users purchase an item, the payload is different between them,
-         *    so that one user's purchase can't be replayed to another user.
-         *
-         * 2. The payload must be such that you can verify it even when the app wasn't the
-         *    one who initiated the purchase flow (so that items purchased by the user on
-         *    one device work on other devices owned by the user).
-         *
-         * Using your own server to store and verify developer payloads across app
-         * installations is recommended.
-         */
-
-        return false;
-    }
-
-    IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
-        public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-            //Toast.makeText(getApplicationContext(),"finished",Toast.LENGTH_SHORT).show();
-            if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    purchaseProgressDialog.dismiss();
-                }
-                return;
-            }
-            if(purchase.getSku().equals(REMOVE_AD_SKU)){
-                try {
-                    //Toast.makeText(getApplicationContext(),"SUCCESS",Toast.LENGTH_SHORT).show();
-                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                        purchaseProgressDialog.setMessage(getString(R.string.verifying));
-                    }
-                    if (mHelper != null) mHelper.flagEndAsync();
-                    mHelper.queryInventoryAsync(mGotInventoryListener);
-                    return;
-                    //iapsetup = true;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
-                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                        purchaseProgressDialog.dismiss();
-                    }
-                    //System.out.println("qazwsx"+5);
-                    iapsetup = false;
-                    return;
-                }
-            }else {
-                Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    purchaseProgressDialog.dismiss();
-                }
-            }
-        }
-    };
 
     /*@Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
@@ -1376,6 +1448,119 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return super.onContextItemSelected(item);
     }*/
 
+    public void fakeProgress(int ms){
+        ObjectAnimator animator = ObjectAnimator.ofInt(fabProgressBar,"progress",0,1000);
+        animator.setDuration(ms);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.start();
+
+    }
+
+    public void removeAd(){
+        if(isAdRemoved){
+            adView.destroy();
+            adView.setEnabled(false);
+            adView.setVisibility(View.GONE);
+            CoordinatorLayout coordinatorLayout = (CoordinatorLayout)findViewById(R.id.fab_coordinator_layout);
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)coordinatorLayout.getLayoutParams();
+            params.bottomMargin = 0;
+            //setMargins(coordinatorLayout,0,0,0,0);
+            //setMargins(fab,16,16,16,btmMargin);
+            menuNav.removeItem(R.id.unlock);
+            if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                purchaseProgressDialog.dismiss();
+                Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_purchase),Toast.LENGTH_SHORT).show();
+            }
+            //ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams)fab.getLayoutParams();
+            //params.bottomMargin = 80;
+        }
+        else{
+            return;
+        }
+    }
+
+    public void setOutOfSearchMode(){
+        proFab.setVisibility(View.VISIBLE);
+        isInSearchMode = false;
+        getSupportLoaderManager().restartLoader(123,null,this);
+        displayAllNotes();
+        hideKeyboard();
+    }
+
+    public void setOutOfSelectionMode(){
+        isInSelectionMode = false;
+        proFab.setVisibility(View.VISIBLE);
+        getSupportLoaderManager().restartLoader(123,null,this);
+        selectedId.clear();
+        selectedContent.clear();
+        selectAll = false;
+        unSelectAll = false;
+        displayAllNotes();
+        selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
+        selectionToolBar.getMenu().clear();
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        selectionToolBar.setVisibility(View.GONE);
+        if(selectAllBox != null){
+            selectAllBox.setChecked(false);
+        }
+        toolbar.setVisibility(View.VISIBLE);
+        todoList.requestFocus();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        if(isInSearchMode && isInSelectionMode){
+            setOutOfSelectionMode();
+        }else if(isInSearchMode){
+            setOutOfSearchMode();
+        }else {
+            setOutOfSelectionMode();
+        }
+        return true;
+    }
+
+    boolean verifyDeveloperPayload(Purchase p) {
+        if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
+            if(p.getDeveloperPayload().equals(
+                    "0x397821dc97276"+
+                    "CPMFnxQ5s0" +
+                    "NBVs3kWNgN" +
+                    "ivr1zfRbfk" +
+                    "U1lCak93su" +
+                    "RlMWFgHQMj" +
+                    "ZWYDiMVeak" +
+                    "rZ3bRGzfzz" +
+                    "9IMuplWteD" +
+                    "rBMyPRIDUm" +
+                    "GcIdL4lDdR"))
+            return true;
+        }
+        /*
+         *  verify that the developer payload of the purchase is correct. It will be
+         * the same one that you sent when initiating the purchase.
+         *
+         * WARNING: Locally generating a random string when starting a purchase and
+         * verifying it here might seem like a good approach, but this will fail in the
+         * case where the user purchases an item on one device and then uses your app on
+         * a different device, because on the other device you will not have access to the
+         * random string you originally generated.
+         *
+         * So a good developer payload has these characteristics:
+         *
+         * 1. If two different users purchase an item, the payload is different between them,
+         *    so that one user's purchase can't be replayed to another user.
+         *
+         * 2. The payload must be such that you can verify it even when the app wasn't the
+         *    one who initiated the purchase flow (so that items purchased by the user on
+         *    one device work on other devices owned by the user).
+         *
+         * Using your own server to store and verify developer payloads across app
+         * installations is recommended.
+         */
+
+        return false;
+    }
+
     public void addSelectedId(long id){
         selectedId.add(0,id);
         String data = todosql.getOneDataInTODO(Long.toString(id));
@@ -1419,32 +1604,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
             String count = Integer.toString(selectedId.size());
             selectionTitle.setText(count + getString(R.string.selection_mode_title));
-        }
-    }
-
-    public static void setCursorColor(EditText view, int color) {
-        try {
-            // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
-
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
-
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
-
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-        } catch (Exception ignored) {
-
         }
     }
 
@@ -1539,75 +1698,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
         //todoList.setDividerHeight(2);
 }
-
-    public static void dataUpload(String data){// refresh firebase token
-        if(data.equals("")) {
-            data = FirebaseInstanceId.getInstance().getToken();
-        }
-        FirebaseStorage storage = FirebaseStorage.getInstance();
-        StorageReference storageRef = storage.getReference();// Create a storage reference from our app
-        try {
-            String systemInfo ="";
-            String macAddress = getMacAddr().replace(":","-");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
-            }else {
-                systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
-            }
-            String token =  data + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
-            byte[] feedbackBytes =token.getBytes("UTF-8");
-            String uniqueID = UUID.randomUUID().toString();
-            String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
-            StorageReference feedbackRef = storageRef.child("firebase_token/" + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + data + " " + uniqueID +".txt");
-            UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
-            uploadTask.addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception exception) {
-                    //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-                    // Handle unsuccessful uploads
-                }
-            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
-                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
-                    //Uri downloadUrl = taskSnapshot.getDownloadUrl();
-                }
-            });
-        } catch (UnsupportedEncodingException e) {
-            //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-            e.printStackTrace();
-        }
-
-    }
-
-    public static String getMacAddr() {
-        try {
-            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
-            for (NetworkInterface nif : all) {
-                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
-
-                byte[] macBytes = nif.getHardwareAddress();
-                if (macBytes == null) {
-                    return "";
-                }
-
-                StringBuilder res1 = new StringBuilder();
-                for (byte b : macBytes) {
-                    res1.append(String.format("%02X:",b));
-                }
-
-                if (res1.length() > 0) {
-                    res1.deleteCharAt(res1.length() - 1);
-                }
-                return res1.toString();
-            }
-        } catch (Exception ex) {
-            ////System.out.println("ex eoiii" + ex.getLocalizedMessage());
-        }
-        return "(Can't retrieve mac address)";
-    }
-
 
     public void showFeedBackDialog() {
         LayoutInflater inflater = this.getLayoutInflater();
@@ -1728,98 +1818,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
     }
 
-    private class ConnectionDetector extends AsyncTask<Void,Void,Void>{
-        @Override
-        protected Void doInBackground(Void... params) {
-            if (networkConnectivity()) {
-                try {
-                    HttpURLConnection urlc = (HttpURLConnection) (new URL("http://clients3.google.com/generate_204").openConnection());
-                    urlc.setRequestProperty("User-Agent", "Android");
-                    urlc.setRequestProperty("Connection", "close");
-                    urlc.setConnectTimeout(1500);
-                    urlc.setReadTimeout(2000);
-                    urlc.connect();
-                    // networkcode2 = urlc.getResponseCode();
-                    isConnected = (urlc.getResponseCode() == 204 && urlc.getContentLength() == 0);
-                } catch (IOException e) {
-                    isConnected = false;
-                }
-            } else{
-                isConnected = false;
-            }
-            return null;
-        }
-        private boolean networkConnectivity() {
-            ConnectivityManager cm = (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-            if (networkInfo != null && networkInfo.isConnected()) {
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            //isConnected = isConn;
-            super.onPostExecute(aVoid);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode){
-            case 0:{
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_corporation),Toast.LENGTH_SHORT).show();
-                    fab.performLongClick();
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-
-                } else {
-                    Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                }
-                break;
-            }
-        }
-    }
-
-    public void purchaseRemoveAds(){
-        try {
-            new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
-        }
-        if(isConnected){
-            try{
-                //Toast.makeText(getApplicationContext(),"ddd",Toast.LENGTH_LONG).show();
-                purchaseProgressDialog =  new ProgressDialog(MainActivity.this);
-                purchaseProgressDialog.setTitle(getString(R.string.please_wait));
-                purchaseProgressDialog.setMessage(getString(R.string.purchasing));
-                purchaseProgressDialog.setCancelable(false);
-                purchaseProgressDialog.show();
-                if (mHelper != null) mHelper.flagEndAsync();
-                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
-            }
-            catch (Exception e) {
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
-                //Toast.makeText(getApplicationContext(),"8" +e.getLocalizedMessage(),Toast.LENGTH_LONG).show();
-                //insertData(e.getLocalizedMessage());
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    purchaseProgressDialog.dismiss();
-                }
-                e.printStackTrace();
-            }
-        }else{
-            //Toast.makeText(getApplicationContext(),"NO INTERNET",Toast.LENGTH_LONG).show();
-            Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
-            //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
-        }
-    }
-
     /*
     public void displaySearchResults(final String filter){
         final Cursor cursor = todosql.getSearchResults(filter);
@@ -1879,73 +1877,60 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }*/
 
-    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode){
+            case 0:{
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_corporation),Toast.LENGTH_SHORT).show();
+                    fab.performLongClick();
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
 
-        @Override
-        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
-            return false;
-        }
-
-        @Override
-        public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-            if(isInSelectionMode) return 0; //prevent swipe in selection mode
-            return super.getSwipeDirs(recyclerView, viewHolder);
-        }
-
-        @Override
-            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-            unSelectAll = false;
-            selectAll = false;
-            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
-                removeSelectedId(viewHolder.getItemId());
-            }
-            final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
-            finishData(viewHolder.getItemId());
-            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    insertData(finishedContent);
-                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
-                    displayAllNotes();
+                } else {
+                    Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
                 }
-            }).show();
-        }
-
-        @Override
-        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-            if (viewHolder.getAdapterPosition() == -1) {
-                return;
+                break;
             }
-            View itemView = viewHolder.itemView;
-            Paint textPaint = new Paint();
-            textPaint.setStrokeWidth(2);
-            textPaint.setTextSize(80);
-            textPaint.setColor(themeColor);
-            textPaint.setTextAlign(Paint.Align.LEFT);
-            Rect bounds = new Rect();
-            textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
-            Drawable finishIcon = ContextCompat.getDrawable(MainActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
-            finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-            int finishIconMargin = 40;
-            int itemHeight = itemView.getBottom() - itemView.getTop();
-            int intrinsicWidth = finishIcon.getIntrinsicWidth();
-            int intrinsicHeight = finishIcon.getIntrinsicWidth();
-            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width();
-            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width();
-            int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-            int finishIconBottom = finishIconTop + intrinsicHeight;
-            finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
-            finishIcon.draw(c);
-            //fade out the view
-            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
-            viewHolder.itemView.setAlpha(alpha);
-            viewHolder.itemView.setTranslationX(dX);
-            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 34 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
-            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
         }
+    }
 
-    };
+    public void purchaseRemoveAds(){
+        try {
+            new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+        }
+        if(isConnected){
+            try{
+                //Toast.makeText(getApplicationContext(),"ddd",Toast.LENGTH_LONG).show();
+                purchaseProgressDialog =  new ProgressDialog(MainActivity.this);
+                purchaseProgressDialog.setTitle(getString(R.string.please_wait));
+                purchaseProgressDialog.setMessage(getString(R.string.purchasing));
+                purchaseProgressDialog.setCancelable(false);
+                purchaseProgressDialog.show();
+                if (mHelper != null) mHelper.flagEndAsync();
+                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
+            }
+            catch (Exception e) {
+                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"8" +e.getLocalizedMessage(),Toast.LENGTH_LONG).show();
+                //insertData(e.getLocalizedMessage());
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
+                e.printStackTrace();
+            }
+        }else{
+            //Toast.makeText(getApplicationContext(),"NO INTERNET",Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
+            //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
+        }
+    }
 
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
@@ -2083,27 +2068,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //stop circle
     }
 
-    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                final Class<?> clazz = RecyclerView.class;
-                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
-                    Method method = clazz.getDeclaredMethod(name);
-                    method.setAccessible(true);
-                    method.invoke(recyclerView);
-                }
-                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
-                    final Field field = clazz.getDeclaredField(name);
-                    field.setAccessible(true);
-                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
-                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
-                    fEdgeEffect.setAccessible(true);
-                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
-                }
-            } catch (final Exception ignored) {}
-        }
-    }
-
     public void finishSetOfData(){
 
         CLONESelectedContent.clear();
@@ -2198,185 +2162,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, shareSub);
         sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
         startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
-    }
-
-    public class ExportPrintAdapter extends PrintDocumentAdapter//print adapter for exportation
-    {
-        Context context;
-        private int pageHeight;
-        private int pageWidth;
-        public PdfDocument myPdfDocument;
-        public int totalpages = 0;
-
-        public ExportPrintAdapter(Context context)
-        {
-            this.context = context;
-        }
-
-        @Override
-        public void onLayout(PrintAttributes oldAttributes,
-                             PrintAttributes newAttributes,
-                             CancellationSignal cancellationSignal,
-                             LayoutResultCallback callback,
-                             Bundle metadata) {
-            myPdfDocument = new PrintedPdfDocument(context, newAttributes);//create new PDF document
-
-            pageHeight = newAttributes.getMediaSize().getHeightMils()/1000 * 72;
-            pageWidth = newAttributes.getMediaSize().getWidthMils()/1000 * 72;//calculate page height/width
-
-            if (cancellationSignal.isCanceled() ) {//handle cancellation requests
-                callback.onLayoutCancelled();
-                return;
-            }
-            totalpages = computePageCount(newAttributes);//get total page number
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-            PrintDocumentInfo.Builder builder = new PrintDocumentInfo
-                    .Builder(getString(R.string.export_file_name) + dateFormat.format(Calendar.getInstance().getTime()) + ".pdf")//exported file name
-                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                    .setPageCount(totalpages);//set page number
-            PrintDocumentInfo info = builder.build();
-            callback.onLayoutFinished(info, true);
-        }
-
-
-        @Override
-        public void onWrite(final PageRange[] pageRanges,
-                            final ParcelFileDescriptor destination,
-                            final CancellationSignal cancellationSignal,
-                            final PrintDocumentAdapter.WriteResultCallback callback) {//render final export document
-            for (int i = 0; i < totalpages; i++) {
-                if (pageInRange(pageRanges, i))
-                {
-                    PdfDocument.PageInfo newPage = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i).create();
-
-                    PdfDocument.Page page = myPdfDocument.startPage(newPage);
-
-                    if (cancellationSignal.isCanceled()) {
-                        callback.onWriteCancelled();
-                        myPdfDocument.close();
-                        myPdfDocument = null;
-                        return;
-                    }
-                    //drawPage(page, i);//DEPRECIATED METHOD
-                    Canvas canvas = page.getCanvas();
-                    int titleBaseLine = 72;
-                    int leftMargin = 54;
-                    int verticalMargin = 16;
-                    Paint paint = new Paint();
-                    paint.setColor(Color.BLACK);
-                    paint.setTextSize(40);//set title font                    canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
-                    canvas.drawText(getString(R.string.export_title), leftMargin, titleBaseLine + 35, paint);
-                    paint.setTextSize(14);
-                    for(String text : selectedContent){
-                        canvas.drawText(
-                                text,
-                                leftMargin,
-                                titleBaseLine,
-                                paint);
-                        if(canvas.getClipBounds().height()-verticalMargin >= pageHeight) return;
-                    }
-                    myPdfDocument.finishPage(page);
-                }
-            }
-
-            try {
-                myPdfDocument.writeTo(new FileOutputStream(
-                        destination.getFileDescriptor()));
-            } catch (IOException e) {
-                callback.onWriteFailed(e.toString());
-                return;
-            } finally {
-                myPdfDocument.close();
-                myPdfDocument = null;
-            }
-            callback.onWriteFinished(pageRanges);
-            setOutOfSelectionMode();
-        }
-
-        private void drawPage(PdfDocument.Page page, int pagenumber) {//DEPRECIATED method, see onWrite() part
-            Canvas canvas = page.getCanvas();
-
-            pagenumber++; // Make sure page numbers start at 1
-
-            int titleBaseLine = 72;
-            int leftMargin = 54;
-            int dynamicTextSize = 0;//determine text size based on the content size
-            int textCount = selectedContent.toArray().length;
-            if (textCount <= 150){
-                dynamicTextSize = 30;
-            }else if(textCount < 500 && textCount > 150){
-                dynamicTextSize = 22;
-            }else {
-                dynamicTextSize = 18;
-            }
-            Paint paint = new Paint();
-            paint.setColor(Color.BLACK);
-            paint.setTextSize(dynamicTextSize);//set title font
-            canvas.drawText(
-                    "Test Print Document Page " + pagenumber,
-                    leftMargin,
-                    titleBaseLine,
-                    paint);
-
-            paint.setTextSize(14);
-            canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
-
-            //PdfDocument.PageInfo pageInfo = page.getInfo();
-
-            /*canvas.drawCircle(pageInfo.getPageWidth()/2,
-                    pageInfo.getPageHeight()/2,
-                    150,
-                    paint);*///draw circle todo mark on the page
-        }
-
-        private boolean pageInRange(PageRange[] pageRanges, int page)
-        {
-            for (int i = 0; i<pageRanges.length; i++)
-            {
-                if ((page >= pageRanges[i].getStart()) &&
-                        (page <= pageRanges[i].getEnd()))
-                    return true;
-            }
-            return false;
-        }
-
-        private int computePageCount(PrintAttributes printAttributes) { //calculate total page number todo improve this algorithm
-            int itemsPerPage = 4; // default item count for portrait mode
-
-            PrintAttributes.MediaSize pageSize = printAttributes.getMediaSize();
-            if (!pageSize.isPortrait()) {
-                // Six items per page in landscape orientation
-                itemsPerPage = 6;
-            }
-
-            // Determine number of print items
-            int finalPageNumber = 0;
-            int printItemCount = selectedContent.size();
-            int pageHeight = pageSize.getHeightMils();
-            int dynamicTextSize = 0;//determine text size based on the content
-            int textCount = selectedContent.toArray().length;
-            if (textCount <= 150){
-                dynamicTextSize = 30;
-            }else if(textCount < 500 && textCount > 150){
-                dynamicTextSize = 22;
-            }else {
-                dynamicTextSize = 18;
-            }
-            Toast.makeText(getApplicationContext(),printItemCount,Toast.LENGTH_LONG).show();
-            Paint fontPaint = new Paint();//determine content size'
-            Rect fontRect = new Rect();
-            fontPaint.setStyle(Paint.Style.FILL);
-            fontPaint.setColor(Color.BLACK);
-            fontPaint.setTextSize(dynamicTextSize);
-            fontPaint.getTextBounds(selectedContent.toString(),0,selectedContent.size(),fontRect);
-            int textTotalHeight = fontRect.height();
-            if (pageHeight >= textTotalHeight) finalPageNumber = 1;//in case the content is less than one page
-            else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
-            return finalPageNumber; //todo temporary, change later
-            //return (int) Math.ceil(printItemCount / itemsPerPage);
-        }
-
-
     }
 
     public void hideKeyboard() {
@@ -2536,6 +2321,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
         return true;
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        //System.out.println(intent.getAction()+" IDENTIFIII");
+        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            handleVoiceSearch(intent);
+        }
+
+    }
     /*
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -2553,16 +2348,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         return super.onOptionsItemSelected(item);
     }*/
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        //System.out.println(intent.getAction()+" IDENTIFIII");
-        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            handleVoiceSearch(intent);
-        }
-
-    }
 
     public void query(String text) {
         Bundle bundle = new Bundle();
@@ -2791,13 +2576,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onDestroy();
     }
 
-    /*private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager
-                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null;
-    }*/
-
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
@@ -2864,6 +2642,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return true;
     }
 
+    /*private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null;
+    }*/
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -2899,10 +2684,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
         return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
-    }
-
-    public static String getThisPackageName(){
-        return MainActivity.class.getPackage().getName();
     }
 
     @Override
@@ -2959,6 +2740,222 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //System.out.println("delete data" + id);
         getContentResolver().delete(uri, null, null);
         displayAllNotes();
+    }
+
+    private class ConnectionDetector extends AsyncTask<Void,Void,Void>{
+        @Override
+        protected Void doInBackground(Void... params) {
+            if (networkConnectivity()) {
+                try {
+                    HttpURLConnection urlc = (HttpURLConnection) (new URL("http://clients3.google.com/generate_204").openConnection());
+                    urlc.setRequestProperty("User-Agent", "Android");
+                    urlc.setRequestProperty("Connection", "close");
+                    urlc.setConnectTimeout(1500);
+                    urlc.setReadTimeout(2000);
+                    urlc.connect();
+                    // networkcode2 = urlc.getResponseCode();
+                    isConnected = (urlc.getResponseCode() == 204 && urlc.getContentLength() == 0);
+                } catch (IOException e) {
+                    isConnected = false;
+                }
+            } else{
+                isConnected = false;
+            }
+            return null;
+        }
+        private boolean networkConnectivity() {
+            ConnectivityManager cm = (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+            if (networkInfo != null && networkInfo.isConnected()) {
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            //isConnected = isConn;
+            super.onPostExecute(aVoid);
+        }
+    }
+
+    public class ExportPrintAdapter extends PrintDocumentAdapter//print adapter for exportation
+    {
+        public PdfDocument myPdfDocument;
+        public int totalpages = 0;
+        Context context;
+        private int pageHeight;
+        private int pageWidth;
+
+        public ExportPrintAdapter(Context context)
+        {
+            this.context = context;
+        }
+
+        @Override
+        public void onLayout(PrintAttributes oldAttributes,
+                             PrintAttributes newAttributes,
+                             CancellationSignal cancellationSignal,
+                             LayoutResultCallback callback,
+                             Bundle metadata) {
+            myPdfDocument = new PrintedPdfDocument(context, newAttributes);//create new PDF document
+
+            pageHeight = newAttributes.getMediaSize().getHeightMils()/1000 * 72;
+            pageWidth = newAttributes.getMediaSize().getWidthMils()/1000 * 72;//calculate page height/width
+
+            if (cancellationSignal.isCanceled() ) {//handle cancellation requests
+                callback.onLayoutCancelled();
+                return;
+            }
+            totalpages = computePageCount(newAttributes);//get total page number
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+            PrintDocumentInfo.Builder builder = new PrintDocumentInfo
+                    .Builder(getString(R.string.export_file_name) + dateFormat.format(Calendar.getInstance().getTime()) + ".pdf")//exported file name
+                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                    .setPageCount(totalpages);//set page number
+            PrintDocumentInfo info = builder.build();
+            callback.onLayoutFinished(info, true);
+        }
+
+
+        @Override
+        public void onWrite(final PageRange[] pageRanges,
+                            final ParcelFileDescriptor destination,
+                            final CancellationSignal cancellationSignal,
+                            final PrintDocumentAdapter.WriteResultCallback callback) {//render final export document
+            for (int i = 0; i < totalpages; i++) {
+                if (pageInRange(pageRanges, i))
+                {
+                    PdfDocument.PageInfo newPage = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i).create();
+
+                    PdfDocument.Page page = myPdfDocument.startPage(newPage);
+
+                    if (cancellationSignal.isCanceled()) {
+                        callback.onWriteCancelled();
+                        myPdfDocument.close();
+                        myPdfDocument = null;
+                        return;
+                    }
+                    //drawPage(page, i);//DEPRECIATED METHOD
+                    Canvas canvas = page.getCanvas();
+                    int titleBaseLine = 72;
+                    int leftMargin = 54;
+                    int verticalMargin = 16;
+                    Paint paint = new Paint();
+                    paint.setColor(Color.BLACK);
+                    paint.setTextSize(40);//set title font                    canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+                    canvas.drawText(getString(R.string.export_title), leftMargin, titleBaseLine + 35, paint);
+                    paint.setTextSize(14);
+                    for(String text : selectedContent){
+                        canvas.drawText(
+                                text,
+                                leftMargin,
+                                titleBaseLine,
+                                paint);
+                        if(canvas.getClipBounds().height()-verticalMargin >= pageHeight) return;
+                    }
+                    myPdfDocument.finishPage(page);
+                }
+            }
+
+            try {
+                myPdfDocument.writeTo(new FileOutputStream(
+                        destination.getFileDescriptor()));
+            } catch (IOException e) {
+                callback.onWriteFailed(e.toString());
+                return;
+            } finally {
+                myPdfDocument.close();
+                myPdfDocument = null;
+            }
+            callback.onWriteFinished(pageRanges);
+            setOutOfSelectionMode();
+        }
+
+        private void drawPage(PdfDocument.Page page, int pagenumber) {//DEPRECIATED method, see onWrite() part
+            Canvas canvas = page.getCanvas();
+
+            pagenumber++; // Make sure page numbers start at 1
+
+            int titleBaseLine = 72;
+            int leftMargin = 54;
+            int dynamicTextSize = 0;//determine text size based on the content size
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Paint paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(dynamicTextSize);//set title font
+            canvas.drawText(
+                    "Test Print Document Page " + pagenumber,
+                    leftMargin,
+                    titleBaseLine,
+                    paint);
+
+            paint.setTextSize(14);
+            canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+
+            //PdfDocument.PageInfo pageInfo = page.getInfo();
+
+            /*canvas.drawCircle(pageInfo.getPageWidth()/2,
+                    pageInfo.getPageHeight()/2,
+                    150,
+                    paint);*///draw circle todo mark on the page
+        }
+
+        private boolean pageInRange(PageRange[] pageRanges, int page)
+        {
+            for (int i = 0; i<pageRanges.length; i++)
+            {
+                if ((page >= pageRanges[i].getStart()) &&
+                        (page <= pageRanges[i].getEnd()))
+                    return true;
+            }
+            return false;
+        }
+
+        private int computePageCount(PrintAttributes printAttributes) { //calculate total page number todo improve this algorithm
+            int itemsPerPage = 4; // default item count for portrait mode
+
+            PrintAttributes.MediaSize pageSize = printAttributes.getMediaSize();
+            if (!pageSize.isPortrait()) {
+                // Six items per page in landscape orientation
+                itemsPerPage = 6;
+            }
+
+            // Determine number of print items
+            int finalPageNumber = 0;
+            int printItemCount = selectedContent.size();
+            int pageHeight = pageSize.getHeightMils();
+            int dynamicTextSize = 0;//determine text size based on the content
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Toast.makeText(getApplicationContext(),printItemCount,Toast.LENGTH_LONG).show();
+            Paint fontPaint = new Paint();//determine content size'
+            Rect fontRect = new Rect();
+            fontPaint.setStyle(Paint.Style.FILL);
+            fontPaint.setColor(Color.BLACK);
+            fontPaint.setTextSize(dynamicTextSize);
+            fontPaint.getTextBounds(selectedContent.toString(),0,selectedContent.size(),fontRect);
+            int textTotalHeight = fontRect.height();
+            if (pageHeight >= textTotalHeight) finalPageNumber = 1;//in case the content is less than one page
+            else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
+            return finalPageNumber; //todo temporary, change later
+            //return (int) Math.ceil(printItemCount / itemsPerPage);
+        }
+
+
     }
 }
 

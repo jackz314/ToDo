@@ -349,5 +349,6 @@
     <string name="send_path_data" translatable="false">M 14.604 15.6 L 18.802 13.8 L 23 12 L 2.01 3 L 2 10 L 17 12 L 14 12.4 L 11 12.8 L 8 13.2 L 5 13.6 L 2 14 L 2.01 21 L 6.208 19.2 L 10.406 17.4 L 14.604 15.6</string>
     <string name="done_path_Data" translatable="false">M 3.4 13.4 L 9 19 L 12 16 L 15 13 L 18 10 L 21 7 L 19.6 5.6 L 17.48 7.72 L 15.36 9.84 L 13.24 11.96 L 11.12 14.08 L 9 16.2 L 9 16.2 L 4.8 12 L 3.4 13.4</string>
     <string name="title_activity_tags">TagsActivity</string>
+    <string name="title_activity_tag_selection">TagSelectionActivity</string>
 
 </resources>

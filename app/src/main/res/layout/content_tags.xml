@@ -9,18 +9,52 @@
     tools:showIn="@layout/activity_tags">
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/todolist"
+        android:id="@+id/taglist"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        tools:listitem="@layout/todolist"
+        android:layout_marginBottom="8dp"
+        android:paddingTop="8dp"
         android:stackFromBottom="false"
         android:visibility="visible"
-        android:paddingTop="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/tags_input"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:listitem="@layout/todolist" />
 
+    <EditText
+        android:id="@+id/tags_input"
+        style="@android:style/Widget.EditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginLeft="8dp"
+        android:ems="10"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:hint="@string/input_hint_text"
+        android:inputType="textMultiLine"
+        android:selectAllOnFocus="false"
+        android:textSize="24sp"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/tags_fab"
+        app:layout_constraintLeft_toLeftOf="parent"
+        tools:ignore="RtlHardcoded" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/tags_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/avd_plus_to_send" />
 
 
 </android.support.constraint.ConstraintLayout>
