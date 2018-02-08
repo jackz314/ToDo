@@ -94,7 +94,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         input = (EditText)findViewById(R.id.tags_input);
         tagList = (RecyclerView)findViewById(R.id.taglist);
         toolbar = (Toolbar)findViewById(R.id.tags_toolbar);
-        main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
+        main = (CoordinatorLayout)findViewById(R.id.tags_main);
         modifyId = (TextView)findViewById(R.id.motify_tag_id);
         
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);

@@ -21,6 +21,7 @@ final class AppContract {
         /** The content:// style URI */
         static final Uri TODO_URI = Uri.withAppendedPath(AUTHORITY_URI, dtb.TODO_TABLE);
         static final Uri HISTORY_URI = Uri.withAppendedPath(AUTHORITY_URI, dtb.HISTORY_TABLE);
+        static final Uri TAGS_URI = Uri.withAppendedPath(AUTHORITY_URI, dtb.TAGS_TABLE);
 
 
 
@@ -31,6 +32,8 @@ final class AppContract {
         static final String ITEM_MIME_TYPE = "vnd.android.cursor.item/vnd." + AUTHORITY + "." + dtb.TODO_TABLE;
         static final String HISTORY_DIR_MIME_TYPE = "vnd.android.cursor.dir/vnd." + AUTHORITY + "." + dtb.HISTORY_TABLE;
         static final String HISTORY_ITEM_MIME_TYPE = "vnd.android.cursor.item/vnd." + AUTHORITY + "." + dtb.HISTORY_TABLE;
+        static final String TAGS_DIR_MIME_TYPE = "vnd.android.cursor.dir/vnd." + AUTHORITY + "." + dtb.TODO_TABLE;
+        static final String TAGS_ITEM_MIME_TYPE = "vnd.android.cursor.item/vnd." + AUTHORITY + "." + dtb.TODO_TABLE;
     }
 }
 

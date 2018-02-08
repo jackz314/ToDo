@@ -48,6 +48,8 @@ public class AppProvider extends ContentProvider {
         sUriMatcher.addURI(AUTHORITY, dtb.TODO_TABLE + "/#", ITEMS_ID);
         sUriMatcher.addURI(AUTHORITY, dtb.HISTORY_TABLE, ITEMS);
         sUriMatcher.addURI(AUTHORITY, dtb.HISTORY_TABLE + "/#", ITEMS_ID);
+        sUriMatcher.addURI(AUTHORITY, dtb.TAGS_TABLE, ITEMS);
+        sUriMatcher.addURI(AUTHORITY, dtb.TAGS_TABLE + "/#", ITEMS_ID);
     }
 
     private ContentResolver mResolver;
@@ -102,6 +104,12 @@ public class AppProvider extends ContentProvider {
             cursor.setNotificationUri(mResolver, AppContract.Item.HISTORY_URI);
             return cursor;
         }
+        if(uri.getPath().contains(dtb.TAGS_TABLE)){
+            SQLiteDatabase db = mDbHelper.getReadableDatabase();
+            Cursor cursor = db.query(dtb.TAGS_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
+            cursor.setNotificationUri(mResolver, AppContract.Item.TAGS_URI);
+            return cursor;
+        }
         return null;
     }
 
@@ -125,6 +133,13 @@ public class AppProvider extends ContentProvider {
             long newRowId = db.insert(dtb.HISTORY_TABLE, null, values);
             if (newRowId != -1) {
                 Uri newUri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, newRowId);
+                mResolver.notifyChange(newUri, null);
+                return newUri;
+            }
+        }else if(uri.getPath().contains(dtb.TAGS_TABLE)){
+            long newRowId = db.insert(dtb.TAGS_TABLE, null, values);
+            if (newRowId != -1) {
+                Uri newUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI, newRowId);
                 mResolver.notifyChange(newUri, null);
                 return newUri;
             }
@@ -161,6 +176,15 @@ public class AppProvider extends ContentProvider {
                     return AppContract.Item.HISTORY_DIR_MIME_TYPE;
                 case ITEMS_ID:
                     return AppContract.Item.HISTORY_ITEM_MIME_TYPE;
+                default:
+                    return null;
+            }
+        }else if(uri.getPath().contains(dtb.TAGS_TABLE)){
+            switch (sUriMatcher.match(uri)) {
+                case ITEMS:
+                    return AppContract.Item.TAGS_DIR_MIME_TYPE;
+                case ITEMS_ID:
+                    return AppContract.Item.TAGS_DIR_MIME_TYPE;
                 default:
                     return null;
             }
@@ -211,6 +235,20 @@ public class AppProvider extends ContentProvider {
                     break;
                 case ACTION_DELETE:
                     count = db.delete(dtb.HISTORY_TABLE, selection, selectionArgs);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Action not supported: " + action);
+            }
+            mResolver.notifyChange(uri, null);
+            return count;
+
+        }else if (uri.getPath().contains(dtb.TAGS_TABLE)){
+            switch (action) {
+                case ACTION_UPDATE:
+                    count = db.update(dtb.TAGS_TABLE, values, selection, selectionArgs);
+                    break;
+                case ACTION_DELETE:
+                    count = db.delete(dtb.TAGS_TABLE, selection, selectionArgs);
                     break;
                 default:
                     throw new IllegalArgumentException("Action not supported: " + action);

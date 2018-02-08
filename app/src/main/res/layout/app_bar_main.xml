@@ -46,7 +46,7 @@
                     android:layout_height="wrap_content"
                     android:id="@+id/select_all_box"
                     android:layout_gravity="start"
-                    app:showAsAction="ifRoom|withText"
+                    android:showAsAction="ifRoom|withText"
                     android:checkable="true"
                     android:title="@string/select_all"/>
                 <TextView
