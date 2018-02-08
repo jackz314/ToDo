@@ -2,7 +2,10 @@ package com.jackz314.todo;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
@@ -13,13 +16,26 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.pdf.PdfDocument;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.os.Vibrator;
+import android.print.PageRange;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintDocumentInfo;
+import android.print.PrintManager;
+import android.print.pdf.PrintedPdfDocument;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -29,19 +45,25 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EdgeEffect;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import static com.jackz314.todo.dtb.ID;
+import static com.jackz314.todo.dtb.TITLE;
 
-public class TagsActivity extends AppCompatActivity {
+public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Object> {
 
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -53,77 +75,30 @@ public class TagsActivity extends AppCompatActivity {
     FloatingActionButton fab;
     EditText input;
     CheckBox selectAllBox, multiSelectionBox;
-    Toolbar toolbar;
+    Toolbar toolbar, selectionToolBar;
+    TextView modifyId, selectionTitle;
+    CoordinatorLayout main;
     dtb todosql;
+    boolean isAdd = true;
     boolean selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
-
-    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                final Class<?> clazz = RecyclerView.class;
-                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
-                    Method method = clazz.getDeclaredMethod(name);
-                    method.setAccessible(true);
-                    method.invoke(recyclerView);
-                }
-                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
-                    final Field field = clazz.getDeclaredField(name);
-                    field.setAccessible(true);
-                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
-                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
-                    fEdgeEffect.setAccessible(true);
-                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
-                }
-            } catch (final Exception ignored) {}
-        }
-    }
-
-    public static void setCursorColor(EditText view, int color) {//REFLECTION USED
-        try {
-            // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
-
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
-
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
-
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-        } catch (Exception ignored) {
-
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tags);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         displayAllNotes();
         todosql = new dtb(this);
-        fab = (FloatingActionButton) findViewById(R.id.tags_fab);
-        input = (EditText) findViewById(R.id.tags_input);
-        tagList = (RecyclerView) findViewById(R.id.taglist);
-        toolbar = (Toolbar) findViewById(R.id.tags_toolbar);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        fab = (FloatingActionButton)findViewById(R.id.tags_fab);
+        input = (EditText)findViewById(R.id.tags_input);
+        tagList = (RecyclerView)findViewById(R.id.taglist);
+        toolbar = (Toolbar)findViewById(R.id.tags_toolbar);
+        main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
+        modifyId = (TextView)findViewById(R.id.motify_tag_id);
+        
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        setColorPreferences();
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
@@ -158,6 +133,7 @@ public class TagsActivity extends AppCompatActivity {
                     input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
                     input.requestFocus();
                     input.setSelection(input.getText().length());
+                    showKeyboard();
                     int top = view.getTop();
                     tagList.smoothScrollBy(0,top);//scroll the clicked item to top
                     //Toast.makeText(getApplicationContext(),String.valueOf(position),Toast.LENGTH_LONG).show();
@@ -175,10 +151,10 @@ public class TagsActivity extends AppCompatActivity {
                 }
             }
         });
-        ItemClickSupport.addTo(todoList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
+        ItemClickSupport.addTo(tagList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
-                long id = todoListAdapter.getItemId(position);
+                long id = tagListAdapter.getItemId(position);
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                 v.vibrate(30);
                 if(isInSelectionMode){
@@ -191,7 +167,7 @@ public class TagsActivity extends AppCompatActivity {
                     fab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
-                    getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
+                    getSupportLoaderManager().restartLoader(123,null,TagsActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
@@ -232,7 +208,7 @@ public class TagsActivity extends AppCompatActivity {
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
                                 unSelectAll = true;
-                                todoList.getAdapter().notifyDataSetChanged();
+                                tagList.getAdapter().notifyDataSetChanged();
                             }else if(selectAllBox.isChecked()){//check all
                                 selectAllBox.setChecked(true);
                                 if(selectedId.size()==0){
@@ -262,7 +238,7 @@ public class TagsActivity extends AppCompatActivity {
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectAll = true;
-                                todoList.getAdapter().notifyDataSetChanged();
+                                tagList.getAdapter().notifyDataSetChanged();
                                 Cursor cursor = todosql.getData();
                                 cursor.moveToFirst();
                                 do{
@@ -344,7 +320,7 @@ public class TagsActivity extends AppCompatActivity {
                 textPaint.setTextAlign(Paint.Align.LEFT);
                 Rect bounds = new Rect();
                 textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
-                Drawable finishIcon = ContextCompat.getDrawable(MainActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
+                Drawable finishIcon = ContextCompat.getDrawable(TagsActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
                 finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
                 int finishIconMargin = 40;
                 int itemHeight = itemView.getBottom() - itemView.getTop();
@@ -365,6 +341,53 @@ public class TagsActivity extends AppCompatActivity {
             }
 
         };
+    }
+
+    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                final Class<?> clazz = RecyclerView.class;
+                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
+                    Method method = clazz.getDeclaredMethod(name);
+                    method.setAccessible(true);
+                    method.invoke(recyclerView);
+                }
+                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
+                    final Field field = clazz.getDeclaredField(name);
+                    field.setAccessible(true);
+                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
+                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
+                    fEdgeEffect.setAccessible(true);
+                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
+                }
+            } catch (final Exception ignored) {}
+        }
+    }
+
+    public static void setCursorColor(EditText view, int color) {//REFLECTION USED
+        try {
+            // Get the cursor resource id
+            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
+            field.setAccessible(true);
+            int drawableResId = field.getInt(view);
+
+            // Get the editor
+            field = TextView.class.getDeclaredField("mEditor");
+            field.setAccessible(true);
+            Object editor = field.get(view);
+
+            // Get the drawable and set a color filter
+            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
+            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+            Drawable[] drawables = {drawable, drawable};
+
+            // Set the drawables
+            field = editor.getClass().getDeclaredField("mCursorDrawable");
+            field.setAccessible(true);
+            field.set(editor, drawables);
+        } catch (Exception ignored) {
+
+        }
     }
 
     public void addSelectedId(long id){
@@ -455,8 +478,260 @@ public class TagsActivity extends AppCompatActivity {
         }).show();
     }
 
+    public Uri insertData(String title) {
+        if (!title.isEmpty()) {
+            ContentValues values = new ContentValues();
+            values.put(TITLE, title);
+            return getContentResolver().insert(AppContract.Item.TODO_URI, values);
+        } else return null;
+    }
+
+    public void finishData(long id){
+        ContentValues cv = new ContentValues();
+        String data = todosql.getOneDataInTODO(Long.toString(id));
+        cv.put(TITLE,data);
+        //System.out.println("finish data" + id);
+        deleteData(id);
+        getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
+    }
+
+    public void deleteData(long id){
+        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+        //System.out.println("delete data" + id);
+        getContentResolver().delete(uri, null, null);
+        displayAllNotes();
+    }
+
+    public void shareSetOfData(){//share note function
+        Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+        sharingIntent.setType("text/plain");
+        String shareBody = null;
+        StringBuilder shareBodyBuilder = new StringBuilder();
+        if (selectedContent.size() == 1){
+            shareBodyBuilder.append(selectedContent.get(0));
+        }else {
+            for(String data : selectedContent){
+                shareBodyBuilder.append("\n\n");//empty line after each note
+                shareBodyBuilder.append(data);
+            }
+            shareBodyBuilder.deleteCharAt(0);//remove the extra final empty lines.
+            shareBodyBuilder.deleteCharAt(0);//remove the extra final empty lines.
+        }
+        shareBody = shareBodyBuilder.toString();
+        String shareSub = getString(R.string.note_share_subject);
+        sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, shareSub);
+        sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+        startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
+    }
+
+    public class ExportPrintAdapter extends PrintDocumentAdapter//print adapter for exportation
+    {
+        public PdfDocument myPdfDocument;
+        public int totalpages = 0;
+        Context context;
+        private int pageHeight;
+        private int pageWidth;
+
+        public ExportPrintAdapter(Context context)
+        {
+            this.context = context;
+        }
+
+        @Override
+        public void onLayout(PrintAttributes oldAttributes,
+                             PrintAttributes newAttributes,
+                             CancellationSignal cancellationSignal,
+                             LayoutResultCallback callback,
+                             Bundle metadata) {
+            myPdfDocument = new PrintedPdfDocument(context, newAttributes);//create new PDF document
+
+            pageHeight = newAttributes.getMediaSize().getHeightMils()/1000 * 72;
+            pageWidth = newAttributes.getMediaSize().getWidthMils()/1000 * 72;//calculate page height/width
+
+            if (cancellationSignal.isCanceled() ) {//handle cancellation requests
+                callback.onLayoutCancelled();
+                return;
+            }
+            totalpages = computePageCount(newAttributes);//get total page number
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+            PrintDocumentInfo.Builder builder = new PrintDocumentInfo
+                    .Builder(getString(R.string.export_file_name) + dateFormat.format(Calendar.getInstance().getTime()) + ".pdf")//exported file name
+                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                    .setPageCount(totalpages);//set page number
+            PrintDocumentInfo info = builder.build();
+            callback.onLayoutFinished(info, true);
+        }
+
+
+        @Override
+        public void onWrite(final PageRange[] pageRanges,
+                            final ParcelFileDescriptor destination,
+                            final CancellationSignal cancellationSignal,
+                            final PrintDocumentAdapter.WriteResultCallback callback) {//render final export document
+            for (int i = 0; i < totalpages; i++) {
+                if (pageInRange(pageRanges, i))
+                {
+                    PdfDocument.PageInfo newPage = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i).create();
+
+                    PdfDocument.Page page = myPdfDocument.startPage(newPage);
+
+                    if (cancellationSignal.isCanceled()) {
+                        callback.onWriteCancelled();
+                        myPdfDocument.close();
+                        myPdfDocument = null;
+                        return;
+                    }
+                    //drawPage(page, i);//DEPRECIATED METHOD
+                    Canvas canvas = page.getCanvas();
+                    int titleBaseLine = 72;
+                    int leftMargin = 54;
+                    int verticalMargin = 16;
+                    Paint paint = new Paint();
+                    paint.setColor(Color.BLACK);
+                    paint.setTextSize(40);//set title font                    canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+                    canvas.drawText(getString(R.string.export_title), leftMargin, titleBaseLine + 35, paint);
+                    paint.setTextSize(14);
+                    for(String text : selectedContent){
+                        canvas.drawText(
+                                text,
+                                leftMargin,
+                                titleBaseLine,
+                                paint);
+                        if(canvas.getClipBounds().height()-verticalMargin >= pageHeight) return;
+                    }
+                    myPdfDocument.finishPage(page);
+                }
+            }
+
+            try {
+                myPdfDocument.writeTo(new FileOutputStream(
+                        destination.getFileDescriptor()));
+            } catch (IOException e) {
+                callback.onWriteFailed(e.toString());
+                return;
+            } finally {
+                myPdfDocument.close();
+                myPdfDocument = null;
+            }
+            callback.onWriteFinished(pageRanges);
+            setOutOfSelectionMode();
+        }
+
+        private void drawPage(PdfDocument.Page page, int pagenumber) {//DEPRECIATED method, see onWrite() part
+            Canvas canvas = page.getCanvas();
+
+            pagenumber++; // Make sure page numbers start at 1
+
+            int titleBaseLine = 72;
+            int leftMargin = 54;
+            int dynamicTextSize = 0;//determine text size based on the content size
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Paint paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(dynamicTextSize);//set title font
+            canvas.drawText(
+                    "Test Print Document Page " + pagenumber,
+                    leftMargin,
+                    titleBaseLine,
+                    paint);
+
+            paint.setTextSize(14);
+            canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+
+            //PdfDocument.PageInfo pageInfo = page.getInfo();
+
+            /*canvas.drawCircle(pageInfo.getPageWidth()/2,
+                    pageInfo.getPageHeight()/2,
+                    150,
+                    paint);*///draw circle todo mark on the page
+        }
+
+        private boolean pageInRange(PageRange[] pageRanges, int page)
+        {
+            for (int i = 0; i<pageRanges.length; i++)
+            {
+                if ((page >= pageRanges[i].getStart()) &&
+                        (page <= pageRanges[i].getEnd()))
+                    return true;
+            }
+            return false;
+        }
+
+        private int computePageCount(PrintAttributes printAttributes) { //calculate total page number todo improve this algorithm
+            int itemsPerPage = 4; // default item count for portrait mode
+
+            PrintAttributes.MediaSize pageSize = printAttributes.getMediaSize();
+            if (!pageSize.isPortrait()) {
+                // Six items per page in landscape orientation
+                itemsPerPage = 6;
+            }
+
+            // Determine number of print items
+            int finalPageNumber = 0;
+            int printItemCount = selectedContent.size();
+            int pageHeight = pageSize.getHeightMils();
+            int dynamicTextSize = 0;//determine text size based on the content
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Toast.makeText(getApplicationContext(),printItemCount,Toast.LENGTH_LONG).show();
+            Paint fontPaint = new Paint();//determine content size'
+            Rect fontRect = new Rect();
+            fontPaint.setStyle(Paint.Style.FILL);
+            fontPaint.setColor(Color.BLACK);
+            fontPaint.setTextSize(dynamicTextSize);
+            fontPaint.getTextBounds(selectedContent.toString(),0,selectedContent.size(),fontRect);
+            int textTotalHeight = fontRect.height();
+            if (pageHeight >= textTotalHeight) finalPageNumber = 1;//in case the content is less than one page
+            else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
+            return finalPageNumber; //todo temporary, change later
+            //return (int) Math.ceil(printItemCount / itemsPerPage);
+        }
+
+
+    }
+
+    public boolean exportOrPrint(){//print list or export as pdf
+        //todo print list or export as pdf
+        Toast.makeText(getApplicationContext(),getString(R.string.exporting),Toast.LENGTH_SHORT).show();
+        String exportBody = null;
+        StringBuilder exportBodyBuilder = new StringBuilder();
+        exportBody = getString(R.string.note_export_content_header);
+        for(String data : selectedContent){
+            exportBodyBuilder.append(data);
+            exportBodyBuilder.append("\n\n");//empty line after each note
+        }
+        exportBody = exportBodyBuilder.toString();//this is the final string for export
+        PrintManager printManager = (PrintManager) TagsActivity.this
+                .getSystemService(Context.PRINT_SERVICE);
+        String jobName = TagsActivity.this.getString(R.string.app_name) + " Document";
+        try{
+            printManager.print(jobName, new TagsActivity.ExportPrintAdapter(TagsActivity.this),null);//print with print adapter
+        }catch (Exception e){
+            Toast.makeText(getApplicationContext(),e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+            return false;
+        }
+        //PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(new Rect(0, 0, 100, 100), 1).create();
+        //PdfDocument.Page page = document.startPage(pageInfo);
+        //document.writeTo();
+        return true;
+    }
+
     public void setOutOfSearchMode(){
-        proFab.setVisibility(View.VISIBLE);
+        fab.setVisibility(View.VISIBLE);
         isInSearchMode = false;
         getSupportLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
@@ -545,4 +820,28 @@ public class TagsActivity extends AppCompatActivity {
         }
     }
 
+    public void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(input.getWindowToken(),0);
+    }
+
+    public void showKeyboard() {
+        InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imManager.showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    @Override
+    public Loader<Object> onCreateLoader(int id, Bundle args) {
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Object> loader, Object data) {
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Object> loader) {
+
+    }
 }
