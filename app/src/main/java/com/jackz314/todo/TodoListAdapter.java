@@ -56,6 +56,8 @@ import java.util.ArrayList;
                         ((MainActivity)mContext).addSelectedId(id);
                     }else if(mContext.toString().contains("HistoryActivity")){
                         ((HistoryActivity)mContext).addSelectedId(id);
+                    }else if (mContext.toString().contains("TagsActivity")){
+                        ((TagsActivity)mContext).addSelectedId(id);
                     }
                     //System.out.println("checked " + id);
                     // do some operations here
@@ -65,7 +67,9 @@ import java.util.ArrayList;
                         ((MainActivity)mContext).removeSelectedId(id);
                     }else if(mContext.toString().contains("HistoryActivity")){
                         ((HistoryActivity)mContext).removeSelectedId(id);
-                    }                    // do some operations here
+                    }else if (mContext.toString().contains("TagsActivity")){
+                        ((TagsActivity)mContext).removeSelectedId(id);
+                    }
                 }
             }
         });
@@ -75,12 +79,14 @@ import java.util.ArrayList;
     static class TodoViewHolder extends RecyclerView.ViewHolder {
         TextView todoText;
         CardView cardView;
+        View tagDot;
         CheckBox cBox;
         TodoViewHolder(View view){
             super(view);
             todoText = (TextView) view.findViewById(R.id.titleText);
             cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
             cardView = (CardView) view.findViewById(R.id.cardView);
+            tagDot = view.findViewById(R.id.tag_dot);
             /*final long id = getItemId(position);
             cBox.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {

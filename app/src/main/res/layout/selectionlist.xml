@@ -7,7 +7,12 @@
     android:layout_width="match_parent"
     android:id="@+id/tagSelectionTextView">
 
-
+    <View
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:background="@drawable/color_dot_for_tags"
+        android:layout_weight="1"
+        android:id="@+id/tag_dot"/>
 
     <TextView
         android:id="@+id/titleText"

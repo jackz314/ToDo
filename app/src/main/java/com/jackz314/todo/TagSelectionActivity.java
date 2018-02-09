@@ -3,6 +3,7 @@ package com.jackz314.todo;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
@@ -28,6 +29,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -53,9 +55,6 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     RecyclerView tagList;
     int themeColor,textColor,backgroundColor,textSize;
     SharedPreferences sharedPreferences;
-    FloatingActionButton fab;
-    EditText input;
-    CheckBox selectAllBox, multiSelectionBox;
     Toolbar toolbar;
     CoordinatorLayout main;
     boolean isInSearchMode = false;
@@ -71,20 +70,20 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         Toolbar toolbar = (Toolbar) findViewById(R.id.tags_selection_toolbar);
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.tags_selection_main);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
+        try{
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }catch (NullPointerException ignored){
+            //ignore
+        }
+        displayAllNotes();
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
-
+                //go to the specific tag, pass on the tag value here
+                String tag = tagListAdapter.getItemContent(position,TAG);
+                Intent tagIntent = new Intent(TagSelectionActivity.this, TagsActivity.class);
+                tagIntent.putExtra("TAG_VALUE",tag);
+                startActivity(tagIntent);
             }
         });
     }
@@ -102,10 +101,10 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                     String text = cursor.getString(cursor.getColumnIndex(dtb.TAG));//get the text of the note
                     String tagColor = cursor.getString(cursor.getColumnIndex(dtb.TAG_COLOR));
                     holder.todoText.setTextColor(textColor);
-                    holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
+                    holder.tagDot.setBackgroundColor(Color.parseColor(tagColor));
                     holder.todoText.setTextSize(textSize);
+                    Spannable spannable = new SpannableString(text);
                     if(isInSearchMode){
-                        Spannable spannable = new SpannableString(text);
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
@@ -118,14 +117,14 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                                 int start = Math.min(startPos, textLow.length());
                                 int end = Math.min(startPos + searchTextLow.length(), textLow.length());
                                 startPos = textLow.indexOf(searchTextLow,end);
-                                spannable.setSpan(new TextAppearanceSpan(null, Typeface.BOLD,-1,
-                                        new ColorStateList(new int[][] {new int[] {}},
-                                                new int[] {Color.parseColor("#ef5350")})
-                                        ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight searched text
+                                spannable.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set searched text to bold
                             }while (startPos > 0);
-                            holder.todoText.setText(spannable);
                         }
                     }
+                    spannable.setSpan(new TextAppearanceSpan(null,Typeface.NORMAL,-1,new ColorStateList(new int[][] {new int[] {}},
+                            new int[] {Color.parseColor(tagColor)})
+                            ,null), 0, spannable.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    holder.todoText.setText(spannable);
                 }
             });
         }
@@ -152,43 +151,13 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         }
     }
 
-    public static void setCursorColor(EditText view, int color) {//REFLECTION USED
-        try {
-            // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
-
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
-
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
-
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-        } catch (Exception ignored) {
-
-        }
-    }
-
     public void setColorPreferences() {
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data", MODE_PRIVATE);
         themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key), getResources().getColor(R.color.colorActualPrimary));
         textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         textSize = sharedPreferences.getInt(getString(R.string.text_size_key), 24);
         backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key), Color.WHITE);
-        fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         toolbar.setBackgroundColor(themeColor);
-        input.setTextColor(textColor);
-        input.setTextSize(getResources().getDimension(R.dimen.default_text_size));
-        setCursorColor(input, themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();
         window.setStatusBarColor(themeColor);

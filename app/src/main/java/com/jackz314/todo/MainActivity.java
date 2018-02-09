@@ -916,7 +916,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }*/
                     // Toast.makeText(getApplicationContext(),selectedId.toString(),Toast.LENGTH_SHORT).show();
                 }else {
-                    /*doubleClickCout++;
+                    /*doubleClickCout++; DOUBLE CLICK METHOD DEPRECIATED
                     Handler handler = new Handler();
                     Runnable r = new Runnable() {
                         @Override
@@ -963,7 +963,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             setOutOfSearchMode();
                         }
                         modifyId.setText(String.valueOf(id));
-                        if(isAdd){
+                        if(isAdd){//if current button displays "+" sign
                             AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                             fab.setImageDrawable(d);
                             isAdd = false;

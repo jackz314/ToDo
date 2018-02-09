@@ -79,6 +79,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView modifyId, selectionTitle;
     CoordinatorLayout main;
     dtb todosql;
+    String tagName = "";
     boolean isAdd = true;
     boolean selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
 
@@ -86,18 +87,22 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tags);
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = (Toolbar)findViewById(R.id.tags_toolbar);
         setSupportActionBar(toolbar);
         displayAllNotes();
         todosql = new dtb(this);
         fab = (FloatingActionButton)findViewById(R.id.tags_fab);
         input = (EditText)findViewById(R.id.tags_input);
         tagList = (RecyclerView)findViewById(R.id.taglist);
-        toolbar = (Toolbar)findViewById(R.id.tags_toolbar);
         main = (CoordinatorLayout)findViewById(R.id.tags_main);
         modifyId = (TextView)findViewById(R.id.motify_tag_id);
-        
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        tagName = determineTag();//determine tag name
+        try{
+            getSupportActionBar().setTitle(tagName);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }catch (NullPointerException ignored){
+            //ignored
+        }
         setColorPreferences();
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
@@ -118,7 +123,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
                     }
                 }else {
-
                     if(isInSearchMode){
                         setOutOfSearchMode();
                     }
@@ -522,6 +526,14 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, shareSub);
         sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
         startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
+    }
+
+    public String determineTag(){
+        Bundle extras = getIntent().getExtras();
+        if(extras != null){
+            return extras.getString("TAG_VALUE");
+        }
+        return "";
     }
 
     @Override

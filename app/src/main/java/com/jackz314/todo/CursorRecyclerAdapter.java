@@ -90,6 +90,14 @@ public abstract class CursorRecyclerAdapter<VH extends RecyclerView.ViewHolder>
         }
     }
 
+    public String getItemContent(final int position, String columnName) {
+        if (mDataValid && mCursor != null && mCursor.moveToPosition(position)) {
+            return mCursor.getString(mCursor.getColumnIndex(columnName));
+        } else {
+            return null;
+        }
+    }
+
     /**
      * Change the underlying cursor to a new cursor. If there is an existing cursor it will be
      * closed.
