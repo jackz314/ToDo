@@ -1,6 +1,5 @@
 package com.jackz314.todo;
 
-import android.app.LoaderManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -21,6 +20,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -61,7 +61,8 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     boolean isInSearchMode = false;
     private static final String[] PROJECTION = new String[]{ID, TAG};
     private static final String SELECTION = TAG + " LIKE ?";
-
+    public String searchText;
+    TextView emptyTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -193,9 +194,9 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         window.setStatusBarColor(themeColor);
         window.setNavigationBarColor(themeColor);
         if (ColorUtils.determineBrightness(backgroundColor) < 0.5) {// dark
-            //   EmptextView.setTextColor(Color.parseColor("#7FFFFFFF"));
+            //   emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
         } else {//bright
-            //     EmptextView.setTextColor(Color.parseColor("#61000000"));
+            //     emptyTextView.setTextColor(Color.parseColor("#61000000"));
 
         }
         tagList.setBackgroundColor(backgroundColor);
@@ -222,22 +223,24 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         return new CursorLoader(this, AppContract.Item.TAGS_URI, PROJECTION, null, null, sort);    }
 
     @Override
-    public void onLoadFinished(android.content.Loader<Cursor> loader, Cursor cursor) {
-        if(cursor.getCount() == 0 && isInSearchMode){
-            EmptextView.setVisibility(View.VISIBLE);
-            EmptextView.setText(getString(R.string.empty_search_result));
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if(data.getCount() == 0 && isInSearchMode){
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText(getString(R.string.empty_search_result));
         }else if(data.getCount() == 0 && !isInSearchMode){
-            EmptextView.setVisibility(View.VISIBLE);
-            EmptextView.setText(R.string.empty_todolist);
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText(R.string.empty_todolist);
         }else {
-            EmptextView.setVisibility(View.GONE);
-            EmptextView.setText("");
+            emptyTextView.setVisibility(View.GONE);
+            emptyTextView.setText("");
         }
-        tagListAdapter.changeCursor(cursor);
+        tagListAdapter.changeCursor(data);
     }
 
     @Override
-    public void onLoaderReset(android.content.Loader<Cursor> loader) {
+    public void onLoaderReset(Loader<Cursor> loader) {
         tagListAdapter.changeCursor(null);
+
     }
+
 }

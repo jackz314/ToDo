@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
     ActionBarDrawerToggle mDrawerToggle;
-    TextView EmptextView, selectionTitle;
+    TextView emptyTextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
     AdView adView;
@@ -566,7 +566,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         input = (EditText)findViewById(R.id.input);
         modifyId = (TextView)findViewById(R.id.modifyId);
         navigationView = (NavigationView) findViewById(R.id.nav_view);
-        EmptextView = (TextView)findViewById(R.id.emptyText);
+        emptyTextView = (TextView)findViewById(R.id.emptyText);
         todoList = (RecyclerView) findViewById(R.id.todolist);
         todoList.setHasFixedSize(true);
         fab = (FloatingActionButton)findViewById(R.id.fab);
@@ -1679,9 +1679,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         window.setStatusBarColor(themeColor);
         window.setNavigationBarColor(themeColor);
         if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
-            EmptextView.setTextColor(Color.parseColor("#7FFFFFFF"));
+            emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
         }else {//bright
-            EmptextView.setTextColor(Color.parseColor("#61000000"));
+            emptyTextView.setTextColor(Color.parseColor("#61000000"));
 
         }
         todoList.setBackgroundColor(backgroundColor);
@@ -1822,13 +1822,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void displaySearchResults(final String filter){
         final Cursor cursor = todosql.getSearchResults(filter);
         if(cursor.getCount() == 0){
-            EmptextView.setVisibility(View.VISIBLE);
-            EmptextView.setText(R.string.empty_search_result);
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText(R.string.empty_search_result);
             todoList.removeAllViewsInLayout();//remove all items
             todoList.setAdapter(null);
         } else {
-            EmptextView.setVisibility(View.GONE);
-            EmptextView.setText("");
+            emptyTextView.setVisibility(View.GONE);
+            emptyTextView.setText("");
             final TodoListAdapter todoListAdapter = (new TodoListAdapter(cursor){
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
@@ -2690,14 +2690,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         ////System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
         if(data.getCount() == 0 && isInSearchMode){
-            EmptextView.setVisibility(View.VISIBLE);
-            EmptextView.setText(getString(R.string.empty_search_result));
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText(getString(R.string.empty_search_result));
         }else if(data.getCount() == 0 && !isInSearchMode){
-            EmptextView.setVisibility(View.VISIBLE);
-            EmptextView.setText(R.string.empty_todolist);
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText(R.string.empty_todolist);
         }else {
-            EmptextView.setVisibility(View.GONE);
-            EmptextView.setText("");
+            emptyTextView.setVisibility(View.GONE);
+            emptyTextView.setText("");
         }
         todoListAdapter.changeCursor(data);
     }

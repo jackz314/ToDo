@@ -63,7 +63,7 @@ import java.util.Calendar;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
-public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Object> {
+public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -524,6 +524,21 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
     }
 
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
+    }
+
     public class ExportPrintAdapter extends PrintDocumentAdapter//print adapter for exportation
     {
         public PdfDocument myPdfDocument;
@@ -830,18 +845,4 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         imManager.showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);
     }
 
-    @Override
-    public Loader<Object> onCreateLoader(int id, Bundle args) {
-        return null;
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Object> loader, Object data) {
-
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Object> loader) {
-
-    }
 }
