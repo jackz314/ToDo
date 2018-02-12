@@ -1,5 +1,7 @@
 package com.jackz314.todo;
 
+import android.animation.LayoutTransition;
+import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentUris;
@@ -14,6 +16,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.pdf.PdfDocument;
@@ -30,18 +33,26 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintDocumentInfo;
 import android.print.PrintManager;
 import android.print.pdf.PrintedPdfDocument;
+import android.speech.RecognizerIntent;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.Loader;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.TextAppearanceSpan;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
@@ -49,8 +60,12 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EdgeEffect;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.dmitrymalkovich.android.ProgressFloatingActionButton;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -59,6 +74,8 @@ import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Locale;
+import java.util.Random;
 
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
@@ -73,6 +90,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     int themeColor,textColor,backgroundColor,textSize;
     SharedPreferences sharedPreferences;
     FloatingActionButton fab;
+    ProgressFloatingActionButton proFab;
     EditText input;
     CheckBox selectAllBox, multiSelectionBox;
     Toolbar toolbar, selectionToolBar;
@@ -80,6 +98,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     CoordinatorLayout main;
     dtb todosql;
     String tagName = "";
+    public String searchText;
     boolean isAdd = true;
     boolean selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
 
@@ -87,23 +106,119 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tags);
-        toolbar = (Toolbar)findViewById(R.id.tags_toolbar);
+        toolbar = (Toolbar) findViewById(R.id.tags_toolbar);
         setSupportActionBar(toolbar);
         displayAllNotes();
         todosql = new dtb(this);
-        fab = (FloatingActionButton)findViewById(R.id.tags_fab);
-        input = (EditText)findViewById(R.id.tags_input);
-        tagList = (RecyclerView)findViewById(R.id.taglist);
-        main = (CoordinatorLayout)findViewById(R.id.tags_main);
-        modifyId = (TextView)findViewById(R.id.motify_tag_id);
+        fab = (FloatingActionButton) findViewById(R.id.tags_fab);
+        input = (EditText) findViewById(R.id.tags_input);
+        tagList = (RecyclerView) findViewById(R.id.taglist);
+        main = (CoordinatorLayout) findViewById(R.id.tags_main);
+        modifyId = (TextView) findViewById(R.id.motify_tag_id);
         tagName = determineTag();//determine tag name
-        try{
+        try {
             getSupportActionBar().setTitle(tagName);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }catch (NullPointerException ignored){
+        } catch (NullPointerException ignored) {
             //ignored
         }
         setColorPreferences();
+
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {//todo finish the implementation of fab, profab, voice recognition
+                //setOutOfSelectionMode();
+                String inputText=input.getText().toString().trim();
+                interruptAutoSend();
+                if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
+                    if(isAdd){
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                        fab.setImageDrawable(d);
+                        isAdd = false;
+                        d.start();
+                    }
+                    input.setVisibility(View.VISIBLE);
+                    showKeyboard();
+                    input.requestFocus();
+                }
+                else{
+                    int successModify=-1;
+                    Uri success = null;
+                    if (!modifyId.getText().toString().equals("")){
+                        Bundle bundle = new Bundle();
+                        bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "update_notes");
+                        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "updated notes"+input.getText().toString());
+                        bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
+                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+                        successModify = updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
+                    } else {
+                        success = insertData(input.getText().toString());
+                        int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
+                        //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
+                        //todoList.setDividerHeight(2);
+                        todoList.smoothScrollToPosition(0);
+                        Bundle bundle = new Bundle();
+                        bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "new_notes");
+                        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "new notes"+input.getText().toString());
+                        bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
+                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+                    }if(success != null || successModify != -1){
+                        hideKeyboard();
+                        displayAllNotes();
+                        if(!isAdd){
+                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                            fab.setImageDrawable(d);
+                            isAdd = true;
+                            d.start();
+                        }
+                        //input.clearFocus();
+                        input.setVisibility(View.GONE);
+                        input.setText("");
+                        modifyId.setText("");
+                    } else{
+                        Toast.makeText(getApplicationContext(),getString(R.string.error_message),Toast.LENGTH_SHORT).show();
+                        input.requestFocus();
+                    }
+                }
+                /*Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();*/
+
+            }
+        });
+
+        fab.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                vibrator.vibrate(20);
+                //speechRecognizer.stopListening();
+                interruptAutoSend();
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.getDefault().getLanguage().trim());
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_search_prompt));
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                //if(input.getVisibility() != View.VISIBLE){
+                //fab.setImageResource(le(R.drawable.avd_plus_to_sed));
+                //}
+                proFab.setVisibility(View.INVISIBLE);
+                fab.setVisibility(View.INVISIBLE);
+                recognitionProgressView.setVisibility(View.VISIBLE);
+                input.setVisibility(View.VISIBLE);
+                input.setEnabled(false);
+                if(isAdd){
+                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                    fab.setImageDrawable(d);
+                    isAdd = false;
+                    d.start();
+                }
+                speechRecognizer.startListening(intent);
+                return true;
+            }
+        });
+
+
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
@@ -111,23 +226,23 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 unSelectAll = false;
                 selectAll = false;
                 if (isInSelectionMode) {
-                    multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
-                    if(multiSelectionBox.isChecked()){
+                    multiSelectionBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
+                    if (multiSelectionBox.isChecked()) {
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
                         //System.out.println("false" + id);
-                    }else {
+                    } else {
                         addSelectedId(id);
                         multiSelectionBox.setChecked(true);
                         //System.out.println("true" + id);
 
                     }
-                }else {
-                    if(isInSearchMode){
+                } else {
+                    if (isInSearchMode) {
                         setOutOfSearchMode();
                     }
                     modifyId.setText(String.valueOf(id));
-                    if(isAdd){
+                    if (isAdd) {
                         AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
                         isAdd = false;
@@ -139,7 +254,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     input.setSelection(input.getText().length());
                     showKeyboard();
                     int top = view.getTop();
-                    tagList.smoothScrollBy(0,top);//scroll the clicked item to top
+                    tagList.smoothScrollBy(0, top);//scroll the clicked item to top
                     //Toast.makeText(getApplicationContext(),String.valueOf(position),Toast.LENGTH_LONG).show();
                     //handler.postDelayed(r,250);//double click interval
                     //(new Handler()).postDelayed(new Runnable() {
@@ -161,22 +276,22 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 long id = tagListAdapter.getItemId(position);
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                 v.vibrate(30);
-                if(isInSelectionMode){
+                if (isInSelectionMode) {
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(String.valueOf(id)));
                     clipboard.setPrimaryClip(clip);
-                    Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
-                }else {
+                    Snackbar.make(main, getString(R.string.todo_copied), Snackbar.LENGTH_LONG).show();
+                } else {
                     setOutOfSelectionMode();
                     fab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
-                    getSupportLoaderManager().restartLoader(123,null,TagsActivity.this);
+                    getSupportLoaderManager().restartLoader(123, null, TagsActivity.this);
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
-                    selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
-                    selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
+                    selectionToolBar = (Toolbar) findViewById(R.id.selection_toolbar);
+                    selectionTitle = (TextView) selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar = (Toolbar) findViewById(R.id.toolbar);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
@@ -184,17 +299,17 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     //Drawable backArrow = getDrawable(R.drawable.ic_close_black_24dp);
                     //selectionToolBar.setNavigationIcon(backArrow);
                     selectionToolBar.setBackgroundColor(themeColor);
-                    selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.select_all_box);
+                    selectAllBox = (CheckBox) selectionToolBar.findViewById(R.id.select_all_box);
                     ColorStateList colorStateList = new ColorStateList(
                             new int[][]{
                                     new int[]{-android.R.attr.state_checked}, //disabled
                                     new int[]{android.R.attr.state_checked}, //enabled
                                     new int[]{android.R.attr.background}
                             },
-                            new int[] {
+                            new int[]{
                                     Color.WHITE//disabled
-                                    ,ColorUtils.lighten(themeColor,0.32) //enabled
-                                    ,Color.WHITE
+                                    , ColorUtils.lighten(themeColor, 0.32) //enabled
+                                    , Color.WHITE
                             }
                     );
                     //selectAllBox.setBackground(new ColorDrawable(Color.WHITE));
@@ -205,7 +320,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         public void onClick(View v) {
                             unSelectAll = false;
                             selectAll = false;
-                            if(!selectAllBox.isChecked()){//uncheck all
+                            if (!selectAllBox.isChecked()) {//uncheck all
                                 selectAllBox.setChecked(false);
                                 selectedId.clear();
                                 selectedContent.clear();
@@ -213,25 +328,25 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                 selectionToolBar.getMenu().clear();
                                 unSelectAll = true;
                                 tagList.getAdapter().notifyDataSetChanged();
-                            }else if(selectAllBox.isChecked()){//check all
+                            } else if (selectAllBox.isChecked()) {//check all
                                 selectAllBox.setChecked(true);
-                                if(selectedId.size()==0){
+                                if (selectedId.size() == 0) {
                                     selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
                                     selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
                                         @Override
                                         public boolean onMenuItemClick(MenuItem item) {
-                                            if(item.getItemId() == R.id.selection_menu_finish){
+                                            if (item.getItemId() == R.id.selection_menu_finish) {
                                                 finishSetOfData();
-                                            }else if(item.getItemId() == R.id.selection_menu_delete){
+                                            } else if (item.getItemId() == R.id.selection_menu_delete) {
                                                 deleteSetOfData();
-                                            }else if (item.getItemId() == R.id.selection_menu_share){
+                                            } else if (item.getItemId() == R.id.selection_menu_share) {
                                                 shareSetOfData();
-                                            }else if (item.getItemId() == R.id.selection_menu_export){
+                                            } else if (item.getItemId() == R.id.selection_menu_export) {
                                                 boolean succ = exportOrPrint();
-                                                if (succ){
-                                                    Toast.makeText(getApplicationContext(),getString(R.string.export_succeed),Toast.LENGTH_SHORT).show();
-                                                }else {
-                                                    Toast.makeText(getApplicationContext(),getString(R.string.export_failed),Toast.LENGTH_LONG).show();
+                                                if (succ) {
+                                                    Toast.makeText(getApplicationContext(), getString(R.string.export_succeed), Toast.LENGTH_SHORT).show();
+                                                } else {
+                                                    Toast.makeText(getApplicationContext(), getString(R.string.export_failed), Toast.LENGTH_LONG).show();
                                                 }
                                             }
                                             return false;
@@ -245,12 +360,12 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                 tagList.getAdapter().notifyDataSetChanged();
                                 Cursor cursor = todosql.getData();
                                 cursor.moveToFirst();
-                                do{
+                                do {
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
-                                    selectedId.add(0,id);
+                                    selectedId.add(0, id);
                                     String data = todosql.getOneDataInTODO(Long.toString(id));
-                                    selectedContent.add(0,data);
-                                }while (cursor.moveToNext());
+                                    selectedContent.add(0, data);
+                                } while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
                                 selectionTitle.setText(count + getString(R.string.selection_mode_title));
                             }
@@ -260,7 +375,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     Handler handler = new Handler();
                     handler.postDelayed(new Runnable() {
                         public void run() {
-                            multiSelectionBox =(CheckBox)view.findViewById(R.id.multiSelectionBox);
+                            multiSelectionBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
                             multiSelectionBox.setChecked(true);
                         }
                     }, 1);//to solve the problem that the checkbox is not checked with no delay
@@ -277,75 +392,75 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 return true;
             }
         });
-
-        ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {//draw the options after swipe left
-
-            @Override
-            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
-                return false;
-            }
-
-            @Override
-            public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-                if(isInSelectionMode) return 0; //prevent swipe in selection mode
-                return super.getSwipeDirs(recyclerView, viewHolder);
-            }
-
-            @Override
-            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-                unSelectAll = false;
-                selectAll = false;
-                if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
-                    removeSelectedId(viewHolder.getItemId());
-                }
-                final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
-                finishData(viewHolder.getItemId());
-                Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        insertData(finishedContent);
-                        long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                        todosql.deleteFromHistory(String.valueOf(lastHistoryId));
-                        displayAllNotes();
-                    }
-                }).show();
-            }
-
-            @Override
-            public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-                if (viewHolder.getAdapterPosition() == -1) {
-                    return;
-                }
-                View itemView = viewHolder.itemView;
-                Paint textPaint = new Paint();
-                textPaint.setStrokeWidth(2);
-                textPaint.setTextSize(80);
-                textPaint.setColor(themeColor);
-                textPaint.setTextAlign(Paint.Align.LEFT);
-                Rect bounds = new Rect();
-                textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
-                Drawable finishIcon = ContextCompat.getDrawable(TagsActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
-                finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-                int finishIconMargin = 40;
-                int itemHeight = itemView.getBottom() - itemView.getTop();
-                int intrinsicWidth = finishIcon.getIntrinsicWidth();
-                int intrinsicHeight = finishIcon.getIntrinsicWidth();
-                int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width();
-                int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width();
-                int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-                int finishIconBottom = finishIconTop + intrinsicHeight;
-                finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
-                finishIcon.draw(c);
-                //fade out the view
-                final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
-                viewHolder.itemView.setAlpha(alpha);
-                viewHolder.itemView.setTranslationX(dX);
-                c.drawText(getString(R.string.finish),(float) itemView.getRight() - 34 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
-                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
-            }
-
-        };
     }
+
+    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {//draw the options after swipe left
+
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
+        }
+
+        @Override
+        public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+            if (isInSelectionMode) return 0; //prevent swipe in selection mode
+            return super.getSwipeDirs(recyclerView, viewHolder);
+        }
+
+        @Override
+        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            unSelectAll = false;
+            selectAll = false;
+            if (isInSelectionMode && selectedId.contains(viewHolder.getItemId())) {
+                removeSelectedId(viewHolder.getItemId());
+            }
+            final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
+            finishData(viewHolder.getItemId());
+            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    insertData(finishedContent);
+                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
+                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                    displayAllNotes();
+                }
+            }).show();
+        }
+
+        @Override
+        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+            if (viewHolder.getAdapterPosition() == -1) {
+                return;
+            }
+            View itemView = viewHolder.itemView;
+            Paint textPaint = new Paint();
+            textPaint.setStrokeWidth(2);
+            textPaint.setTextSize(80);
+            textPaint.setColor(themeColor);
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            Rect bounds = new Rect();
+            textPaint.getTextBounds(getString(R.string.finish), 0, getString(R.string.finish).length(), bounds);
+            Drawable finishIcon = ContextCompat.getDrawable(TagsActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
+            finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+            int finishIconMargin = 40;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
+            int intrinsicWidth = finishIcon.getIntrinsicWidth();
+            int intrinsicHeight = finishIcon.getIntrinsicWidth();
+            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width();
+            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width();
+            int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
+            int finishIconBottom = finishIconTop + intrinsicHeight;
+            finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
+            finishIcon.draw(c);
+            //fade out the view
+            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
+            viewHolder.itemView.setAlpha(alpha);
+            viewHolder.itemView.setTranslationX(dX);
+            c.drawText(getString(R.string.finish), (float) itemView.getRight() - 34 - bounds.width(), (((finishIconTop + finishIconBottom) / 2) - (textPaint.descent() + textPaint.ascent()) / 2), textPaint);
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+        }
+
+    };
 
     public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -534,6 +649,14 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             return extras.getString("TAG_VALUE");
         }
         return "";
+    }
+
+    public void query(String text) {//launch search
+        Bundle bundle = new Bundle();
+        bundle.putString("QUERY", text);
+        searchText = text;
+        //System.out.println("calledquery" + " " + text);
+        getSupportLoaderManager().restartLoader(1234, bundle, TagsActivity.this);
     }
 
     @Override
@@ -798,7 +921,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public void displayAllNotes(){
-        if(!(tagList == null)){
+        if(tagList.getAdapter() == null){
+            ////System.out.println("null called");
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             tagList.setLayoutManager(linearLayoutManager);
@@ -811,9 +935,116 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
+                    if(isInSearchMode){
+                        Spannable spannable = new SpannableString(text);
+                        //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
+                        String textLow = text.toLowerCase();
+                        String searchTextLow = searchText.toLowerCase();
+                        int startPos = textLow.indexOf(searchTextLow);
+                        if(startPos <0){
+                            return;
+                        }
+                        if(!(startPos <0)){
+                            do{
+                                int start = Math.min(startPos, textLow.length());
+                                int end = Math.min(startPos + searchTextLow.length(), textLow.length());
+                                startPos = textLow.indexOf(searchTextLow,end);
+                                spannable.setSpan(new TextAppearanceSpan(null, Typeface.BOLD,-1,
+                                        new ColorStateList(new int[][] {new int[] {}},
+                                                new int[] {Color.parseColor("#ef5350")})
+                                        ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight searched text
+                            }while (startPos > 0);
+                            holder.todoText.setText(spannable);
+                        }
+                    }
+                    int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+                    if(tagStartPos >= 0){//determine if contains tags
+                        Spannable taggedText = new SpannableString(text);//highlighting tags
+                        while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                            int tagEndPos = -1;//assume neither enter nor space exists
+                            if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                                tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                            }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                                tagEndPos = text.indexOf("\n",tagStartPos);
+                            }else {//contains only space
+                                tagEndPos = text.indexOf(" ",tagStartPos);
+                            }
+                            if(tagEndPos < 0){//if the tag is the last section of the note
+                                tagEndPos = text.length() - 1;
+                            }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                                continue;
+                            }
+                            //System.out.println(tagStartPos + " AND " + tagEndPos);
+                            String tag = text.substring(tagStartPos,tagEndPos + 1);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            //System.out.println("TEXT: " + text + "****" + tag + "********");
+                            String tagColor = todosql.returnTagColorIfExist(tag);
+                            if(tagColor.equals("")){//if tag doesn't exist
+                                Random random = new Random();//generate random color
+                                int nextInt = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
+                                tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
+                                todosql.createNewTag(tag, tagColor);//add new tag
+                            }
+                            taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                    new ColorStateList(new int[][] {new int[] {}},
+                                            new int[] {Color.parseColor(tagColor)})
+                                    ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                            tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                            //todo performance issue, change the color of different tags
+                        }
+                        holder.todoText.setText(taggedText);
+                    }
+                    else {
+                        holder.todoText.setText(text);
+                    }
+                    //System.out.println("null called");
+                    if(isInSelectionMode){
+                        holder.cBox.setVisibility(View.VISIBLE);
+                        if(selectAll){
+                            holder.cBox.setChecked(true);
+                        }
+                        if(unSelectAll){
+                            holder.cBox.setChecked(false);
+                        }
+                    }else {
+                        holder.cBox.setChecked(false);
+                        holder.cBox.setVisibility(View.GONE);
+                    }
+                    //System.out.println(text+"|cursor read");
+                    holder.cBox.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            unSelectAll = false;
+                            selectAll = false;
+                            if (cb.isChecked()) {
+                                addSelectedId(id);
+                                //System.out.println("checked " + id);
+                                // do some operations here
+                            } else if (!cb.isChecked()) {
+                                //System.out.println("unchecked " + id);
+                                removeSelectedId(id);
+                                // do some operations here
+                            }
+                        }
+                    });
+                    ColorStateList colorStateList = new ColorStateList(
+                            new int[][]{
+                                    new int[]{-android.R.attr.state_checked}, //disabled
+                                    new int[]{android.R.attr.state_checked} //enabled
+                            },
+                            new int[] {
+                                    Color.DKGRAY//disabled
+                                    ,themeColor //enabled
+                            }
+                    );
+                    holder.cBox.setButtonTintList(colorStateList);
                 }
             });
+            tagList.setAdapter(tagListAdapter);
+            getSupportLoaderManager().initLoader(123, null, this);
+            ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
+            mItemTouchHelper.attachToRecyclerView(tagList);
         }
+        getSupportLoaderManager().restartLoader(123,null,this);
     }
 
     public void setColorPreferences() {
@@ -855,6 +1086,62 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     public void showKeyboard() {
         InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
         imManager.showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.search_menu, menu);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) menu.findItem(R.id.todo_search).getActionView();
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setIconifiedByDefault(true);
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        searchBar.setLayoutTransition(new LayoutTransition());
+        Spannable hintText = new SpannableString(getString(R.string.search_hint));
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );//material design standard hint text color in dark themed background
+        }else {//light themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );//material design standard hint text color in light themed background
+        }
+        searchView.setQueryHint(hintText);
+        MenuItem searchMenuIem = menu.findItem(R.id.todo_search);
+        MenuItemCompat.setOnActionExpandListener(searchMenuIem, new MenuItemCompat.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                isInSearchMode = true;
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                setOutOfSearchMode();
+                return true;
+            }
+        });
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isInSearchMode = true;
+            }
+        });
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                query(query);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                query(newText);
+                return false;
+            }
+
+
+        });
+        return true;
     }
 
 }
