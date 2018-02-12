@@ -1933,7 +1933,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
         }
     }
-
+//todo delete tag, pinned order, tag choose color, markdown bold.
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
             ////System.out.println("null called");
@@ -2035,11 +2035,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 // do some operations here
                             } else if (!cb.isChecked()) {
                                 //System.out.println("unchecked " + id);
-                                if(mContext.toString().contains("MainActivity")){
-                                    ((MainActivity)mContext).removeSelectedId(id);
-                                }else if(mContext.toString().contains("HistoryActivity")){
-                                    ((HistoryActivity)mContext).removeSelectedId(id);
-                                }                    // do some operations here
+                                removeSelectedId(id);
                             }
                         }
                     });

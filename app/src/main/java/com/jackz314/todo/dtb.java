@@ -28,6 +28,8 @@ public class dtb extends SQLiteOpenHelper{
     public static String TAG_COLOR = "color";
     public static String CONTENT = "content";
     public static String IMPORTANCE = "importance";
+    public static String PINNED = "pinned";
+    public static String PINNED_TIMESTAMP = "pinned_timestamp";
     public static String CREATED_TIMESTAMP = "created_timestamp";
     public static String DELETED_TIMESTAMP = "deleted_timestamp";
     public static String SAVED_FOR_LATER_TIMESTAMP = "saved_for_later_timestamp";
@@ -42,17 +44,18 @@ public class dtb extends SQLiteOpenHelper{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        //db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ TAGS_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TAG + " TEXT," + TAG_COLOR + " TEXT," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS "+TODO_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+HISTORY_TABLE);
-        db.execSQL("DROP TABLE IF EXISTS "+SAVED_FOR_LATER_TABLE);
+        //db.execSQL("DROP TABLE IF EXISTS "+SAVED_FOR_LATER_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+TAGS_TABLE);
         onCreate(db);
     }

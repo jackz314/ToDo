@@ -10,9 +10,12 @@ import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -41,6 +44,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
@@ -108,16 +112,25 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             tagList.setLayoutManager(linearLayoutManager);
             tagListAdapter = (new TodoListAdapter(null){
+
+                @Override
+                public TodoViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {//override creating method to inflate from a different layout
+                    View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.selectionlist,parent,false);
+                    //System.out.println("|cursor created");
+                    return new TodoViewHolder(view);
+                }
+
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    Toast.makeText(getApplicationContext(),"SD",Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"SD",Toast.LENGTH_LONG).show();
                     final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
                     String text = cursor.getString(cursor.getColumnIndex(dtb.TAG));//get the text of the note
                     String tagColor = cursor.getString(cursor.getColumnIndex(dtb.TAG_COLOR));
-                    holder.todoText.setTextColor(textColor);
-                    //holder.tagDot.setBackgroundColor(Color.parseColor(tagColor)); //todo fix this NullPointerException
-                    holder.todoText.setTextSize(textSize);
+                    holder.tagText.setTextColor(textColor);
+                    ColorFilter tagDotColorFilter = new PorterDuffColorFilter(Color.parseColor(tagColor), PorterDuff.Mode.MULTIPLY);
+                    holder.tagDot.getBackground().setColorFilter(tagDotColorFilter);
+                    holder.tagText.setTextSize(textSize);
                     Spannable spannable = new SpannableString(text);
                     //Toast.makeText(getApplicationContext(),text,Toast.LENGTH_LONG).show();
                     if(isInSearchMode){
@@ -140,7 +153,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                     spannable.setSpan(new TextAppearanceSpan(null,Typeface.NORMAL,-1,new ColorStateList(new int[][] {new int[] {}},
                             new int[] {Color.parseColor(tagColor)})
                             ,null), 0, spannable.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    holder.todoText.setText(spannable);
+                    holder.tagText.setText(spannable);
                 }
             });
             tagList.setAdapter(tagListAdapter);

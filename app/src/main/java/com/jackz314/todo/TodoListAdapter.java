@@ -21,7 +21,7 @@ import java.util.ArrayList;
 
  class TodoListAdapter extends CursorRecyclerAdapter<TodoListAdapter.TodoViewHolder> {
     private Cursor c;
-    Context mContext;
+    //Context mContext;
     private ArrayList<Long> itemChecked = new ArrayList<>();
     protected int[] mFrom;
     protected int[] mTo;
@@ -46,9 +46,9 @@ import java.util.ArrayList;
         final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
         //String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
         //holder.todoText.setText(text);
-        holder.todoText.setTextColor(Color.BLACK);
+        //holder.todoText.setTextColor(Color.BLACK);
         //System.out.println(text+"|cursor read");
-        holder.cBox.setOnClickListener(new View.OnClickListener() {
+        /*holder.cBox.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
                 if (cb.isChecked()) {
@@ -72,21 +72,23 @@ import java.util.ArrayList;
                     }
                 }
             }
-        });
+        });*/
         //override in main/history activity?
     }
 
     static class TodoViewHolder extends RecyclerView.ViewHolder {
         TextView todoText;
+        TextView tagText;
         CardView cardView;
         View tagDot;
         CheckBox cBox;
         TodoViewHolder(View view){
             super(view);
             todoText = (TextView) view.findViewById(R.id.titleText);
+            tagText = (TextView) view.findViewById(R.id.tags_selection_text);
             cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
             cardView = (CardView) view.findViewById(R.id.cardView);
-            tagDot = (View)view.findViewById(R.id.tag_dot);
+            tagDot = view.findViewById(R.id.tag_dot);
             /*final long id = getItemId(position);
             cBox.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
