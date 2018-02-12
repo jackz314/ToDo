@@ -39,6 +39,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -61,6 +62,7 @@ import android.widget.CheckBox;
 import android.widget.EdgeEffect;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -85,6 +87,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
+    private static final String[] PROJECTION = new String[]{ID, TITLE};
+    private static final String SELECTION = TITLE + " LIKE ?";
     TodoListAdapter tagListAdapter;
     RecyclerView tagList;
     int themeColor,textColor,backgroundColor,textSize;
@@ -98,6 +102,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     CoordinatorLayout main;
     dtb todosql;
     String tagName = "";
+    ProgressBar fabProgressBar;
     public String searchText;
     boolean isAdd = true;
     boolean selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
@@ -115,6 +120,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         tagList = (RecyclerView) findViewById(R.id.taglist);
         main = (CoordinatorLayout) findViewById(R.id.tags_main);
         modifyId = (TextView) findViewById(R.id.motify_tag_id);
+        fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
+
         tagName = determineTag();//determine tag name
         try {
             getSupportActionBar().setTitle(tagName);
@@ -661,17 +668,27 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return null;
+        setColorPreferences();
+        //determine order of the list
+        String sort = null;
+        if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+            sort = "_id DESC";
+        }
+        if (args != null) {
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
+            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+        }
+        return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-
+        tagListAdapter.changeCursor(data);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-
+        tagListAdapter.changeCursor(null);
     }
 
     public class ExportPrintAdapter extends PrintDocumentAdapter//print adapter for exportation
@@ -880,6 +897,12 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         return true;
     }
 
+    public void interruptAutoSend(){
+        noInterruption = false;
+        fabProgressBar.setVisibility(View.INVISIBLE);
+        //stop circle
+    }
+
     public void setOutOfSearchMode(){
         fab.setVisibility(View.VISIBLE);
         isInSearchMode = false;
@@ -957,45 +980,34 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                             holder.todoText.setText(spannable);
                         }
                     }
-                    int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
-                    if(tagStartPos >= 0){//determine if contains tags
-                        Spannable taggedText = new SpannableString(text);//highlighting tags
-                        while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
-                            int tagEndPos = -1;//assume neither enter nor space exists
-                            if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
-                                tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
-                            }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
-                                tagEndPos = text.indexOf("\n",tagStartPos);
-                            }else {//contains only space
-                                tagEndPos = text.indexOf(" ",tagStartPos);
-                            }
-                            if(tagEndPos < 0){//if the tag is the last section of the note
-                                tagEndPos = text.length() - 1;
-                            }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
-                                continue;
-                            }
-                            //System.out.println(tagStartPos + " AND " + tagEndPos);
-                            String tag = text.substring(tagStartPos,tagEndPos + 1);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
-                            //System.out.println("TEXT: " + text + "****" + tag + "********");
-                            String tagColor = todosql.returnTagColorIfExist(tag);
-                            if(tagColor.equals("")){//if tag doesn't exist
-                                Random random = new Random();//generate random color
-                                int nextInt = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
-                                tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
-                                todosql.createNewTag(tag, tagColor);//add new tag
-                            }
-                            taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
-                                    new ColorStateList(new int[][] {new int[] {}},
-                                            new int[] {Color.parseColor(tagColor)})
-                                    ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
-                            tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
-                            //todo performance issue, change the color of different tags
+                    int tagStartPos = text.indexOf(tagName,0);//find the position of the start point of the tag
+                    Spannable taggedText = new SpannableString(text);//highlighting tags
+                    while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                        int tagEndPos = -1;//assume neither enter nor space exists
+                        if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                            tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                        }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                            tagEndPos = text.indexOf("\n",tagStartPos);
+                        }else {//contains only space
+                            tagEndPos = text.indexOf(" ",tagStartPos);
                         }
-                        holder.todoText.setText(taggedText);
+                        if(tagEndPos < 0){//if the tag is the last section of the note
+                            tagEndPos = text.length() - 1;
+                        }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                            continue;
+                        }
+                        //System.out.println(tagStartPos + " AND " + tagEndPos);
+                        //System.out.println("TEXT: " + text + "****" + tag + "********");
+                        String tagColor = todosql.returnTagColorIfExist(tagName);
+                        taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                new ColorStateList(new int[][] {new int[] {}},
+                                        new int[] {Color.parseColor(tagColor)})
+                                ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                        tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                        //todo performance issue, change the color of different tags
                     }
-                    else {
-                        holder.todoText.setText(text);
-                    }
+                    holder.todoText.setText(taggedText);
+
                     //System.out.println("null called");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
