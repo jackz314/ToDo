@@ -8,14 +8,14 @@
     android:id="@+id/tagSelectionTextView">
 
     <View
-        android:layout_width="25dp"
-        android:layout_height="25dp"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
         android:background="@drawable/color_dot_for_tags"
-        android:layout_weight="1"
-        android:id="@+id/tag_dot"/>
+        android:id="@+id/tag_dot"
+        android:padding="8dp"/>
 
     <TextView
-        android:id="@+id/titleText"
+        android:id="@+id/tagText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

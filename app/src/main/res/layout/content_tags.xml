@@ -38,7 +38,7 @@
         android:inputType="textMultiLine"
         android:selectAllOnFocus="false"
         android:textSize="24sp"
-        android:visibility="visible"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/tags_fab"
         app:layout_constraintLeft_toLeftOf="parent"

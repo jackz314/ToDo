@@ -1285,7 +1285,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
             /** Called when a drawer has settled in a completely closed state. */
             public void onDrawerClosed(View view) {
-                if(input.isCursorVisible()){
+                if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
                     showKeyboard();
                 }
                 super.onDrawerClosed(view);
@@ -1481,6 +1481,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void setOutOfSearchMode(){
         proFab.setVisibility(View.VISIBLE);
+        if(!(input.getText().equals(""))){//if input had text before entering the search mode, set it to visible here
+            input.setVisibility(View.VISIBLE);
+        }
         isInSearchMode = false;
         getSupportLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
@@ -1686,7 +1689,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         todoList.setBackgroundColor(backgroundColor);
         navigationView.setBackgroundColor(backgroundColor);
-        View listView= LayoutInflater.from(MainActivity.this).inflate(R.layout.todolist,null);
         if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
             input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.5));
         }else {
@@ -2165,13 +2167,29 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(input.getWindowToken(),0);
+        View view = this.getCurrentFocus();
+        if(view != null){
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(),0);
+        }else {
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            try{
+                imm.hideSoftInputFromWindow(input.getWindowToken(),0);
+            }catch (NullPointerException ignored){}
+        }
     }
 
     public void showKeyboard() {
-        InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-        imManager.showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);
+        View view = this.getCurrentFocus();
+        if(view != null){
+            InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imManager.showSoftInput(view,InputMethodManager.SHOW_IMPLICIT);
+        }else{
+            try{
+                InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                imManager.showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);
+            }catch (NullPointerException ignored){}
+        }
     }
 
     @Override
@@ -2281,7 +2299,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 isInSearchMode = true;
-                proFab.setVisibility(View.INVISIBLE);
+                proFab.setVisibility(View.GONE);
+                input.setVisibility(View.GONE);
                 return true;
             }
 
@@ -2300,7 +2319,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public void onClick(View v) {
                 isInSearchMode = true;
-                proFab.setVisibility(View.INVISIBLE);
+                proFab.setVisibility(View.GONE);
+                input.setVisibility(View.GONE);
             }
         });
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -2349,7 +2369,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return super.onOptionsItemSelected(item);
     }*/
 
-    public void query(String text) {
+    public void query(String text) {//launch search
         Bundle bundle = new Bundle();
         bundle.putString("QUERY", text);
         searchText = text;
@@ -2414,7 +2434,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public void onResume(){
-        if(!input.getText().toString().equals("") && input.getVisibility()==View.VISIBLE) showKeyboard();
+        if(!(input.getText().toString().equals("")) && input.getVisibility() == View.VISIBLE) showKeyboard();
         displayAllNotes();
         setColorPreferences();
         int size = menuNav.size();
@@ -2596,7 +2616,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         else if (id == R.id.tags){
             hideKeyboard();
-            Intent intent = new Intent(MainActivity.this, TagsActivity.class);
+            Intent intent = new Intent(MainActivity.this, TagSelectionActivity.class);
             startActivity(intent);
         }
 
@@ -2665,6 +2685,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
                     //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
                     purchaseProgressDialog.dismiss();
                 }
                 isAdRemoved = false;
@@ -2674,8 +2695,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        String sort = null;
         setColorPreferences();
+        //determine order of the list
+        String sort = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
         }

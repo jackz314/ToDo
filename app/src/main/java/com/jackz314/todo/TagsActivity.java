@@ -791,7 +791,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             setOutOfSelectionMode();
         }else if(isInSearchMode){
             setOutOfSearchMode();
-        }else {
+        }else if(isInSelectionMode){
             setOutOfSelectionMode();
         }
         return true;
@@ -825,7 +825,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         toolbar.setBackgroundColor(themeColor);
         input.setTextColor(textColor);
-        input.setTextSize(getResources().getDimension(R.dimen.default_text_size));
+        input.setTextSize(24);
         setCursorColor(input, themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();

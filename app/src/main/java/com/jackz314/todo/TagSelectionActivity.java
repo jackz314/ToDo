@@ -1,5 +1,7 @@
 package com.jackz314.todo;
 
+import android.animation.LayoutTransition;
+import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -23,21 +25,28 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EdgeEffect;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,6 +56,7 @@ import java.lang.reflect.Method;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TAG;
 import static com.jackz314.todo.dtb.TAG_COLOR;
+import static com.jackz314.todo.dtb.TODO_TABLE;
 
 
 public class TagSelectionActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
@@ -58,7 +68,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     Toolbar toolbar;
     CoordinatorLayout main;
     boolean isInSearchMode = false;
-    private static final String[] PROJECTION = new String[]{ID, TAG};
+    private static final String[] PROJECTION = new String[]{ID, TAG, TAG_COLOR};
     private static final String SELECTION = TAG + " LIKE ?";
     public String searchText;
     TextView emptyTextView;
@@ -67,14 +77,18 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tag_selection);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.tags_selection_toolbar);
+        toolbar = (Toolbar) findViewById(R.id.tags_selection_toolbar);
+        tagList = (RecyclerView)findViewById(R.id.tag_selection_list);
+        emptyTextView = (TextView)findViewById(R.id.emptyTagSelection);
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.tags_selection_main);
+
         try{
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }catch (NullPointerException ignored){
             //ignore
         }
+        setColorPreferences();
         displayAllNotes();
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
@@ -89,7 +103,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     }
 
     public void displayAllNotes(){
-        if(!(tagList == null)){
+        if(tagList.getAdapter() == null){
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             tagList.setLayoutManager(linearLayoutManager);
@@ -97,13 +111,15 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
+                    Toast.makeText(getApplicationContext(),"SD",Toast.LENGTH_LONG).show();
                     final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
                     String text = cursor.getString(cursor.getColumnIndex(dtb.TAG));//get the text of the note
                     String tagColor = cursor.getString(cursor.getColumnIndex(dtb.TAG_COLOR));
                     holder.todoText.setTextColor(textColor);
-                    holder.tagDot.setBackgroundColor(Color.parseColor(tagColor));
+                    //holder.tagDot.setBackgroundColor(Color.parseColor(tagColor)); //todo fix this NullPointerException
                     holder.todoText.setTextSize(textSize);
                     Spannable spannable = new SpannableString(text);
+                    //Toast.makeText(getApplicationContext(),text,Toast.LENGTH_LONG).show();
                     if(isInSearchMode){
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
@@ -127,7 +143,12 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                     holder.todoText.setText(spannable);
                 }
             });
+            tagList.setAdapter(tagListAdapter);
+            getSupportLoaderManager().initLoader(1010, null, this);
+            //ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
+            //mItemTouchHelper.attachToRecyclerView(tagList);
         }
+        getSupportLoaderManager().restartLoader(1010,null,this);
     }
 
     public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
@@ -162,6 +183,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         Window window = this.getWindow();
         window.setStatusBarColor(themeColor);
         window.setNavigationBarColor(themeColor);
+        toolbar.setBackgroundColor(themeColor);
         if (ColorUtils.determineBrightness(backgroundColor) < 0.5) {// dark
             //   emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
         } else {//bright
@@ -180,8 +202,9 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
 
     @Override
     public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
-        String sort = null;
         setColorPreferences();
+        //determine order of the list
+        String sort = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
         }
@@ -210,6 +233,93 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     public void onLoaderReset(Loader<Cursor> loader) {
         tagListAdapter.changeCursor(null);
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.search_menu, menu);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) menu.findItem(R.id.todo_search).getActionView();
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setIconifiedByDefault(true);
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        searchBar.setLayoutTransition(new LayoutTransition());
+        Spannable hintText = new SpannableString(getString(R.string.search_hint));
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );//material design standard hint text color in dark themed background
+        }else {//light themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );//material design standard hint text color in light themed background
+        }
+        searchView.setQueryHint(hintText);
+        MenuItem searchMenuIem = menu.findItem(R.id.todo_search);
+        MenuItemCompat.setOnActionExpandListener(searchMenuIem, new MenuItemCompat.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                isInSearchMode = true;
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                setOutOfSearchMode();
+                return true;
+            }
+        });
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isInSearchMode = true;
+            }
+        });
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                query(query);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                query(newText);
+                return false;
+            }
+
+
+        });
+        return true;
+    }
+
+    public void setOutOfSearchMode(){
+        isInSearchMode = false;
+        getSupportLoaderManager().restartLoader(1010,null,this);
+        displayAllNotes();
+        hideKeyboard();
+    }
+
+    public void hideKeyboard() {
+        View view = this.getCurrentFocus();
+        if(view != null){
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(),0);
+        }
+    }
+
+    public void showKeyboard() {
+        View view = this.getCurrentFocus();
+        if(view != null){
+            InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imManager.showSoftInput(view,InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
+    public void query(String text) {//launch search
+        Bundle bundle = new Bundle();
+        bundle.putString("QUERY", text);
+        searchText = text;
+        //System.out.println("calledquery" + " " + text);
+        getSupportLoaderManager().restartLoader(1010, bundle, TagSelectionActivity.this);
     }
 
 }

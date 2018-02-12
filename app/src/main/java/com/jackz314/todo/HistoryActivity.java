@@ -690,13 +690,13 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
     }
 
-    @Override
+    /*@Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             handleVoiceSearch(intent);
         }
-    }
+    }*/
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

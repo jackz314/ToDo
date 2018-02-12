@@ -184,7 +184,7 @@ public class AppProvider extends ContentProvider {
                 case ITEMS:
                     return AppContract.Item.TAGS_DIR_MIME_TYPE;
                 case ITEMS_ID:
-                    return AppContract.Item.TAGS_DIR_MIME_TYPE;
+                    return AppContract.Item.TAGS_ITEM_MIME_TYPE;
                 default:
                     return null;
             }

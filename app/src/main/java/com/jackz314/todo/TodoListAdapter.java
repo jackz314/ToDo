@@ -44,8 +44,8 @@ import java.util.ArrayList;
     @Override
     public void onBindViewHolder(TodoViewHolder holder, final Cursor cursor) {
         final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-        String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
-        holder.todoText.setText(text);
+        //String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+        //holder.todoText.setText(text);
         holder.todoText.setTextColor(Color.BLACK);
         //System.out.println(text+"|cursor read");
         holder.cBox.setOnClickListener(new View.OnClickListener() {
@@ -86,7 +86,7 @@ import java.util.ArrayList;
             todoText = (TextView) view.findViewById(R.id.titleText);
             cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
             cardView = (CardView) view.findViewById(R.id.cardView);
-            tagDot = view.findViewById(R.id.tag_dot);
+            tagDot = (View)view.findViewById(R.id.tag_dot);
             /*final long id = getItemId(position);
             cBox.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
