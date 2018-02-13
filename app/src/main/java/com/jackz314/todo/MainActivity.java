@@ -76,6 +76,7 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -1946,8 +1947,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
+                    Spannable spannable = new SpannableString(text);
                     if(isInSearchMode){
-                        Spannable spannable = new SpannableString(text);
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
@@ -1960,21 +1961,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 int start = Math.min(startPos, textLow.length());
                                 int end = Math.min(startPos + searchTextLow.length(), textLow.length());
                                 startPos = textLow.indexOf(searchTextLow,end);
-                                spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,
-                                        new ColorStateList(new int[][] {new int[] {}},
-                                                new int[] {Color.parseColor("#ef5350")})
-                                        ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight searched text
+                                spannable.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set searched text to bold
                             }while (startPos > 0);
-                            holder.todoText.setText(spannable);
                         }
                     }
                     int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
-                    if(tagStartPos >= 0){//determine if contains tags
-                        Spannable taggedText = new SpannableString(text);//highlighting tags
+                    if(tagStartPos >= 0){//if contains tags
                         while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                             int tagEndPos = -1;//assume neither enter nor space exists
                             if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
-                                tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break todo WHY WHY WHY??? WHY DO I NEED TO +1 at the end?
+                                tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
                             }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
                                 tagEndPos = text.indexOf("\n",tagStartPos);
                             }else {//contains only space
@@ -1995,18 +1991,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
                                 todosql.createNewTag(tag, tagColor);//add new tag
                             }
-                            taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                            spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                     new ColorStateList(new int[][] {new int[] {}},
                                             new int[] {Color.parseColor(tagColor)})
                                     ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
                             tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
                             //todo performance issue, change the color of different tags
                         }
-                        holder.todoText.setText(taggedText);
                     }
-                   else {
-                        holder.todoText.setText(text);
-                    }
+                    holder.todoText.setText(spannable);
                     //System.out.println("null called");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);

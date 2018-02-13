@@ -122,7 +122,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         setContentView(R.layout.activity_tags);
         toolbar = (Toolbar) findViewById(R.id.tags_toolbar);
         setSupportActionBar(toolbar);
-        displayAllNotes();
         todosql = new dtb(this);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         fab = (FloatingActionButton) findViewById(R.id.tags_fab);
@@ -135,12 +134,21 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         tagName = determineTag();//determine tag name
+        displayAllNotes();
+
         try {
             getSupportActionBar().setTitle(tagName);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         } catch (NullPointerException ignored) {
             //ignored
         }
+
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
         setColorPreferences();
 
         fab.setOnClickListener(new View.OnClickListener() {
@@ -1158,8 +1166,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
+                    Spannable spannable = new SpannableString(text);
                     if(isInSearchMode){
-                        Spannable spannable = new SpannableString(text);
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
@@ -1181,7 +1189,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         }
                     }
                     int tagStartPos = text.indexOf(tagName,0);//find the position of the start point of the tag
-                    Spannable taggedText = new SpannableString(text);//highlighting tags
                     while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                         int tagEndPos = -1;//assume neither enter nor space exists
                         if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
@@ -1199,14 +1206,14 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         //System.out.println(tagStartPos + " AND " + tagEndPos);
                         //System.out.println("TEXT: " + text + "****" + tag + "********");
                         String tagColor = todosql.returnTagColorIfExist(tagName);
-                        taggedText.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                        spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                 new ColorStateList(new int[][] {new int[] {}},
                                         new int[] {Color.parseColor(tagColor)})
                                 ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
                         tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
                         //todo performance issue, change the color of different tags
                     }
-                    holder.todoText.setText(taggedText);
+                    holder.todoText.setText(spannable);
 
                     //System.out.println("null called");
                     if(isInSelectionMode){
