@@ -183,7 +183,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     int exit=0,doubleClickCout = 0;
     boolean justex = false;
     boolean isConnected = false;
-    boolean justDoubleClicked = false;
     boolean selectAll = false, unSelectAll = false;
     SharedPreferences sharedPreferences;
     int resultCount = 0, cursorPos = 0;
@@ -1240,8 +1239,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         input.requestFocus();
                     }
                 }
-                /*Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();*/
-
             }
         });
 
