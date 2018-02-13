@@ -25,6 +25,54 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:listitem="@layout/todolist" />
 
+    <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
+        android:id="@+id/recognition_view"
+        android:layout_width="56dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toTopOf="parent"
+        android:layout_marginEnd="8dp" />
+
+    <android.support.design.widget.CoordinatorLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fab_coordinator_layout"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toTopOf="parent"
+        android:layout_marginBottom="0dp">
+        <com.dmitrymalkovich.android.ProgressFloatingActionButton
+            android:id="@+id/tag_progress_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="false">
+
+            <ProgressBar
+                android:id="@+id/tag_fab_progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:max="1000"
+                android:progress="0"
+                android:progressDrawable="@drawable/circular"
+                />
+
+            <android.support.design.widget.FloatingActionButton
+                android:id="@+id/tags_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="8dp"
+                android:layout_marginBottom="@dimen/fab_margin"
+                android:layout_marginLeft="8dp"
+                android:layout_marginTop="@dimen/fab_margin"
+                android:src="@drawable/avd_plus_to_send"
+                app:backgroundTint="@color/colorPrimary" />
+        </com.dmitrymalkovich.android.ProgressFloatingActionButton>
+
+    </android.support.design.widget.CoordinatorLayout>
+
     <EditText
         android:id="@+id/tags_input"
         style="@android:style/Widget.EditText"
@@ -45,18 +93,6 @@
         app:layout_constraintEnd_toStartOf="@+id/tags_fab"
         app:layout_constraintLeft_toLeftOf="parent"
         tools:ignore="RtlHardcoded" />
-
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/tags_fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:clickable="true"
-        android:focusable="true"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@drawable/avd_plus_to_send" />
 
     <TextView
         android:id="@+id/motify_tag_id"

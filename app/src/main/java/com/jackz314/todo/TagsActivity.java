@@ -1,6 +1,8 @@
 package com.jackz314.todo;
 
+import android.*;
 import android.animation.LayoutTransition;
+import android.animation.ObjectAnimator;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -34,9 +36,11 @@ import android.print.PrintDocumentInfo;
 import android.print.PrintManager;
 import android.print.pdf.PrintedPdfDocument;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
@@ -52,11 +56,13 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.TextAppearanceSpan;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EdgeEffect;
@@ -68,6 +74,8 @@ import android.widget.Toast;
 
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
+import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -77,7 +85,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
-import java.util.Random;
+import java.util.regex.Pattern;
 
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
@@ -89,6 +97,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     private static final String[] PROJECTION = new String[]{ID, TITLE};
     private static final String SELECTION = TITLE + " LIKE ?";
+    private FirebaseAnalytics mFirebaseAnalytics;
     TodoListAdapter tagListAdapter;
     RecyclerView tagList;
     int themeColor,textColor,backgroundColor,textSize;
@@ -101,11 +110,11 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView modifyId, selectionTitle;
     CoordinatorLayout main;
     dtb todosql;
-    String tagName = "";
+    String tagName = "", oldResult = "", searchText = "";
     ProgressBar fabProgressBar;
-    public String searchText;
-    boolean isAdd = true;
-    boolean selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
+    RecognitionProgressView recognitionProgressView;
+    SpeechRecognizer speechRecognizer;
+    boolean isAdd = true, noInterruption = true, selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,13 +124,16 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         setSupportActionBar(toolbar);
         displayAllNotes();
         todosql = new dtb(this);
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         fab = (FloatingActionButton) findViewById(R.id.tags_fab);
+        proFab = (ProgressFloatingActionButton)findViewById(R.id.tag_progress_fab);
         input = (EditText) findViewById(R.id.tags_input);
         tagList = (RecyclerView) findViewById(R.id.taglist);
         main = (CoordinatorLayout) findViewById(R.id.tags_main);
         modifyId = (TextView) findViewById(R.id.motify_tag_id);
-        fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
-
+        fabProgressBar = (ProgressBar)findViewById(R.id.tag_fab_progress_bar);
+        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         tagName = determineTag();//determine tag name
         try {
             getSupportActionBar().setTitle(tagName);
@@ -163,7 +175,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
                         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
                         //todoList.setDividerHeight(2);
-                        todoList.smoothScrollToPosition(0);
+                        tagList.smoothScrollToPosition(0);
                         Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "new_notes");
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "new notes"+input.getText().toString());
@@ -187,7 +199,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         input.requestFocus();
                     }
                 }
-                /*Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();*/
 
             }
         });
@@ -234,15 +245,12 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 selectAll = false;
                 if (isInSelectionMode) {
                     multiSelectionBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
-                    if (multiSelectionBox.isChecked()) {
+                    if (multiSelectionBox.isChecked()) {//change to false
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
-                        //System.out.println("false" + id);
-                    } else {
+                    } else {//change to true
                         addSelectedId(id);
                         multiSelectionBox.setChecked(true);
-                        //System.out.println("true" + id);
-
                     }
                 } else {
                     if (isInSearchMode) {
@@ -262,18 +270,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     showKeyboard();
                     int top = view.getTop();
                     tagList.smoothScrollBy(0, top);//scroll the clicked item to top
-                    //Toast.makeText(getApplicationContext(),String.valueOf(position),Toast.LENGTH_LONG).show();
-                    //handler.postDelayed(r,250);//double click interval
-                    //(new Handler()).postDelayed(new Runnable() {
-                    //  @Override
-                    //   public void run() {
-                    //  if(!justDoubleClicked){
-
-                    //   }]
-                    // }
-                    //}, 250);
-                    //justDoubleClicked = false;
-                    // }
                 }
             }
         });
@@ -399,6 +395,202 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 return true;
             }
         });
+
+        recognitionProgressView.setVisibility(View.GONE);
+        fab.setVisibility(View.VISIBLE);
+        proFab.setVisibility(View.VISIBLE);
+        recognitionProgressView.setSpeechRecognizer(speechRecognizer);
+        recognitionProgressView.setRecognitionListener(new RecognitionListenerAdapter() {
+            @Override
+            public void onBeginningOfSpeech() {
+
+            }
+            public void onReadyForSpeech(Bundle params)
+            {
+            }
+            public void onRmsChanged(float rmsdB)
+            {
+            }
+            public void onBufferReceived(byte[] buffer)
+            {
+            }
+            public void onEndOfSpeech()
+            {
+
+            }
+            public void onError(int error)
+            {
+                if(error == SpeechRecognizer.ERROR_NO_MATCH){
+                    //Toast.makeText(getApplicationContext(),String.valueOf(error),Toast.LENGTH_SHORT).show();
+                    recognitionProgressView.stop();
+                    recognitionProgressView.play();
+                    recognitionProgressView.setSpeechRecognizer(speechRecognizer);
+
+                }else {
+                    recognitionProgressView.setVisibility(View.GONE);
+                    proFab.setVisibility(View.VISIBLE);
+                    fab.setVisibility(View.VISIBLE);
+                    input.setEnabled(true);
+                    //proFab.setVisibility(View.VISIBLE);
+                    recognitionProgressView.stop();
+                    recognitionProgressView.play();
+                    if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                        ActivityCompat.requestPermissions(TagsActivity.this,new String[]{android.Manifest.permission.RECORD_AUDIO},0);
+                    }else if(error == SpeechRecognizer.ERROR_AUDIO){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY){
+                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
+                    }else if(error == SpeechRecognizer.ERROR_CLIENT){
+
+                    }
+                }
+                //Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
+            }
+            public void onResults(Bundle results)
+            {
+                String str = "";
+                input.setEnabled(false);
+                ArrayList data = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                if (data != null) {
+                    input.setEnabled(false);
+                    if(oldResult.isEmpty()){
+                        String originalText = input.getText().toString();
+                        if(!originalText.isEmpty()){
+                            Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
+                            if( input.getSelectionStart() == -1 || input.getSelectionStart()-1 == input.getText().toString().length() - 1){//cursor at last or not exist
+                                if(!Character.isWhitespace(originalText.charAt(originalText.length() - 1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(originalText.length() - 1)))){
+                                    input.append(" ");
+                                }
+                            }else {
+                                if(!Character.isWhitespace(originalText.charAt(input.getSelectionStart()-1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(input.getSelectionStart()-1)))){
+                                    input.getText().insert(input.getSelectionStart()," ");
+                                }
+                            }
+                        }
+                    }
+                    str = (String) data.get(0);
+                    Log.i("VOICERECOGNITION", ">"+str+"<");
+                    if(!oldResult.isEmpty()){
+                        String originalText = input.getText().toString();
+                        if(oldResult.length() <= str.length()){
+                            if(originalText.contains(oldResult)){
+                                input.getText().replace(originalText.indexOf(oldResult),originalText.indexOf(oldResult) + oldResult.length(),str);
+                            }
+                            //String newText = originalText.replace(oldResult,str);
+                        }else {
+                            input.append(str);
+                        }
+                    }else {
+                        input.getText().insert(input.getSelectionStart(),str);
+                    }
+                    input.setSelection(input.getSelectionStart());
+                    if(input.getSelectionStart() < input.getText().length()-1){
+                        if(!Character.isWhitespace(input.getText().charAt(input.getSelectionStart())) || Pattern.matches("\\p{Punct}", String.valueOf(input.getText().charAt(input.getSelectionStart())))){
+                            input.getText().insert(input.getSelectionStart()," ");
+                        }
+                    }
+                }
+                oldResult = "";
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        recognitionProgressView.setVisibility(View.GONE);
+                        proFab.setVisibility(View.VISIBLE);
+                        recognitionProgressView.stop();
+                        recognitionProgressView.play();
+                        Handler delayHandler = new Handler();
+                        noInterruption = true;
+                        fabProgressBar.setVisibility(View.VISIBLE);
+                        fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        fabProgressBar.setProgress(0);
+                        fab.setVisibility(View.VISIBLE);
+                        //fabProgressBar.setSecondaryProgress(100);
+                        fakeProgress(1200);//fake progress bar for 2000ms
+                        delayHandler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(noInterruption && fab.getVisibility() == View.VISIBLE){
+                                    fab.performClick();
+                                    fabProgressBar.clearAnimation();
+                                    fabProgressBar.setVisibility(View.INVISIBLE);
+                                }
+                            }
+                        },1201);
+                        input.setEnabled(true);
+                    }
+                },500);
+
+            }
+            public void onPartialResults(Bundle partialResults)
+            {
+                ArrayList<String> partialResultsList = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                String result = partialResultsList.get(0);
+
+                if (result.isEmpty()) {
+                } else {
+                    input.setEnabled(false);
+                    if(oldResult.isEmpty()){
+                        String originalText = input.getText().toString();
+                        if(!originalText.isEmpty()){
+                            Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
+                            if( input.getSelectionStart() == -1 || input.getSelectionStart() == input.getText().toString().length() - 1){//cursor at last or not exist
+                                if(!Character.isWhitespace(originalText.charAt(originalText.length() - 1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(originalText.length() - 1)))){
+                                    input.append(" ");
+                                }
+                            }else {
+                                if (input.getSelectionStart() == -1){
+                                    input.append(" ");
+                                }else{
+                                    if(!Character.isWhitespace(originalText.charAt(input.getSelectionStart()-1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(input.getSelectionStart()-1)))){
+                                        input.getText().insert(input.getSelectionStart()," ");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // resultCount++;
+                    Log.i("VOICERECOGNITION", "|"+result+"|");
+                    //Handler handler = new Handler();
+                    //   handler.post(new Runnable() {
+                    //   @Override
+                    // public void run() {
+                    //int currentCursorPos = input.getSelectionStart()-1;
+                    // //System.out.println(currentCursorPos);
+                    if(input.getSelectionStart() == -1){
+                        if(result.toLowerCase().contains(oldResult.toLowerCase())){
+                            input.append(result.substring(oldResult.length()));
+                        }else {
+                            input.getText().replace(input.getText().length()-oldResult.length(),input.getText().length(),result);
+                        }
+                        input.setSelection(input.getText().length()-1);
+                    }else {
+                        if(result.toLowerCase().contains(oldResult.toLowerCase())){
+                            input.getText().insert(input.getSelectionStart(),result.substring(oldResult.length()));
+                            //input.setSelection(input.getSelectionStart() + result.length()-1-oldResult.length()-1);
+
+                        }else {
+                            input.getText().replace(input.getSelectionStart()-oldResult.length(),input.getSelectionStart(),result);
+                            //input.setSelection(input.getSelectionStart()+result.length()-1);
+                        }
+                    }
+                    //input.moveCursorToVisibleOffset();
+                    //  }
+                    //  });
+                    oldResult = result;
+                    //resultCount = 0;
+                }
+            }
+            public void onEvent(int eventType, Bundle params)
+            {
+            }
+        });
+        recognitionProgressView.play();
+
     }
 
     ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {//draw the options after swipe left
@@ -466,7 +658,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             c.drawText(getString(R.string.finish), (float) itemView.getRight() - 34 - bounds.width(), (((finishIconTop + finishIconBottom) / 2) - (textPaint.descent() + textPaint.ascent()) / 2), textPaint);
             super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
         }
-
     };
 
     public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
@@ -664,6 +855,15 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         searchText = text;
         //System.out.println("calledquery" + " " + text);
         getSupportLoaderManager().restartLoader(1234, bundle, TagsActivity.this);
+    }
+
+    public int updateData(long id, String title){
+        if (!title.isEmpty()) {
+            ContentValues values = new ContentValues();
+            values.put(TITLE, title);
+            Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+            return getContentResolver().update(uri, values, null, null);
+        }else return -1;
     }
 
     @Override
@@ -1088,6 +1288,13 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         } else {
           //  input.setHintTextColor(ColorUtils.makeTransparent(textColor, 0.38));
         }
+    }
+
+    public void fakeProgress(int ms){
+        ObjectAnimator animator = ObjectAnimator.ofInt(fabProgressBar,"progress",0,1000);
+        animator.setDuration(ms);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.start();
     }
 
     public void hideKeyboard() {

@@ -4,6 +4,7 @@ package com.jackz314.todo;
 import android.Manifest;
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.BroadcastReceiver;
@@ -547,6 +548,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         getApplicationContext().sendBroadcast(intent);
     }*/
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -694,7 +696,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return false;
             }
         });
-        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         recognitionProgressView.setVisibility(View.GONE);
         fab.setVisibility(View.VISIBLE);
         proFab.setVisibility(View.VISIBLE);
@@ -1450,7 +1451,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         animator.setDuration(ms);
         animator.setInterpolator(new DecelerateInterpolator());
         animator.start();
-
     }
 
     public void removeAd(){
@@ -2730,7 +2730,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
             return getContentResolver().update(uri, values, null, null);
         }else return -1;
-
     }
 
     public Uri insertData(String title) {
