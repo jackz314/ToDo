@@ -272,7 +272,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         d.start();
                     }
                     input.setVisibility(View.VISIBLE);
-                    input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
+                    input.setText(todosql.getOneDataInTODO(id));
                     input.requestFocus();
                     input.setSelection(input.getText().length());
                     showKeyboard();
@@ -289,7 +289,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 v.vibrate(30);
                 if (isInSelectionMode) {
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(String.valueOf(id)));
+                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(main, getString(R.string.todo_copied), Snackbar.LENGTH_LONG).show();
                 } else {
@@ -374,7 +374,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                 do {
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0, id);
-                                    String data = todosql.getOneDataInTODO(Long.toString(id));
+                                    String data = todosql.getOneDataInTODO(id);
                                     selectedContent.add(0, data);
                                 } while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -621,7 +621,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             if (isInSelectionMode && selectedId.contains(viewHolder.getItemId())) {
                 removeSelectedId(viewHolder.getItemId());
             }
-            final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
+            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
             finishData(viewHolder.getItemId());
             Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
@@ -717,7 +717,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = todosql.getOneDataInTODO(Long.toString(id));
+        String data = todosql.getOneDataInTODO(id);
         selectedContent.add(0,data);
         selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
         if(selectedId.size() == 1){
@@ -746,7 +746,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        String data = todosql.getOneDataInTODO(Long.toString(id));
+        String data = todosql.getOneDataInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
         if(selectedId.size() < todosql.getData().getCount()){
             selectAllBox.setChecked(false);
@@ -813,7 +813,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void finishData(long id){
         ContentValues cv = new ContentValues();
-        String data = todosql.getOneDataInTODO(Long.toString(id));
+        String data = todosql.getOneDataInTODO(id);
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
