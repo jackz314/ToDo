@@ -1932,7 +1932,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 //todo delete tag, pinned order, tag choose color, markdown bold.
-        public void displayAllNotes(){
+        public void displayAllNotes(){//todo ignore cases when storing, determine tags
         if(todoList.getAdapter() == null){
             ////System.out.println("null called");
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -2776,7 +2776,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
-                if(!todosql.determineIfTagExist(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
                     Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
                     getContentResolver().delete(tagUri,null,null);
                 }

@@ -380,34 +380,48 @@ public class dtb extends SQLiteOpenHelper{
         }
     }
 
-    public String returnTagColorIfExist(String tag){
+    public String returnTagColorIfExist(String tag){//see if tag exists in the tag database
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );//search for the tag
+        Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );//search for the tag
         if(cs.getCount() == 0) return "";
         else {
             try{
-                while(cs.moveToNext()){
-                   String tagColor = cs.getString(cs.getColumnIndex(TAG_COLOR));
-                   cs.close();
-                   return tagColor;
-                }
+                cs.moveToNext();
+                String tagColor = cs.getString(cs.getColumnIndex(TAG_COLOR));
+                cs.close();
+                return tagColor;
             }catch (Exception e){
                 cs.close();
                 return "";
             }
         }
-        cs.close();
-        return "";
     }
 
-    public boolean determineIfTagExist(String text){
-
+    public boolean determineIfTagInUse(String tag){//see if tag is in use in the displaying, active notes
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );
+        if(!(cs.getCount() == 0)) {
+            while(cs.moveToNext()){//confirm that the tag still is in use again
+                String todoText = cs.getString(cs.getColumnIndex(TITLE));
+                if(todoText.contains(tag)){
+                    String charBeforeTagStart = String.valueOf(todoText.charAt(todoText.indexOf(tag) - 1));//determine if the character before the tag start is a space or enter (determine if it's a legal in use tag)
+                    if(charBeforeTagStart.equals(" ") || charBeforeTagStart.equals("\n")){
+                        cs.close();
+                        return true;
+                    }
+                }
+            }
+        }
         return false;
     }
 
     public long returnTagID(String tag){
-
-        return -1;
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.query(false,TAGS_TABLE, new String[]{ID,TAG},TAG + " LIKE ",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );
+        cs.moveToNext();
+        long id = cs.getInt(cs.getColumnIndex(ID));
+        cs.close();
+        return id;
     }
 
     public void createNewTag(String tag, String tagColor){
