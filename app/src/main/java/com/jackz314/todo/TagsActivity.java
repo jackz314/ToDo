@@ -110,32 +110,35 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView modifyId, selectionTitle;
     CoordinatorLayout main;
     dtb todosql;
-    String tagName = "", oldResult = "", searchText = "";
+    String tagName = "", tagColor = "", oldResult = "", searchText = "";
     ProgressBar fabProgressBar;
     RecognitionProgressView recognitionProgressView;
     SpeechRecognizer speechRecognizer;
+    TextView emptyTextView;
     boolean isAdd = true, noInterruption = true, selectAll = false, unSelectAll = false, isInSelectionMode = false, isInSearchMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tags);
-        toolbar = (Toolbar) findViewById(R.id.tags_toolbar);
+        toolbar = findViewById(R.id.tags_toolbar);
         setSupportActionBar(toolbar);
         todosql = new dtb(this);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-        fab = (FloatingActionButton) findViewById(R.id.tags_fab);
-        proFab = (ProgressFloatingActionButton)findViewById(R.id.tag_progress_fab);
-        input = (EditText) findViewById(R.id.tags_input);
-        tagList = (RecyclerView) findViewById(R.id.taglist);
-        main = (CoordinatorLayout) findViewById(R.id.tags_main);
-        modifyId = (TextView) findViewById(R.id.motify_tag_id);
-        fabProgressBar = (ProgressBar)findViewById(R.id.tag_fab_progress_bar);
-        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        fab = findViewById(R.id.tags_fab);
+        proFab = findViewById(R.id.tag_progress_fab);
+        input = findViewById(R.id.tags_input);
+        tagList = findViewById(R.id.taglist);
+        main = findViewById(R.id.tags_main);
+        modifyId = findViewById(R.id.motify_tag_id);
+        fabProgressBar = findViewById(R.id.tag_fab_progress_bar);
+        recognitionProgressView = findViewById(R.id.recognition_view);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        tagName = determineTag();//determine tag name
+        emptyTextView = findViewById(R.id.emptyTag);
+        tagName = determineTag();//determine activity tag name
+        tagColor = determineActivityTagColor();//determine activity tag color
         displayAllNotes();
-
+        //todo implement undo functions
         try {
             getSupportActionBar().setTitle(tagName);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -146,18 +149,19 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                determineIfDeleteTag();
                 finish();
             }
         });
         setColorPreferences();
-
+        setEdgeEffect(tagList,themeColor);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {//todo finish the implementation of fab, profab, voice recognition
                 //setOutOfSelectionMode();
-                String inputText=input.getText().toString().trim();
+                String trimmedInputText = input.getText().toString().trim();
                 interruptAutoSend();
-                if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
+                if(trimmedInputText.isEmpty()||trimmedInputText.equals("")||input.getText()==null){
                     if(isAdd){
                         AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
@@ -805,6 +809,13 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public Uri insertData(String title) {
         if (!title.isEmpty()) {
+            if(!title.contains(tagName)){//if the new note doesn't contain the tag, add it here
+                if(title.substring(title.length()).equals(" ") || title.substring(title.length()).equals("\n")){//if the end of the note is space or enter, no need to add space before the tag
+                   title = title + tagName;
+                }else {
+                    title = title + " " + tagName;
+                }
+            }
             ContentValues values = new ContentValues();
             values.put(TITLE, title + " " + tagName);//add tag at the end
             return getContentResolver().insert(AppContract.Item.TODO_URI, values);
@@ -822,14 +833,45 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
-        //System.out.println("delete data" + id);
+        String note = todosql.getOneDataInTODO(id);
         getContentResolver().delete(uri, null, null);
-        if(tagListAdapter.getItemCount() == 0){//if no more notes contain this tag
-            todosql.deleteTag(tagName);//delete tag and return to previous level
-            finish();
+        ArrayList<String> tags = determineContainedTags(note);
+        if(!(tags == null)){//if contains tags
+            for(String tag : tags){
+                if(tag.equals(tagName)) continue;//if it's this tag, don't delete it yet
+                if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                    Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                    getContentResolver().delete(tagUri,null,null);
+                }
+            }
         }
-        todosql.deleteTag(tagName);
         displayAllNotes();
+    }
+
+    public ArrayList<String> determineContainedTags(String text){
+        int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+        if(tagStartPos >= 0){//if contains tags
+            ArrayList<String> tags = new ArrayList<String>();
+            while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                int tagEndPos = -1;//assume neither enter nor space exists
+                if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                    tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                    tagEndPos = text.indexOf("\n",tagStartPos);
+                }else {//contains only space
+                    tagEndPos = text.indexOf(" ",tagStartPos);
+                }
+                if(tagEndPos < 0){//if the tag is the last section of the note
+                    tagEndPos = text.length() - 1;
+                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                    continue;
+                }
+                String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                tags.add(tag);
+                tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+            }
+            return tags;
+        }else return null;
     }
 
     public void shareSetOfData(){//share note function
@@ -851,7 +893,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         String shareSub = getString(R.string.note_share_subject);
         sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, shareSub);
         sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
-        startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
+        startActivity(Intent.createChooser(sharingIntent, getString(R.string.note_share_via)));
     }
 
     public String determineTag(){
@@ -860,6 +902,10 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             return extras.getString("TAG_VALUE");
         }
         return "";
+    }
+
+    public String determineActivityTagColor(){
+        return todosql.returnTagColorIfExist(tagName);
     }
 
     public void query(String text) {//launch search
@@ -897,6 +943,17 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if(data.getCount() == 0 && isInSearchMode){
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText(getString(R.string.empty_search_result));
+        }else if(data.getCount() == 0 && !isInSearchMode){
+            emptyTextView.setVisibility(View.VISIBLE);
+            String emptyTagText = getString(R.string.empty_tag_pt1) + tagName + getString(R.string.empty_tag_pt2);
+            emptyTextView.setText(emptyTagText);
+        }else {
+            emptyTextView.setVisibility(View.GONE);
+            emptyTextView.setText("");
+        }
         tagListAdapter.changeCursor(data);
     }
 
@@ -1123,6 +1180,19 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         getSupportLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
         hideKeyboard();
+    }
+
+    @Override
+    public void onBackPressed() {
+        determineIfDeleteTag();
+        super.onBackPressed();
+    }
+
+    public void determineIfDeleteTag(){
+        if(tagListAdapter.getItemCount() == 0 && todosql.returnAllTagColors() == null){//if tag no longer exist
+            Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tagName));
+            getContentResolver().delete(tagUri,null,null);
+        }
     }
 
     public void setOutOfSelectionMode(){

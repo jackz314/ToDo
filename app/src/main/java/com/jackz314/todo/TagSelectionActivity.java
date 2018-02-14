@@ -5,7 +5,10 @@ import android.animation.LayoutTransition;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -15,6 +18,7 @@ import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.CoordinatorLayout;
@@ -22,6 +26,7 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -42,6 +47,8 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EdgeEffect;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -75,7 +82,6 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         emptyTextView = (TextView)findViewById(R.id.emptyTagSelection);
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.tags_selection_main);
-
         try{
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }catch (NullPointerException ignored){
@@ -83,6 +89,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         }
         setColorPreferences();
         displayAllNotes();
+        setEdgeEffect(tagList,themeColor);
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
@@ -110,16 +117,58 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                 }
 
                 @Override
-                public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
+                public void onBindViewHolder(final TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
                     //Toast.makeText(getApplicationContext(),"SD",Toast.LENGTH_LONG).show();
                     final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
                     String text = cursor.getString(cursor.getColumnIndex(dtb.TAG));//get the text of the note
-                    String tagColor = cursor.getString(cursor.getColumnIndex(dtb.TAG_COLOR));
+                    final String tagColor = cursor.getString(cursor.getColumnIndex(dtb.TAG_COLOR));
                     holder.tagText.setTextColor(textColor);
                     ColorFilter tagDotColorFilter = new PorterDuffColorFilter(Color.parseColor(tagColor), PorterDuff.Mode.MULTIPLY);
                     holder.tagDot.getBackground().setColorFilter(tagDotColorFilter);
                     holder.tagText.setTextSize(textSize);
+                    holder.tagDot.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            ColorPickerDialog colorPickerDialog = new ColorPickerDialog(TagSelectionActivity.this, Color.parseColor(tagColor), getString(R.string.color_picker_dialog_title), new ColorPickerDialog.OnColorChangedListener() {
+                                @Override
+                                public void colorChanged(final int color) {// set color
+                                    if(ColorUtils.determineSimilarColor(color,textColor)>0.9){//if newly selected tag color is similar to text color, ask again to confirm the choice
+                                        final AlertDialog dialog = new AlertDialog.Builder(TagSelectionActivity.this).setTitle(R.string.warning_title)
+                                                .setMessage(R.string.color_conflict)
+                                                .setPositiveButton(R.string.just_do_it, new DialogInterface.OnClickListener() {
+                                                    @Override
+                                                    public void onClick(DialogInterface dialog, int which) {
+                                                        ContentValues values = new ContentValues();
+                                                        String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
+                                                        values.put(TAG_COLOR, hexColor);
+                                                        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+                                                        getContentResolver().update(uri, values, null, null);
+                                                    }
+                                                }).setNegativeButton(R.string.reconsider, new DialogInterface.OnClickListener() {
+                                                    @Override
+                                                    public void onClick(DialogInterface dialog, int which) {
+                                                        //empty
+                                                    }
+                                                }).show();
+                                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
+                                    }else{
+                                        ContentValues values = new ContentValues();
+                                        String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
+                                        values.put(TAG_COLOR, hexColor);
+                                        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+                                        getContentResolver().update(uri, values, null, null);
+                                    }
+                                }
+                            });
+                            colorPickerDialog.setTitle(getString(R.string.tag_color_selector));
+                            colorPickerDialog.show();
+                            holder.tagText.setTextColor(textColor);//refresh the tag selection list colors
+                            ColorFilter tagDotColorFilter = new PorterDuffColorFilter(Color.parseColor(tagColor), PorterDuff.Mode.MULTIPLY);
+                            holder.tagDot.getBackground().setColorFilter(tagDotColorFilter);
+                        }
+                    });
                     Spannable spannable = new SpannableString(text);
                     //Toast.makeText(getApplicationContext(),text,Toast.LENGTH_LONG).show();
                     if(isInSearchMode){
@@ -223,7 +272,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
             emptyTextView.setText(getString(R.string.empty_search_result));
         }else if(data.getCount() == 0 && !isInSearchMode){
             emptyTextView.setVisibility(View.VISIBLE);
-            emptyTextView.setText(R.string.empty_todolist);
+            emptyTextView.setText(R.string.empty_tag_selection);
         }else {
             emptyTextView.setVisibility(View.GONE);
             emptyTextView.setText("");

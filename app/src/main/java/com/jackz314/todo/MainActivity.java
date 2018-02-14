@@ -1966,7 +1966,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         }
                     }
                     int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
-                    if(tagStartPos >= 0){//if contains tags
+                    if(tagStartPos >= 0){//if potentially contains tags
                         while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                             int tagEndPos = -1;//assume neither enter nor space exists
                             if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
@@ -1982,13 +1982,20 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 continue;
                             }
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
-                            String tag = text.substring(tagStartPos,tagEndPos);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
                             String tagColor = todosql.returnTagColorIfExist(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 Random random = new Random();//generate random color
-                                int nextInt = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
-                                tagColor = String.format("#%06x", nextInt);// format it as hexadecimal string (with hashtag and leading zeros)
+                                int finalColor = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
+                                ArrayList<Integer> allTagColors = todosql.returnAllTagColors();
+                                for(int i = 0; i < allTagColors.size(); i++){//eliminate too similar tag colors
+                                    if(ColorUtils.determineSimilarColor(finalColor,allTagColors.get(i)) > 95){//compare new color to each color in tag database
+                                        finalColor = random.nextInt(256*256*256);//generate a new color
+                                        i = 0;//restart loop
+                                    }
+                                }
+                                tagColor = String.format("#%06x", 0xFFFFFF & finalColor);// format it as hexadecimal string (with hashtag and leading zeros)
                                 todosql.createNewTag(tag, tagColor);//add new tag
                             }
                             spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
@@ -2056,7 +2063,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             ArrayList<String> tags = new ArrayList<String>();
             while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                 int tagEndPos = -1;//assume neither enter nor space exists
-                if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                if(text.indexOf(" ",tagStartPos) >= 0 && text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
                     tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
                 }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
                     tagEndPos = text.indexOf("\n",tagStartPos);
@@ -2068,7 +2075,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
                     continue;
                 }
-                String tag = text.substring(tagStartPos,tagEndPos);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                 tags.add(tag);
                 tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
             }

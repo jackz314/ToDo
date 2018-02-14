@@ -32,6 +32,6 @@
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
         android:textColor="@android:color/darker_gray"
-        android:visibility="invisible"/>
+        android:visibility="gone"/>
 
 </android.support.design.widget.CoordinatorLayout>

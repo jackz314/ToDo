@@ -113,6 +113,9 @@
     <string name="about_name">About</string>
     <string name="empty_history">Nothing finished yet…\nYour finished items will be here</string>
     <string name="empty_todolist">Got nothing to do?</string>
+    <string name="empty_tag_pt1">Tap \"+\" to create a new </string>
+    <string name="empty_tag_pt2"> note.</string>
+    <string name="empty_tag_selection">No tags used yet, add one now?</string>
     <string name="error_message">Something went wrong :-/</string>
     <string name="about">This is a light-weighted to-do list app that you can customize however you want, Enjoy! \nPlease support or rate if you want!\nBy Jack ;)</string>
     <string name="delete_all_notes">Delete All Notes</string>
@@ -121,7 +124,7 @@
     <string name="history_switch_title">History Records</string>
     <string name="search_title">Search</string>
     <string name="search_hint">Search…</string>
-    <string name="empty_search_result">No results found</string>
+    <string name="empty_search_result">No matching results</string>
     <string name="history_switch_content">Keep history records</string>
     <string name="note_finished_snack_text">Note Finished</string>
     <string name="notes_finished_snack_text">notes finished</string>
@@ -147,6 +150,7 @@
     <string name="note_share_subject">Notes From ToDo</string>
     <string name="note_share_content_header">Notes shared from ToDo: \n</string>
     <string name="note_export_content_header">ToDo\n</string>
+    <string name="note_share_via">Share notes via…</string>
     <string name="share_subject">ToDo — An awesome to-do list app</string>
     <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
     <string name="share_via">Share this app with other people!</string>
@@ -305,6 +309,7 @@
     <!-- Settings for Appearance -->
     <string name="pref_header_appearance">Appearance</string>
     <string name="theme_color_selector">Theme Color</string>
+    <string name="tag_color_selector">Tag Color</string>
     <string name="color_picker_dialog_title">Please choose a color</string>
     <string name="theme_color_selector_content">Change the theme color</string>
     <string name="theme_color_key" translatable="false">theme_color_key</string>

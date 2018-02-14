@@ -5,10 +5,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.Color;
 
 import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 /**
@@ -146,10 +148,6 @@ public class dtb extends SQLiteOpenHelper{
     public void deleteNote(Long id){
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
-    }
-
-    public void deleteTag(String tag){
-
     }
 
     public void insertDataForSpecialMsgAction(String data){
@@ -378,6 +376,19 @@ public class dtb extends SQLiteOpenHelper{
             diff = -1;
             return diff;
         }
+    }
+
+    public ArrayList<Integer> returnAllTagColors(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE ,null);
+        ArrayList<Integer> allColors = new ArrayList<Integer>();
+        if(cs.getCount() != 0){
+            while(cs.moveToNext()){
+                allColors.add(Color.parseColor(cs.getString(cs.getColumnIndex(TAG_COLOR))));
+            }
+        }
+        cs.close();
+        return allColors;
     }
 
     public String returnTagColorIfExist(String tag){//see if tag exists in the tag database
