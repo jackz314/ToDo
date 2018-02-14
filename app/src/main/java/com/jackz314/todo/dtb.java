@@ -148,6 +148,10 @@ public class dtb extends SQLiteOpenHelper{
         db.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
     }
 
+    public void deleteTag(String tag){
+
+    }
+
     public void insertDataForSpecialMsgAction(String data){
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -169,7 +173,7 @@ public class dtb extends SQLiteOpenHelper{
         cs.close();
     }
 
-    public String getOneDataInTODO(String id){
+    public String getOneDataInTODO(long id){
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
         String data="";
@@ -394,6 +398,16 @@ public class dtb extends SQLiteOpenHelper{
         }
         cs.close();
         return "";
+    }
+
+    public boolean determineIfTagExist(String text){
+
+        return false;
+    }
+
+    public long returnTagID(String tag){
+
+        return -1;
     }
 
     public void createNewTag(String tag, String tagColor){

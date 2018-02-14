@@ -806,7 +806,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     public Uri insertData(String title) {
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
-            values.put(TITLE, title);
+            values.put(TITLE, title + " " + tagName);//add tag at the end
             return getContentResolver().insert(AppContract.Item.TODO_URI, values);
         } else return null;
     }
@@ -824,6 +824,11 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
         getContentResolver().delete(uri, null, null);
+        if(tagListAdapter.getItemCount() == 0){//if no more notes contain this tag
+            todosql.deleteTag(tagName);//delete tag and return to previous level
+            finish();
+        }
+        todosql.deleteTag(tagName);
         displayAllNotes();
     }
 
@@ -882,11 +887,12 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
         }
+        String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + "%"};
         if (args != null) {
-            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
-        return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
+        selectionArgs = new String[]{"%" + tagName + "%"};
+        return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
     }
 
     @Override

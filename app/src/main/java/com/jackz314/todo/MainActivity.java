@@ -332,7 +332,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
                 removeSelectedId(viewHolder.getItemId());
             }
-            final String finishedContent = todosql.getOneDataInTODO(String.valueOf(viewHolder.getItemId()));
+            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
             finishData(viewHolder.getItemId());
             Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
@@ -971,7 +971,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             d.start();
                         }
                         input.setVisibility(View.VISIBLE);
-                        input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
+                        input.setText(todosql.getOneDataInTODO(id));
                         input.requestFocus();
                         input.setSelection(input.getText().length());
                         showKeyboard();
@@ -1000,7 +1000,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 v.vibrate(30);
                 if(isInSelectionMode){
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(String.valueOf(id)));
+                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
@@ -1085,7 +1085,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 do{
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0,id);
-                                    String data = todosql.getOneDataInTODO(Long.toString(id));
+                                    String data = todosql.getOneDataInTODO(id);
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -1564,7 +1564,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = todosql.getOneDataInTODO(Long.toString(id));
+        String data = todosql.getOneDataInTODO(id);
         selectedContent.add(0,data);
         selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
         if(selectedId.size() == 1){
@@ -1593,7 +1593,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        String data = todosql.getOneDataInTODO(Long.toString(id));
+        String data = todosql.getOneDataInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
         if(selectedId.size() < todosql.getData().getCount()){
             selectAllBox.setChecked(false);
@@ -1982,7 +1982,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 continue;
                             }
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
-                            String tag = text.substring(tagStartPos,tagEndPos + 1);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            String tag = text.substring(tagStartPos,tagEndPos);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
                             String tagColor = todosql.returnTagColorIfExist(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
@@ -2048,6 +2048,32 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             mItemTouchHelper.attachToRecyclerView(todoList);
         }
         getSupportLoaderManager().restartLoader(123,null,this);
+    }
+
+    public ArrayList<String> determineContainedTags(String text){
+        int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+        if(tagStartPos >= 0){//if contains tags
+            ArrayList<String> tags = new ArrayList<String>();
+            while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                int tagEndPos = -1;//assume neither enter nor space exists
+                if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                    tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                    tagEndPos = text.indexOf("\n",tagStartPos);
+                }else {//contains only space
+                    tagEndPos = text.indexOf(" ",tagStartPos);
+                }
+                if(tagEndPos < 0){//if the tag is the last section of the note
+                    tagEndPos = text.length() - 1;
+                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                    continue;
+                }
+                String tag = text.substring(tagStartPos,tagEndPos);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                tags.add(tag);
+                tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+            }
+            return tags;
+        }else return null;
     }
 
     public void interruptAutoSend(){
@@ -2735,7 +2761,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void finishData(long id){
         ContentValues cv = new ContentValues();
-        String data = todosql.getOneDataInTODO(Long.toString(id));
+        String data = todosql.getOneDataInTODO(id);
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
@@ -2745,7 +2771,17 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
+        String note = todosql.getOneDataInTODO(id);
         getContentResolver().delete(uri, null, null);
+        ArrayList<String> tags = determineContainedTags(note);
+        if(!(tags == null)){//if contains tags
+            for(String tag : tags){
+                if(!todosql.determineIfTagExist(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                    Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                    getContentResolver().delete(tagUri,null,null);
+                }
+            }
+        }
         displayAllNotes();
     }
 
