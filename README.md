@@ -5,25 +5,11 @@ This the ToDo Project Repository.
 ### What is this repository for? ###
 
 * Quick summary: ToDoooooooooooooooooooooooooooo
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* Version 1.0
 
-### How do I get set up? ###
+### Contact/Websites ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+* [ToDo Slack Workspace](todojmd.slack.com)
+* [ToDo Notion Workspace](https://www.notion.so/jmd/Todo-App-827e45a6a68e481884a85828984a0e4f)
+* Jack Zhang: Email: [Gmail](zhangmngyu10@gmail.com)
+* Morfeo Qu: Email: [Hotmail](qu100@hotmail.com), [Gmail](morfqu@gmail.com), [163](quhaotian100@163.com)
