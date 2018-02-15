@@ -56,7 +56,9 @@ import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -1287,26 +1289,42 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
-                    Spannable spannable = new SpannableString(text);
+                    SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+
+                    //bold section
+                    int boldStartPos = text.indexOf("*");
+                    if(boldStartPos >= 0){//contains bold markdown
+                        while(boldStartPos < text.length() && boldStartPos >= 0){
+                            int boldEndPos = text.indexOf("*",boldStartPos + 1);
+                            if(boldEndPos < 0){
+                                break;
+                            }else {
+                                spannable.delete(boldStartPos, boldStartPos + 1);//delete "*" after marked
+                                spannable.delete(boldEndPos - 1, boldEndPos);//this doesn't work....
+                                text = removeCharAt(text, boldStartPos);
+                                text = removeCharAt(text, boldEndPos - 1);
+                                System.out.println(text);
+                                spannable.setSpan(new StyleSpan(Typeface.BOLD), boldStartPos, boldEndPos - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
+                                boldStartPos = text.indexOf("*", boldEndPos - 2);
+                            }
+                        }
+                    }
+
                     if(isInSearchMode){
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
                         int startPos = textLow.indexOf(searchTextLow);
-                        if(startPos <0){
+                        if(startPos < 0){
                             return;
                         }
-                        if(!(startPos <0)){
+                        if(!(startPos < 0)){
                             do{
                                 int start = Math.min(startPos, textLow.length());
                                 int end = Math.min(startPos + searchTextLow.length(), textLow.length());
                                 startPos = textLow.indexOf(searchTextLow,end);
-                                spannable.setSpan(new TextAppearanceSpan(null, Typeface.BOLD,-1,
-                                        new ColorStateList(new int[][] {new int[] {}},
-                                                new int[] {Color.parseColor("#ef5350")})
-                                        ,null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight searched text
+                                spannable.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
                             }while (startPos > 0);
-                            holder.todoText.setText(spannable);
                         }
                     }
                     int tagStartPos = text.indexOf(tagName,0);//find the position of the start point of the tag
@@ -1385,6 +1403,10 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             mItemTouchHelper.attachToRecyclerView(tagList);
         }
         getSupportLoaderManager().restartLoader(123,null,this);
+    }
+
+    public static String removeCharAt(String s, int pos) {
+        return s.substring(0, pos) + s.substring(pos + 1);
     }
 
     public void setColorPreferences() {

@@ -1932,7 +1932,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
         }
     }
-//todo delete tag, pinned order, tag choose color, markdown bold.
+//todo pinned order, markdown bold.
         public void displayAllNotes(){//todo ignore cases when storing, determine tags
         if(todoList.getAdapter() == null){
             ////System.out.println("null called");
@@ -2006,7 +2006,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 continue;
                             }
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
-                            String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            String tag = text.toLowerCase().substring(tagStartPos,tagEndPos + 1);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
                             String tagColor = todosql.returnTagColorIfExist(tag);
                             if(tagColor.equals("")){//if tag doesn't exist

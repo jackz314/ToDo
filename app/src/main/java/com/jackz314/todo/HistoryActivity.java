@@ -39,7 +39,9 @@ import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -55,6 +57,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Random;
 
 import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.dtb.ID;
@@ -329,8 +332,63 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
                     String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
                     holder.todoText.setTextColor(textColor);
-                    holder.cardView.setCardBackgroundColor(colorUtils.darken(backgroundColor,0.01));
+                    holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
+                    SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+
+                    //bold section
+                    int boldStartPos = text.indexOf("*");
+                    if(boldStartPos >= 0){//contains bold markdown
+                        while(boldStartPos < text.length() && boldStartPos >= 0){
+                            int boldEndPos = text.indexOf("*",boldStartPos + 1);
+                            if(boldEndPos < 0){
+                                break;
+                            }else {
+                                spannable.delete(boldStartPos, boldStartPos + 1);//delete "*" after marked
+                                spannable.delete(boldEndPos - 1, boldEndPos);//this doesn't work....
+                                text = removeCharAt(text, boldStartPos);
+                                text = removeCharAt(text, boldEndPos - 1);
+                                System.out.println(text);
+                                spannable.setSpan(new StyleSpan(Typeface.BOLD), boldStartPos, boldEndPos - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
+                                boldStartPos = text.indexOf("*", boldEndPos - 2);
+                            }
+                        }
+                    }
+
+                    //tag section
+                    int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+                    if(tagStartPos >= 0){//if potentially contains tags
+                        while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                            int tagEndPos = -1;//assume neither enter nor space exists
+                            if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                                tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                            }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                                tagEndPos = text.indexOf("\n",tagStartPos);
+                            }else {//contains only space
+                                tagEndPos = text.indexOf(" ",tagStartPos);
+                            }
+                            if(tagEndPos < 0){//if the tag is the last section of the note
+                                tagEndPos = text.length() - 1;
+                            }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                                continue;
+                            }
+                            //System.out.println(tagStartPos + " AND " + tagEndPos);
+                            String tag = text.toLowerCase().substring(tagStartPos,tagEndPos + 1);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            //System.out.println("TEXT: " + text + "****" + tag + "********");
+                            String tagColor = todosql.returnTagColorIfExist(tag);
+                            if(tagColor.equals("")){//if tag doesn't exist
+                                tagColor = "#BBBBBC";//set tag color to grey in history
+                            }
+                            spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                    new ColorStateList(new int[][] {new int[] {}},
+                                            new int[] {Color.parseColor(tagColor)})
+                                    ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                            tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                            //todo performance issue
+                        }
+                    }
+
+                    //search section
                     if(isInSearchMode){
                         if(cursor.getCount() == 0){
                             emptyHistory.setVisibility(View.VISIBLE);
@@ -338,7 +396,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                         }else {
                             emptyHistory.setVisibility(View.GONE);
                             emptyHistory.setText("");
-                            Spannable spannable = new SpannableString(text);
                             ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                             String textLow = text.toLowerCase();
                             String searchTextLow = searchText.toLowerCase();
@@ -350,13 +407,11 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                     startPos = textLow.indexOf(searchTextLow,end);
                                     spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                                 }while (startPos > 0);
-                                holder.todoText.setText(spannable);
                             }
                             //spannable.setSpan(new TextAppearanceSpan(null,Typeface.BOLD,-1,new ColorStateList(new int[][] {new int[] {}},new int[] {Color.parseColor("#ef5350")}),null), startPos, startPos + searchTextLow.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                         }
-                    }else {
-                        holder.todoText.setText(text);
                     }
+                    holder.todoText.setText(spannable);
                     ////System.out.println(isInSelectionMode + "DISPLAYALLNOTES");
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
@@ -419,6 +474,9 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
     }
 
+    public static String removeCharAt(String s, int pos) {
+        return s.substring(0, pos) + s.substring(pos + 1);
+    }
 
     ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0,ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT) {
         @Override
