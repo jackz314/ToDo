@@ -393,7 +393,7 @@ public class dtb extends SQLiteOpenHelper{
 
     public String returnTagColorIfExist(String tag){//see if tag exists in the tag database
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );//search for the tag
+        Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );//search for the tag
         if(cs.getCount() == 0) return "";
         else {
             try{
@@ -428,7 +428,7 @@ public class dtb extends SQLiteOpenHelper{
 
     public long returnTagID(String tag){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TAGS_TABLE, new String[]{ID,TAG},TAG + " LIKE ",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );
+        Cursor cs = db.query(false,TAGS_TABLE, new String[]{ID,TAG},TAG + " LIKE ?",new String[]{"%"+ tag+ "%" },null,null,"_id desc",null );
         cs.moveToNext();
         long id = cs.getInt(cs.getColumnIndex(ID));
         cs.close();

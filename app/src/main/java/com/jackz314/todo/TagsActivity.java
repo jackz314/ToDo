@@ -45,7 +45,9 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -933,12 +935,13 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
         }
-        String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + "%"};
-        if (args != null) {
+        if (args != null) {//if contains search request
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + "%"};
+            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+        }else {
+            String[] selectionArgs = new String[]{"%" + tagName + "%"};
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
-        selectionArgs = new String[]{"%" + tagName + "%"};
-        return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
     }
 
     @Override
@@ -1184,8 +1187,50 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onBackPressed() {
-        determineIfDeleteTag();
-        super.onBackPressed();
+        interruptAutoSend();
+        boolean justex = false;
+        if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
+            recognitionProgressView.setVisibility(View.GONE);
+            fab.setVisibility(View.VISIBLE);
+            proFab.setVisibility(View.VISIBLE);
+        }
+        speechRecognizer.stopListening();
+        if(isInSelectionMode || isInSearchMode){
+            if(isInSelectionMode){
+                setOutOfSelectionMode();
+            }
+            if (isInSearchMode){
+                setOutOfSearchMode();
+            }
+        }else {
+            hideKeyboard();
+            //displayAllNotes();
+            if (input.getVisibility() == View.GONE){
+                justex = true;
+            }else {
+                if(input.getText().toString().equals("")){
+                    if(!isAdd){
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                        fab.setImageDrawable(d);
+                        isAdd = true;
+                        d.start();
+                    }
+                    input.setVisibility(View.GONE);
+                    justex = false;
+                    modifyId.setText("");
+                    hideKeyboard();
+                } else {
+                    input.setText("");
+                    modifyId.setText("");
+                    justex =false;
+                    hideKeyboard();
+                }
+            }
+            if(justex){
+                determineIfDeleteTag();
+                super.onBackPressed();
+            }
+        }
     }
 
     public void determineIfDeleteTag(){

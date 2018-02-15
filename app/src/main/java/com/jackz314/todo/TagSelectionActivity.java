@@ -157,7 +157,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                                         ContentValues values = new ContentValues();
                                         String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
                                         values.put(TAG_COLOR, hexColor);
-                                        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+                                        Uri uri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI, id);
                                         getContentResolver().update(uri, values, null, null);
                                     }
                                 }

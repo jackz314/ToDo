@@ -74,6 +74,7 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
@@ -1947,8 +1948,29 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
-                    Spannable spannable = new SpannableString(text);
-                    if(isInSearchMode){
+                    SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+
+                    //bold section
+                    int boldStartPos = text.indexOf("*");
+                    if(boldStartPos >= 0){//contains bold markdown
+                        while(boldStartPos < text.length() && boldStartPos >= 0){
+                            int boldEndPos = text.indexOf("*",boldStartPos + 1);
+                            if(boldEndPos < 0){
+                                break;
+                            }else {
+                                spannable.delete(boldStartPos, boldStartPos + 1);//delete "*" after marked
+                                spannable.delete(boldEndPos - 1, boldEndPos);//this doesn't work....
+                                text = removeCharAt(text, boldStartPos);
+                                text = removeCharAt(text, boldEndPos - 1);
+                                System.out.println(text);
+                                spannable.setSpan(new StyleSpan(Typeface.BOLD), boldStartPos, boldEndPos - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
+                                boldStartPos = text.indexOf("*", boldEndPos - 2);
+                            }
+                        }
+                    }
+
+                    //search section
+                    if(isInSearchMode){//todo change span to highlight background
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
@@ -1965,6 +1987,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             }while (startPos > 0);
                         }
                     }
+
+                    //tag section
                     int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
                     if(tagStartPos >= 0){//if potentially contains tags
                         while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
@@ -2003,9 +2027,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                             new int[] {Color.parseColor(tagColor)})
                                     ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
                             tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
-                            //todo performance issue, change the color of different tags
+                            //todo performance issue
                         }
                     }
+
                     holder.todoText.setText(spannable);
                     //System.out.println("null called");
                     if(isInSelectionMode){
@@ -2087,6 +2112,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         noInterruption = false;
         fabProgressBar.setVisibility(View.INVISIBLE);
         //stop circle
+    }
+
+    public static String removeCharAt(String s, int pos) {
+        return s.substring(0, pos) + s.substring(pos + 1);
     }
 
     public void finishSetOfData(){
