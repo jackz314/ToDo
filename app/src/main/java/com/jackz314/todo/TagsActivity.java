@@ -938,10 +938,10 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             sort = "_id DESC";
         }
         if (args != null) {//if contains search request
-            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + "%"};
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + " %", "%" + tagName + "\n%"};//todo solve this query multiple filter problem
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }else {
-            String[] selectionArgs = new String[]{"%" + tagName + "%"};
+            String[] selectionArgs = new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"};
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
     }

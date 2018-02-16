@@ -998,7 +998,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                v.vibrate(30);
+                //v.vibrate(30);
                 if(isInSelectionMode){
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
@@ -2001,12 +2001,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 tagEndPos = text.indexOf(" ",tagStartPos);
                             }
                             if(tagEndPos < 0){//if the tag is the last section of the note
-                                tagEndPos = text.length() - 1;
+                                tagEndPos = text.length();
                             }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
                                 continue;
                             }
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
-                            String tag = text.toLowerCase().substring(tagStartPos,tagEndPos + 1);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                            String tag = text.toLowerCase().substring(tagStartPos, tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
                             String tagColor = todosql.returnTagColorIfExist(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
@@ -2025,7 +2025,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                             spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                     new ColorStateList(new int[][] {new int[] {}},
                                             new int[] {Color.parseColor(tagColor)})
-                                    ,null), tagStartPos, tagEndPos + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                                    ,null), tagStartPos, tagEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
                             tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
                             //todo performance issue
                         }
@@ -2086,6 +2086,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
         if(tagStartPos >= 0){//if contains tags
             ArrayList<String> tags = new ArrayList<String>();
+            boolean isTagAtTheEnd = false;
             while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                 int tagEndPos = -1;//assume neither enter nor space exists
                 if(text.indexOf(" ",tagStartPos) >= 0 && text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
@@ -2096,13 +2097,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     tagEndPos = text.indexOf(" ",tagStartPos);
                 }
                 if(tagEndPos < 0){//if the tag is the last section of the note
-                    tagEndPos = text.length() - 1;
+                    tagEndPos = text.length();
+                    isTagAtTheEnd = true;
                 }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
                     continue;
                 }
                 String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                 tags.add(tag);
-                tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                if(isTagAtTheEnd){
+                    break;
+                }else {
+                    tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                }
             }
             return tags;
         }else return null;
