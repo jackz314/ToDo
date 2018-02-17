@@ -76,6 +76,7 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
+import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
@@ -727,7 +728,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     recognitionProgressView.stop();
                     recognitionProgressView.play();
                     recognitionProgressView.setSpeechRecognizer(speechRecognizer);
-
                 }else {
                     recognitionProgressView.setVisibility(View.GONE);
                     proFab.setVisibility(View.VISIBLE);
@@ -1480,7 +1480,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void setOutOfSearchMode(){
         proFab.setVisibility(View.VISIBLE);
-        if(!(input.getText().equals(""))){//if input had text before entering the search mode, set it to visible here
+        if(!(input.getText().toString().equals(""))){//if input had text before entering the search mode, set it to visible here
             input.setVisibility(View.VISIBLE);
         }
         isInSearchMode = false;
@@ -1933,7 +1933,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 //todo pinned order, markdown bold.
-        public void displayAllNotes(){//todo ignore cases when storing, determine tags
+        public void displayAllNotes(){
         if(todoList.getAdapter() == null){
             ////System.out.println("null called");
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -1970,7 +1970,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     }
 
                     //search section
-                    if(isInSearchMode){//todo change span to highlight background
+                    if(isInSearchMode){
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
@@ -1983,7 +1983,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                 int start = Math.min(startPos, textLow.length());
                                 int end = Math.min(startPos + searchTextLow.length(), textLow.length());
                                 startPos = textLow.indexOf(searchTextLow,end);
-                                spannable.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set searched text to bold
+                                spannable.setSpan(new BackgroundColorSpan(ColorUtils.makeTransparent(themeColor,0.2)), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set searched text to bold
                             }while (startPos > 0);
                         }
                     }
@@ -2567,7 +2567,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 registerReceiver(receiver,filter);
                 super.onAdFailedToLoad(i);
             }
-        });
+        });//
         try {
             if (voiceIntent != null && voiceIntent.getAction() != null){
                 if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null) {
@@ -2612,6 +2612,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             //Toast.makeText(getApplicationContext(),"f",Toast.LENGTH_LONG).show();
             menuNav = navigationView.getMenu();
             menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history)).setIcon(R.drawable.ic_history_black_24dp);
+        }
+        //set dynamic tag columns in the navigation menu
+        if(todosql.returnTagsForNavMenu() != null){
+            ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
+            menuNav.add(R.id.nav)//todo add navigationView dynamic expandable tag item
         }
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todosql.getData();

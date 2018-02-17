@@ -100,7 +100,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     private static final String[] PROJECTION = new String[]{ID, TITLE};
-    private static final String SELECTION = TITLE + " LIKE ?";
+    private static final String SELECTION = TITLE + " LIKE ? OR title LIKE ? OR title LIKE ?";
     private FirebaseAnalytics mFirebaseAnalytics;
     TodoListAdapter tagListAdapter;
     RecyclerView tagList;
@@ -938,8 +938,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             sort = "_id DESC";
         }
         if (args != null) {//if contains search request
-            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + " %", "%" + tagName + "\n%"};//todo solve this query multiple filter problem
-            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + " %", "%" + tagName + "\n%", "%" + tagName + ""};//todo solve this query multiple filter problem
+            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION + " OR title LIKE ?", selectionArgs, sort);
         }else {
             String[] selectionArgs = new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"};
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
@@ -1230,13 +1230,14 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             }
             if(justex){
                 determineIfDeleteTag();
+                Toast.makeText(getApplicationContext(),"EXIT", Toast.LENGTH_SHORT).show();
                 super.onBackPressed();
             }
         }
     }
 
     public void determineIfDeleteTag(){
-        if(tagListAdapter.getItemCount() == 0 && todosql.returnAllTagColors() == null){//if tag no longer exist
+        if(tagListAdapter.getItemCount() == 0 && !todosql.determineIfTagInUse(tagName)){//if tag no longer exist
             Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tagName));
             getContentResolver().delete(tagUri,null,null);
         }

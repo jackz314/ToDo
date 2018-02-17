@@ -391,6 +391,32 @@ public class dtb extends SQLiteOpenHelper{
         return allColors;
     }
 
+    public ArrayList<String> returnAllTags(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE ,null);
+        ArrayList<String> allTags = new ArrayList<String>();
+        if(cs.getCount() != 0){
+            while(cs.moveToNext()){
+                allTags.add(cs.getString(cs.getColumnIndex(TAG)));
+            }
+        }
+        cs.close();
+        return allTags;
+    }
+
+    public ArrayList<String> returnTagsForNavMenu(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE + " LIMIT 5",null);
+        ArrayList<String> allTags = new ArrayList<String>();
+        if(cs.getCount() != 0){
+            while(cs.moveToNext()){
+                allTags.add(cs.getString(cs.getColumnIndex(TAG)));
+            }
+        }
+        cs.close();
+        return allTags;
+    }
+
     public String returnTagColorIfExist(String tag){//see if tag exists in the tag database
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{""+ tag+ ""},null,null,"_id desc",null );//search for the tag
@@ -410,7 +436,7 @@ public class dtb extends SQLiteOpenHelper{
 
     public boolean determineIfTagInUse(String tag){//see if tag is in use in the displaying, active notes
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ tag+ "", "%"+ tag+ " %", "%" + tag + "\n%"},null,null,"_id desc",null );
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ? OR ? OR ?",new String[]{"%"+ tag+ "", "%"+ tag+ " %", "%" + tag + "\n%"},null,null,"_id desc",null );
         if(!(cs.getCount() == 0)) {
             while(cs.moveToNext()){//confirm that the tag still is in use again
                 String todoText = cs.getString(cs.getColumnIndex(TITLE));
