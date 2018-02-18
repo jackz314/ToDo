@@ -83,7 +83,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     SearchView searchView;
     CheckBox selectAllBox, multiSelectionBox;
     private static final String[] PROJECTION = new String[]{ID, TITLE};
-    private static final String SELECTION = TITLE + " LIKE ?";
+    private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
     public static int RESTORE_CONTEXT_ID = 1;
     ConstraintLayout historyView;
     public static int DELETE_HISTORY_CONTEXT_ID = 2;

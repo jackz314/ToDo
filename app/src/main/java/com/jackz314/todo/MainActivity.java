@@ -165,8 +165,8 @@ import static com.jackz314.todo.dtb.TITLE;
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener{
     private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
-    private static final String[] PROJECTION = new String[]{ID, TITLE};
-    private static final String SELECTION = TITLE + " LIKE ?";
+    private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
+    private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
     static int REMOVE_REQUEST_ID =1022;
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
@@ -2616,7 +2616,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //set dynamic tag columns in the navigation menu
         if(todosql.returnTagsForNavMenu() != null){
             ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
-            menuNav.add(R.id.nav)//todo add navigationView dynamic expandable tag item
+            //menuNav.add(R.id.nav_category_main,)//todo add navigationView dynamic expandable tag item
         }
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todosql.getData();

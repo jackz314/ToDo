@@ -99,8 +99,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
-    private static final String[] PROJECTION = new String[]{ID, TITLE};
-    private static final String SELECTION = TITLE + " LIKE ? OR title LIKE ? OR title LIKE ?";
+    private static final String[] PROJECTION = new String[]{ID, TITLE};//    private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
+    private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ? OR title LIKE ? OR title LIKE ?";
     private FirebaseAnalytics mFirebaseAnalytics;
     TodoListAdapter tagListAdapter;
     RecyclerView tagList;
