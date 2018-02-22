@@ -2615,8 +2615,28 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         //set dynamic tag columns in the navigation menu
         if(todosql.returnTagsForNavMenu() != null){
-            ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
-            //menuNav.add(R.id.nav_category_main,)//todo add navigationView dynamic expandable tag item
+            final ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
+            ArrayList<String> dynamicTagColors = todosql.returnTagColorsForNavMenu();
+            //todo add navigationView dynamic expandable tag item
+            for(int i = 0; i < dynamicTags.size(); i++){
+                menuNav.add(R.id.nav_category_main,R.id.dynamic_tag_1,4,dynamicTags.get(i));
+                Spannable spannable = new SpannableString(dynamicTags.get(i));
+                spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                        new ColorStateList(new int[][] {new int[] {}},
+                                new int[] {Color.parseColor(dynamicTagColors.get(i))})
+                        ,null), 0, dynamicTags.get(i).length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//change tag title color
+                menuNav.getItem(4).setTitle(spannable);
+                final int finalI = i;
+                menuNav.getItem(4).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        Intent tagIntent = new Intent(MainActivity.this, TagsActivity.class);
+                        tagIntent.putExtra("TAG_VALUE",dynamicTags.get(finalI));
+                        startActivity(tagIntent);
+                        return false;
+                    }
+                });
+            }
         }
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todosql.getData();

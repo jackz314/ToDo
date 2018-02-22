@@ -142,7 +142,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         tagName = determineTag();//determine activity tag name
         tagColor = determineActivityTagColor();//determine activity tag color
         displayAllNotes();
-        //todo implement undo functions
         try {
             getSupportActionBar().setTitle(tagName);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);

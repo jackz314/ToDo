@@ -19,6 +19,37 @@
             android:orderInCategory="3"
             android:icon="@drawable/ic_tags_black_24dp"
             android:title="@string/nav_tags" />
+
+        <item
+            android:id="@+id/dynamic_tag_1"
+            android:orderInCategory="4"
+            android:visible="false"
+
+            android:title="@string/nav_tags" />
+        <item
+            android:id="@+id/dynamic_tag_2"
+            android:orderInCategory="5"
+            android:visible="false"
+
+            android:title="@string/nav_tags" />
+        <item
+            android:id="@+id/dynamic_tag_3"
+            android:orderInCategory="6"
+            android:visible="false"
+
+            android:title="@string/nav_tags" />
+        <item
+            android:id="@+id/dynamic_tag_4"
+            android:orderInCategory="7"
+            android:visible="false"
+
+            android:title="@string/nav_tags" />
+        <item
+            android:id="@+id/dynamic_tag_5"
+            android:orderInCategory="8"
+            android:visible="false"
+            android:title="@string/nav_tags" />
+
     </group>
 
     <group

@@ -417,6 +417,19 @@ public class dtb extends SQLiteOpenHelper{
         return allTags;
     }
 
+    public ArrayList<String> returnTagColorsForNavMenu(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE + " LIMIT 5",null);
+        ArrayList<String> allTagColors = new ArrayList<>();
+        if(cs.getCount() != 0){
+            while(cs.moveToNext()){
+                allTagColors.add(cs.getString(cs.getColumnIndex(TAG_COLOR)));
+            }
+        }
+        cs.close();
+        return allTagColors;
+    }
+
     public String returnTagColorIfExist(String tag){//see if tag exists in the tag database
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{""+ tag+ ""},null,null,"_id desc",null );//search for the tag
