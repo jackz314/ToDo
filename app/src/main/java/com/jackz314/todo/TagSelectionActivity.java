@@ -21,6 +21,7 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.app.LoaderManager;
@@ -72,6 +73,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     private static final String SELECTION = TAG + " LIKE ?";
     public String searchText;
     TextView emptyTextView;
+    int doubleClickCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +89,25 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         }catch (NullPointerException ignored){
             //ignore
         }
+        doubleClickCount = 0;
+        toolbar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                doubleClickCount++;
+                Handler handler = new Handler();
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        doubleClickCount = 0;
+                    }
+                };
+                handler.postDelayed(r,250);
+                if (doubleClickCount == 2) {//double clicked
+                    doubleClickCount = 0;
+                    tagList.smoothScrollToPosition(0);//todo smooth scroll to top
+                }
+            }
+        });
         setColorPreferences();
         displayAllNotes();
         setEdgeEffect(tagList,themeColor);

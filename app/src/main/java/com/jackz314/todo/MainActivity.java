@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView modifyId;
     RecyclerView todoList;
     IabHelper mHelper;
-    int exit=0,doubleClickCout = 0;
+    int exit=0;
     boolean justex = false;
     boolean isConnected = false;
     boolean selectAll = false, unSelectAll = false;
@@ -192,6 +192,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     int resultCount = 0, cursorPos = 0;
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
+    int doubleClickCount = 0;
     CoordinatorLayout main;
     SearchView searchView;
     Boolean noInterruption = true;
@@ -699,6 +700,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return false;
             }
         });
+        doubleClickCount = 0;
+        toolbar.setOnClickListener(new View.OnClickListener() {//double click toolbar to scroll to the top
+            @Override
+            public void onClick(View v) {
+                doubleClickCount++;
+                Handler handler = new Handler();
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        doubleClickCount = 0;
+                    }
+                };
+                handler.postDelayed(r,250);
+                if (doubleClickCount == 2) {//double clicked
+                    doubleClickCount = 0;
+                    todoList.smoothScrollToPosition(0);//todo smooth scroll to top
+                }
+            }
+        });
+
         recognitionProgressView.setVisibility(View.GONE);
         fab.setVisibility(View.VISIBLE);
         proFab.setVisibility(View.VISIBLE);
@@ -892,7 +913,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
         recognitionProgressView.play();
-        doubleClickCout = 0;
         ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
@@ -1932,7 +1952,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             //=Toast.makeText(getApplicationContext(),"9",Toast.LENGTH_SHORT).show();
         }
     }
-//todo pinned order, markdown bold.
+//todo pinned order.
         public void displayAllNotes(){
         if(todoList.getAdapter() == null){
             ////System.out.println("null called");

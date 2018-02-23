@@ -105,6 +105,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     TodoListAdapter tagListAdapter;
     RecyclerView tagList;
     int themeColor,textColor,backgroundColor,textSize;
+    int doubleClickCount = 0;
     SharedPreferences sharedPreferences;
     FloatingActionButton fab;
     ProgressFloatingActionButton proFab;
@@ -251,6 +252,25 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
 
+        doubleClickCount = 0;
+        toolbar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                doubleClickCount++;
+                Handler handler = new Handler();
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        doubleClickCount = 0;
+                    }
+                };
+                handler.postDelayed(r,250);
+                if (doubleClickCount == 2) {//double clicked
+                    doubleClickCount = 0;
+                    tagList.smoothScrollToPosition(0);//todo smooth scroll to top
+                }
+            }
+        });
 
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override

@@ -67,8 +67,9 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     dtb todosql;
     TextView emptyHistory, selectionTitle;
     RecyclerView historyList;
-    ActionBar toolbar;
+    Toolbar toolbar;
     int themeColor,textColor,backgroundColor,textSize;
+    int doubleClickCount = 0;
     SharedPreferences sharedPreferences;
     private FirebaseAnalytics mFirebaseAnalytics;
     ColorUtils colorUtils;
@@ -110,7 +111,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         selectionTitle = (TextView)selectionToolBar.findViewById(R.id.history_selection_toolbar_title);
         selectionTitle.setText(R.string.history_name);
        //View toolbarView = inflater.inflate(R.layout.app_bar_main,null);
-        toolbar = getSupportActionBar();
+        setSupportActionBar(toolbar);
         //toolbar.setBackgroundColor(themeColor);// not working yet!
         setHistoryColorsPreferences();
         deleteExpiredNotes();
@@ -289,6 +290,26 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 }
             });
         }
+
+        doubleClickCount = 0;
+        toolbar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                doubleClickCount++;
+                Handler handler = new Handler();
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        doubleClickCount = 0;
+                    }
+                };
+                handler.postDelayed(r,250);
+                if (doubleClickCount == 2) {//double clicked
+                    doubleClickCount = 0;
+                    historyList.smoothScrollToPosition(0);//todo smooth scroll to top
+                }
+            }
+        });
     }
 
     public void onResume(){
