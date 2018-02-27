@@ -1575,7 +1575,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     "NBVs3kWNgN" +
                     "ivr1zfRbfk" +
                     "U1lCak93su" +
-                    "RlMWFgHQMj" +
+                    "RlMWFg" +
+                    "HQMj" +
                     "ZWYDiMVeak" +
                     "rZ3bRGzfzz" +
                     "9IMuplWteD" +
@@ -1665,13 +1666,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         /*
         set colors
          */
-        int[] colorsBACKUP = {// logo color
+        /*int[] colorsBACKUP = {// logo color
                 ContextCompat.getColor(this, R.color.color1),
                 ContextCompat.getColor(this, R.color.color2),
                 ContextCompat.getColor(this, R.color.color3),
                 ContextCompat.getColor(this, R.color.color4),
                 ContextCompat.getColor(this, R.color.color5)
-        };
+        };*/
 
         int[] colors = {// logo color
                  ColorUtils.lighten(themeColor, 0.3),

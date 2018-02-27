@@ -1,5 +1,6 @@
 package com.jackz314.todo;
 
+import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -18,13 +19,33 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public Fragment getItem(int position) {
+        Bundle args;
+        Fragment fragment;
         switch (position) {
             case 0:
-                return new ImportantFragment();
+                fragment = new ImportantFragment();
+                // Our object is just an integer :-P
+                args = new Bundle();
+                args.putInt("object", position + 1);
+                fragment.setArguments(args);
+                return fragment;
+                //return new ImportantFragment();
             case 1:
-                return new MainFragment();
+                fragment = new MainFragment();
+                // Our object is just an integer :-P
+                args = new Bundle();
+                args.putInt("object", position + 1);
+                fragment.setArguments(args);
+                return fragment;
+                //return new MainFragment();
             case 2:
-                return new ClipboardFragment();
+                fragment = new ClipboardFragment();
+                // Our object is just an integer :-P
+                args = new Bundle();
+                args.putInt("object", position + 1);
+                fragment.setArguments(args);
+                return fragment;
+                //return new ClipboardFragment();
             default:
                 return null;
         }
