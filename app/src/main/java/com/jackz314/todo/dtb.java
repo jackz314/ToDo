@@ -492,6 +492,24 @@ public class dtb extends SQLiteOpenHelper{
         Date nowTime = Calendar.getInstance().getTime();//get now time
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         cv.put(PINNED_TIMESTAMP,dateFormat.format(nowTime));
+        db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
+    }
+
+    public void unpinNote(long id){
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(ID,id);
+        cv.put(PINNED,false);
+        cv.put(PINNED_TIMESTAMP,(String)null);
+        db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
+    }
+
+    public int returnPinnedNotesNumber(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,PINNED},PINNED + " = ?",new String[]{"true"},null,null,"_id desc",null );//filter for pinned tag
+        int count = cs.getCount();
+        cs.close();
+        return count;
     }
 
     /* OLD METHOD

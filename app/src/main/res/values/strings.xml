@@ -79,6 +79,9 @@
     <string name="selection_mode_empty_title">Select items </string>
     <string name="email_subject">Feedback for ToDo</string>
     <string name="email_content">Feedback goes under here, if it\'s a bug, then please state the situation clearly so that we can fix it faster:)\n</string>
+    <string name="important_tab_title">Important</string>
+    <string name="main_tab_title">Main</string>
+    <string name="clipboard_tab_title">Clipboard</string>
 
 
     <string-array name="interval_units">
@@ -355,5 +358,8 @@
     <string name="done_path_Data" translatable="false">M 3.4 13.4 L 9 19 L 12 16 L 15 13 L 18 10 L 21 7 L 19.6 5.6 L 17.48 7.72 L 15.36 9.84 L 13.24 11.96 L 11.12 14.08 L 9 16.2 L 9 16.2 L 4.8 12 L 3.4 13.4</string>
     <string name="title_activity_tags">TagsActivity</string>
     <string name="title_activity_tag_selection">TagSelectionActivity</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>

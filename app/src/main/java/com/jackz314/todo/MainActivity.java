@@ -55,6 +55,7 @@ import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
@@ -62,6 +63,7 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
@@ -194,7 +196,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
     CoordinatorLayout main;
-    SearchView searchView;
     Boolean noInterruption = true;
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
@@ -216,6 +217,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
     ProgressDialog purchaseProgressDialog;
+    TabLayout tabLayout;
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
@@ -557,11 +559,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //System.out.println("oncreatecalled");
         adView= (AdView)findViewById(R.id.bannerAdView);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         final AdRequest adRequest = new AdRequest.Builder().build();
-        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerLayout =  findViewById(R.id.drawer_layout);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         //layoutInflater.inflate(R.layout.nav_header_main,null);
         //setLauncherIcon();
@@ -575,7 +576,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         todoList = (RecyclerView) findViewById(R.id.todolist);
         todoList.setHasFixedSize(true);
         fab = (FloatingActionButton)findViewById(R.id.fab);
-        proFab = (ProgressFloatingActionButton)findViewById(R.id.progress_fab);
+        proFab = findViewById(R.id.progress_fab);
         fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         //todoList.addOnScrollListener(new RecyclerViewListener());
@@ -584,9 +585,33 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         todosql = new dtb(this);
         todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
-        // navheadText = (TextView)navigationView.findViewById(R.id.navHeadText);
+        tabLayout = findViewById(R.id.tab_layout);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
-        //get colors
+
+        //set tabs
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.important_tab_title).setContentDescription(R.string.important_tab_title));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.main_tab_title).setContentDescription(R.string.main_tab_title));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.clipboard_tab_title).setContentDescription(R.string.main_tab_title));
+        tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
+        final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
+        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),tabLayout.getTabCount());
+        viewPager.setAdapter(pagerAdapter);
+        tabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                viewPager.setCurrentItem(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+
+            }
+        });
 
         input.setTextIsSelectable(true);
         input.setFocusable(true);
@@ -680,7 +705,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
        //         input.setVisibility(View.GONE);
       //      }
       //  },5000);
-        todoList.setOnTouchListener(new View.OnTouchListener() {
+        /*todoList.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 todoList.requestFocus();
@@ -699,7 +724,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
                 return false;
             }
-        });
+        });*/
         doubleClickCount = 0;
         toolbar.setOnClickListener(new View.OnClickListener() {//double click toolbar to scroll to the top
             @Override
@@ -1969,6 +1994,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
                     SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+                    //pin section
+                    if(todosql.returnPinnedNotesNumber() > 5){
+
+                    }else {
+                        
+                    }
 
                     //bold section
                     int boldStartPos = text.indexOf("*");
