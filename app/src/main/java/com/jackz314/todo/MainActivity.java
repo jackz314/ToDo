@@ -592,7 +592,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         tabLayout.addTab(tabLayout.newTab().setText(R.string.important_tab_title).setContentDescription(R.string.important_tab_title));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.main_tab_title).setContentDescription(R.string.main_tab_title));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.clipboard_tab_title).setContentDescription(R.string.main_tab_title));
-        tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
+
         final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
         final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),tabLayout.getTabCount());
         viewPager.setAdapter(pagerAdapter);
@@ -610,7 +610,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
-
+                viewPager.setCurrentItem(tab.getPosition());
             }
         });
 
@@ -1744,6 +1744,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
         //todoList.setDividerHeight(2);
+        tabLayout.setBackgroundColor(themeColor);
+        tabLayout.setTabTextColors(ColorStateList.valueOf(textColor));
 }
 
     public void showFeedBackDialog() {
