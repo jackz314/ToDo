@@ -165,7 +165,7 @@ import static com.jackz314.todo.dtb.TITLE;
 
 // the great alpaca that saves me from the bugs
 
-public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener{
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener, ImportantFragment.OnFragmentInteractionListener, ClipboardFragment.OnFragmentInteractionListener, MainFragment.OnFragmentInteractionListener{
     private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
     private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
@@ -217,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
     ProgressDialog purchaseProgressDialog;
-    TabLayout tabLayout;
+    TabLayout tabLayout; //todo FIX UI DISPLAYING ISSUE
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
@@ -596,6 +596,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
         final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),tabLayout.getTabCount());
         viewPager.setAdapter(pagerAdapter);
+        tabLayout.setupWithViewPager(viewPager);
         tabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -2901,6 +2902,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         }
         displayAllNotes();
+    }
+
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+        //todo empty for now, handles calls to new fragment
     }
 
     private class ConnectionDetector extends AsyncTask<Void,Void,Void>{
