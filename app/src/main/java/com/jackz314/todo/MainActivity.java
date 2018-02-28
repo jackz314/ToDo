@@ -5,6 +5,7 @@ import android.Manifest;
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.BroadcastReceiver;
@@ -55,7 +56,6 @@ import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
-import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
@@ -217,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
     ProgressDialog purchaseProgressDialog;
-    TabLayout tabLayout; //todo FIX UI DISPLAYING ISSUE
+    //todo FIX UI DISPLAYING ISSUE
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
@@ -585,35 +585,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         todosql = new dtb(this);
         todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
-        tabLayout = findViewById(R.id.tab_layout);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
 
         //set tabs
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.important_tab_title).setContentDescription(R.string.important_tab_title));
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.main_tab_title).setContentDescription(R.string.main_tab_title));
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.clipboard_tab_title).setContentDescription(R.string.main_tab_title));
-
         final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),tabLayout.getTabCount());
+        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager());
         viewPager.setAdapter(pagerAdapter);
-        tabLayout.setupWithViewPager(viewPager);
-        tabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                viewPager.setCurrentItem(tab.getPosition());
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-                viewPager.setCurrentItem(tab.getPosition());
-            }
-        });
-
         input.setTextIsSelectable(true);
         input.setFocusable(true);
         todoList.setFocusable(true);
@@ -726,6 +703,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return false;
             }
         });*/
+
         doubleClickCount = 0;
         toolbar.setOnClickListener(new View.OnClickListener() {//double click toolbar to scroll to the top
             @Override
@@ -1745,8 +1723,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
         //todoList.setDividerHeight(2);
-        tabLayout.setBackgroundColor(themeColor);
-        tabLayout.setTabTextColors(ColorStateList.valueOf(textColor));
 }
 
     public void showFeedBackDialog() {
