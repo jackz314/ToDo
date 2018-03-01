@@ -32,13 +32,13 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
                 //args.putInt("object", position + 1);
                 //fragment.setArguments(args);
                 //return fragment;
-                return new ImportantFragment();
+                return ImportantFragment.newInstance(position);
             case 1:
 
-                return new MainFragment();
+                return MainFragment.newInstance(position);
             case 2:
 
-                return new ClipboardFragment();
+                return ClipboardFragment.newInstance(position);
             default:
                 return null;
         }

@@ -159,7 +159,22 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
         setColorPreferences();
-        setEdgeColor(tagList,themeColor);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            tagList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                @Override
+                public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                    setEdgeColor(tagList,themeColor);
+                }
+            });
+        }else {
+            tagList.setOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                    super.onScrollStateChanged(recyclerView, newState);
+                    setEdgeColor(tagList,themeColor);
+                }
+            });
+        }
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {//todo finish the implementation of fab, profab, voice recognition
@@ -270,6 +285,20 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     doubleClickCount = 0;
                     tagList.smoothScrollToPosition(0);//todo smooth scroll to top
                 }
+            }
+        });
+
+        tagList.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                setEdgeColor(tagList,themeColor);
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                setEdgeColor(tagList,themeColor);
             }
         });
 

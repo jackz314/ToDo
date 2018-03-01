@@ -84,6 +84,7 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.util.Log;
+import android.view.DragEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -165,8 +166,9 @@ import static com.jackz314.todo.dtb.TITLE;
 
 
 
-// the great alpaca that saves me from the bugs
+// the great alpaca that saves me from the bugs, hopefully...
 //todo pause ad function but preserve iap functions for good
+//todo edge effect doesn't work at first scroll, minor problem
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener, ImportantFragment.OnFragmentInteractionListener, ClipboardFragment.OnFragmentInteractionListener, MainFragment.OnFragmentInteractionListener{
     private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
@@ -558,11 +560,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         getApplicationContext().sendBroadcast(intent);
     }*/
 
-    @SuppressLint("ClickableViewAccessibility")
+    //@SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
-        todoList = (RecyclerView) findViewById(R.id.todolist);
-        setEdgeColor(todoList,Color.RED);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         adView= (AdView)findViewById(R.id.bannerAdView);
@@ -580,13 +580,24 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         emptyTextView = (TextView)findViewById(R.id.emptyText);
         todoList = (RecyclerView) findViewById(R.id.todolist);
-
         todoList.setHasFixedSize(true);
         fab = (FloatingActionButton)findViewById(R.id.fab);
         proFab = findViewById(R.id.progress_fab);
         fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-        //todoList.addOnScrollListener(new RecyclerViewListener());
+        todoList.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                setEdgeColor(todoList,themeColor);
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                setEdgeColor(todoList,themeColor);
+            }
+        });
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
@@ -594,12 +605,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
-//todo change to tablayout method instead of pagertabstripe
-        //set tabs
+        //todo set tab functions
         final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
         final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),getApplicationContext());
         viewPager.setAdapter(pagerAdapter);
         tabLayout.setupWithViewPager(viewPager);
+        viewPager.setCurrentItem(1);
         input.setTextIsSelectable(true);
         input.setFocusable(true);
         todoList.setFocusable(true);
@@ -728,7 +739,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 handler.postDelayed(r,250);
                 if (doubleClickCount == 2) {//double clicked
                     doubleClickCount = 0;
-                    todoList.smoothScrollToPosition(0);//todo smooth scroll to top
+                    todoList.smoothScrollToPosition(0);//smooth scroll to top
                 }
             }
         });
@@ -1184,12 +1195,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
 
-        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             todoList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
                 @Override
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
                     setEdgeColor(todoList,themeColor);
-
                 }
             });
         }else {
@@ -1200,7 +1210,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     setEdgeColor(todoList,themeColor);
                 }
             });
-        }*/
+        }
 
         input.addTextChangedListener(new TextWatcher() {
             @Override
@@ -2538,6 +2548,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onResume(){
         if(!(input.getText().toString().equals("")) && input.getVisibility() == View.VISIBLE) showKeyboard();
         displayAllNotes();
+        //setEdgeColor(todoList,themeColor);
+        //todoList.setVisibility(View.VISIBLE);
         setColorPreferences();
         int size = menuNav.size();
         Intent voiceIntent = getIntent();
@@ -2719,6 +2731,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             mHelper.disposeWhenFinished();
             mHelper = null;
         }
+        sharedPreferences.edit().putBoolean("recreated_for_edge_effect",false).apply();
         super.onDestroy();
     }
 

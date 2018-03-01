@@ -115,7 +115,19 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         setHistoryColorsPreferences();
         deleteExpiredNotes();
         displayAllNotes();
+        historyList.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                setEdgeColor(historyList,themeColor);
+            }
 
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                setEdgeColor(historyList,themeColor);
+            }
+        });
         ItemClickSupport.addTo(historyList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
@@ -288,6 +300,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             });
         }
 
+
         doubleClickCount = 0;
         toolbar.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -303,7 +316,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 handler.postDelayed(r,250);
                 if (doubleClickCount == 2) {//double clicked
                     doubleClickCount = 0;
-                    historyList.smoothScrollToPosition(0);//todo smooth scroll to top
+                    historyList.smoothScrollToPosition(0);//smooth scroll to top
                 }
             }
         });
@@ -312,6 +325,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void onResume(){
         setHistoryColorsPreferences();
         deleteExpiredNotes();
+        setEdgeColor(historyList,themeColor);
         displayAllNotes();
         super.onResume();
     }

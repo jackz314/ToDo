@@ -308,7 +308,7 @@ public final class SetEdgeEffect {
         }
     }
 
-    public static void setEdgeColor(@NonNull NestedScrollView scrollView, @ColorInt int color) {
+    static void setEdgeColor(@NonNull NestedScrollView scrollView, @ColorInt int color) {
         try {
             Object ee;
             ee = NESTED_SCROLL_VIEW_FIELD_EDGE_GLOW_TOP.get(scrollView);
@@ -320,14 +320,14 @@ public final class SetEdgeEffect {
         }
     }
 
-    public static void setEdgeColor(
+    static void setEdgeColor(
             @NonNull RecyclerView scrollView, @ColorInt int color, @EdgeGlowColorApi int when) {
         if (Build.VERSION.SDK_INT < when) {
             setEdgeColor(scrollView, color);
         }
     }
 
-    public static void setEdgeColor(@NonNull RecyclerView scrollView, @ColorInt int color) {
+    static void setEdgeColor(@NonNull RecyclerView scrollView, @ColorInt int color) {
         try {
             Object ee;
             ee = RECYCLER_VIEW_FIELD_EDGE_GLOW_TOP.get(scrollView);
@@ -370,6 +370,9 @@ public final class SetEdgeEffect {
         } else {
             // EdgeEffect
             ((EdgeEffect) edgeEffect).setColor(color);
+            if(((EdgeEffect) edgeEffect).getColor() != color){
+                ((EdgeEffect) edgeEffect).setColor(color);
+            }
         }
     }
 }

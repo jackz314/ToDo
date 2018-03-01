@@ -122,7 +122,39 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                 startActivity(tagIntent);
             }
         });
+
+        tagList.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                setEdgeColor(tagList,themeColor);
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                setEdgeColor(tagList,themeColor);
+            }
+        });
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            tagList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                @Override
+                public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                    setEdgeColor(tagList,themeColor);
+                }
+            });
+        }else {
+            tagList.setOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                    super.onScrollStateChanged(recyclerView, newState);
+                    setEdgeColor(tagList,themeColor);
+                }
+            });
+        }
     }
+
 
     public void displayAllNotes(){
         if(tagList.getAdapter() == null){
