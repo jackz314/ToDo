@@ -54,6 +54,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TAG;
 import static com.jackz314.todo.dtb.TAG_COLOR;
@@ -110,7 +111,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         });
         setColorPreferences();
         displayAllNotes();
-        setEdgeEffect(tagList,themeColor);
+        setEdgeColor(tagList,themeColor);
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
@@ -223,7 +224,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         getSupportLoaderManager().restartLoader(1010,null,this);
     }
 
-    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+    /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
                 final Class<?> clazz = RecyclerView.class;
@@ -242,7 +243,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                 }
             } catch (final Exception ignored) {}
         }
-    }
+    }*/
 
     public void setColorPreferences() {
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data", MODE_PRIVATE);

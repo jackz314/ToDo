@@ -56,6 +56,7 @@ import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
@@ -140,6 +141,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
@@ -164,7 +166,7 @@ import static com.jackz314.todo.dtb.TITLE;
 
 
 // the great alpaca that saves me from the bugs
-
+//todo pause ad function but preserve iap functions for good
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener, ImportantFragment.OnFragmentInteractionListener, ClipboardFragment.OnFragmentInteractionListener, MainFragment.OnFragmentInteractionListener{
     private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
@@ -216,8 +218,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     Toolbar selectionToolBar, toolbar;
     ServiceConnection mServiceConn;
     CheckBox selectAllBox;
+    TabLayout tabLayout;
     ProgressDialog purchaseProgressDialog;
-    //todo FIX UI DISPLAYING ISSUE
+    //todo FIX change fragment issue
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
@@ -369,8 +372,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             int itemHeight = itemView.getBottom() - itemView.getTop();
             int intrinsicWidth = finishIcon.getIntrinsicWidth();
             int intrinsicHeight = finishIcon.getIntrinsicWidth();
-            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width();
-            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width();
+            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width() - 8;
+            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width() - 8;
             int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
             int finishIconBottom = finishIconTop + intrinsicHeight;
             finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
@@ -379,7 +382,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
             viewHolder.itemView.setAlpha(alpha);
             viewHolder.itemView.setTranslationX(dX);
-            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 34 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
             super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
         }
 
@@ -513,7 +516,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }*/
 
-    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+    /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
                 final Class<?> clazz = RecyclerView.class;
@@ -523,7 +526,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     method.invoke(recyclerView);
                 }
                 for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
-                    final Field field = clazz.getDeclaredField(name);
+                //for (final String name : new String[] {"mEdgeGlowTop", "mEdgeGlowBottom"}) {
+                final Field field = clazz.getDeclaredField(name);
                     field.setAccessible(true);
                     final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
                     final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
@@ -532,7 +536,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             } catch (final Exception ignored) {}
         }
-    }
+    }*/
 
     public static String getThisPackageName(){
         return MainActivity.class.getPackage().getName();
@@ -557,6 +561,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
+        todoList = (RecyclerView) findViewById(R.id.todolist);
+        setEdgeColor(todoList,Color.RED);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         adView= (AdView)findViewById(R.id.bannerAdView);
@@ -574,6 +580,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         emptyTextView = (TextView)findViewById(R.id.emptyText);
         todoList = (RecyclerView) findViewById(R.id.todolist);
+
         todoList.setHasFixedSize(true);
         fab = (FloatingActionButton)findViewById(R.id.fab);
         proFab = findViewById(R.id.progress_fab);
@@ -583,14 +590,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         todosql = new dtb(this);
+        tabLayout = findViewById(R.id.tabs_layout);
         todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
-
+//todo change to tablayout method instead of pagertabstripe
         //set tabs
         final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager());
+        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),getApplicationContext());
         viewPager.setAdapter(pagerAdapter);
+        tabLayout.setupWithViewPager(viewPager);
         input.setTextIsSelectable(true);
         input.setFocusable(true);
         todoList.setFocusable(true);
@@ -1175,11 +1184,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             todoList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
                 @Override
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                    setEdgeEffect(todoList,themeColor);
+                    setEdgeColor(todoList,themeColor);
 
                 }
             });
@@ -1188,10 +1197,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 @Override
                 public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                     super.onScrollStateChanged(recyclerView, newState);
-                    setEdgeEffect(todoList,themeColor);
+                    setEdgeColor(todoList,themeColor);
                 }
             });
-        }
+        }*/
 
         input.addTextChangedListener(new TextWatcher() {
             @Override
@@ -1662,7 +1671,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         //int[] heights = { 20, 24, 18, 23, 16 };
         int[] heights = { 30, 36, 27, 35, 24 };
-
         recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
         recognitionProgressView.setColors(colors);
         recognitionProgressView.setBarMaxHeightsInDp(heights);
@@ -1678,7 +1686,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }else {
             navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
         }
+        //setEdgeColor(todoList,themeColor);
         navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
+        tabLayout.setBackgroundColor(themeColor);
+        if(ColorUtils.determineBrightness(themeColor) > 0.9){//if the tab background color is to bright, change tab text color
+            tabLayout.setTabTextColors(ColorUtils.makeTransparent(Color.BLACK,0.7),Color.BLACK);
+            tabLayout.setSelectedTabIndicatorColor(getResources().getColor(R.color.tab_white));
+        }else {
+            tabLayout.setTabTextColors(ColorUtils.makeTransparent(getResources().getColor(R.color.tab_white),0.7),getResources().getColor(R.color.tab_white));
+            tabLayout.setSelectedTabIndicatorColor(ColorUtils.lighten(themeColor,0.7));
+        }
         //int[] themeColors = {backgroundColor,themeColor};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
         //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
@@ -2523,12 +2540,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         displayAllNotes();
         setColorPreferences();
         int size = menuNav.size();
-        String sort = null;
         Intent voiceIntent = getIntent();
         String historySettingPref = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+P2oT72hEaw5FwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
         historySettingPref += "BIjAN" + bep.substring(2,bep.length());
-        adView.setAdListener(new AdListener(){//resume ad when got internet
+        /*adView.setAdListener(new AdListener(){//resume ad when got internet
             @Override
             public void onAdFailedToLoad(int i) {
                 adView.destroy();
@@ -2598,7 +2614,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 registerReceiver(receiver,filter);
                 super.onAdFailedToLoad(i);
             }
-        });//
+        });*///ad function paused!
         try {
             if (voiceIntent != null && voiceIntent.getAction() != null){
                 if(voiceIntent.getAction().equals(getString(R.string.google_now_request_code)) && voiceIntent.getStringExtra(Intent.EXTRA_TEXT) != null) {
@@ -2616,9 +2632,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }catch (Exception e){
             e.printStackTrace();
         }
-        if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+        /*if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = "_id DESC";
-        }
+        }*/
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);

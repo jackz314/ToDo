@@ -91,6 +91,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
@@ -158,7 +159,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
         setColorPreferences();
-        setEdgeEffect(tagList,themeColor);
+        setEdgeColor(tagList,themeColor);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {//todo finish the implementation of fab, profab, voice recognition
@@ -695,7 +696,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     };
 
-    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+    /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
                 final Class<?> clazz = RecyclerView.class;
@@ -714,7 +715,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             } catch (final Exception ignored) {}
         }
-    }
+    }*/
 
     public static void setCursorColor(EditText view, int color) {//REFLECTION USED
         try {
@@ -1249,7 +1250,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             }
             if(justex){
                 determineIfDeleteTag();
-                Toast.makeText(getApplicationContext(),"EXIT", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(),"EXIT", Toast.LENGTH_SHORT).show();
                 super.onBackPressed();
             }
         }

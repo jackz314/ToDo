@@ -52,6 +52,7 @@
         android:stackFromBottom="false"
         android:visibility="visible"
         android:paddingTop="8dp"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toTopOf="@+id/input"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintLeft_toLeftOf="parent"

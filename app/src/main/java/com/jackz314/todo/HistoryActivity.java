@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import static com.jackz314.todo.R.color.colorActualPrimary;
+import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
@@ -67,14 +68,13 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     dtb todosql;
     TextView emptyHistory, selectionTitle;
     RecyclerView historyList;
-    Toolbar toolbar;
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
     SharedPreferences sharedPreferences;
     private FirebaseAnalytics mFirebaseAnalytics;
     ColorUtils colorUtils;
     boolean isInSearchMode =false, isInSelectionMode = false;
-    Toolbar selectionToolBar;
+    Toolbar toolbar;
     boolean selectAll = false, unSelectAll = false;
     ArrayList<Long> selectedId = new ArrayList<>();
     ArrayList<String> selectedContent = new ArrayList<>();
@@ -89,7 +89,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     ConstraintLayout historyView;
     public static int DELETE_HISTORY_CONTEXT_ID = 2;
     TodoListAdapter historyListAdapter;
-    MainActivity mainActivity;
+    //todo fix history restore as blank note problem
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         /*sharedPreferences) = sharedPreferences("settings_data",MODE_PRIVATE);
@@ -100,18 +100,17 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setContentView(R.layout.activity_history);
         todosql = new dtb(this);
-        selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-        setSupportActionBar(selectionToolBar);
+        toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+        setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         historyList = (RecyclerView) findViewById(R.id.historyList);
         historyList.setHasFixedSize(true);
         emptyHistory = (TextView)findViewById(R.id.emptyHistory);
         LayoutInflater inflater =this.getLayoutInflater();
         historyView = (ConstraintLayout)findViewById(R.id.historyView);
-        selectionTitle = (TextView)selectionToolBar.findViewById(R.id.history_selection_toolbar_title);
+        selectionTitle = (TextView)toolbar.findViewById(R.id.history_selection_toolbar_title);
         selectionTitle.setText(R.string.history_name);
        //View toolbarView = inflater.inflate(R.layout.app_bar_main,null);
-        setSupportActionBar(toolbar);
         //toolbar.setBackgroundColor(themeColor);// not working yet!
         setHistoryColorsPreferences();
         deleteExpiredNotes();
@@ -161,8 +160,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = historyListAdapter.getItemId(position);
-                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                v.vibrate(30);
                 unSelectAll = false;
                 selectAll = false;
                 if(isInSelectionMode){
@@ -175,17 +172,17 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-                    selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-                    selectionToolBar.getMenu().clear();
-                    selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-                    selectionTitle = (TextView)selectionToolBar.findViewById(R.id.history_selection_toolbar_title);
+                    toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+                    toolbar.getMenu().clear();
+                    toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+                    selectionTitle = (TextView)toolbar.findViewById(R.id.history_selection_toolbar_title);
                     //toolbar.hide();
-                    selectionToolBar.setVisibility(View.VISIBLE);
+                    toolbar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
                     //Drawable backArrow = getDrawable(R.drawable.ic_close_black_24dp);
-                    //selectionToolBar.setNavigationIcon(backArrow);
-                    selectionToolBar.setBackgroundColor(themeColor);
-                    selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.history_select_all_box);
+                    //toolbar.setNavigationIcon(backArrow);
+                    toolbar.setBackgroundColor(themeColor);
+                    selectAllBox = (CheckBox)toolbar.findViewById(R.id.history_select_all_box);
                     selectAllBox.setVisibility(View.VISIBLE);
                     isInSelectionMode = true;
                     ////System.out.println(isInSelectionMode + "isInselectionmode");
@@ -216,13 +213,13 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 unSelectAll = true;
                                 //historyList.getAdapter().notifyDataSetChanged();
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
-                                selectionToolBar.getMenu().clear();
+                                toolbar.getMenu().clear();
                             }else if(selectAllBox.isChecked()){//check all
                                 selectAllBox.setChecked(true);
-                                selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+                                toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
                                 if(selectedId.size() == 0){
-                                    selectionToolBar.inflateMenu(R.menu.history_selection_mode_menu);
-                                    selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+                                    toolbar.inflateMenu(R.menu.history_selection_mode_menu);
+                                    toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
                                         @Override
                                         public boolean onMenuItemClick(MenuItem item) {
                                             if(item.getItemId() == R.id.history_selection_menu_restore){
@@ -253,7 +250,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                             }
                         }
                     });
-                    /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
+                    /*toolbar.setNavigationOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
                             setOutOfSelectionMode();
@@ -278,7 +275,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             historyList.setOnScrollChangeListener(new View.OnScrollChangeListener() {
                 @Override
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                    setEdgeEffect(historyList,themeColor);
+                    setEdgeColor(historyList,themeColor);
                 }
             });
         }else {
@@ -286,7 +283,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 @Override
                 public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                     super.onScrollStateChanged(recyclerView, newState);
-                    setEdgeEffect(historyList,themeColor);
+                    setEdgeColor(historyList,themeColor);
                 }
             });
         }
@@ -589,7 +586,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
     };
 
-    public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+    /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
                 final Class<?> clazz = RecyclerView.class;
@@ -608,7 +605,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 }
             } catch (final Exception ignored) {}
         }
-    }
+    }*/
 
     @Override
     public void onBackPressed() {
@@ -643,14 +640,14 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             selectAllBox.setVisibility(View.GONE);
         }
         selectionTitle.setText(R.string.history_name);
-        selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-        selectionToolBar.getMenu().clear();
-        selectionToolBar.inflateMenu(R.menu.search_menu);
+        toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+        toolbar.getMenu().clear();
+        toolbar.inflateMenu(R.menu.search_menu);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportLoaderManager().restartLoader(234,null,this);
         displayAllNotes();
-        selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-        //selectionToolBar.setVisibility(View.GONE);
+        toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+        //toolbar.setVisibility(View.GONE);
         if(selectAllBox != null){
             selectAllBox.setChecked(false);
         }
@@ -704,10 +701,10 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         selectedId.add(0,id);
         String data = todosql.getOneDataInHISTORY(Long.toString(id));
         selectedContent.add(0,data);
-        selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+        toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
         if(selectedId.size() == 1){
-            selectionToolBar.inflateMenu(R.menu.history_selection_mode_menu);
-            selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            toolbar.inflateMenu(R.menu.history_selection_mode_menu);
+            toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
                 @Override
                 public boolean onMenuItemClick(MenuItem item) {
                     if(item.getItemId() == R.id.history_selection_menu_restore){
@@ -732,10 +729,10 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         selectedContent.remove(selectedContent.indexOf(data));
         if (selectedId.size() == 0) {
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
-            selectionToolBar = (Toolbar)findViewById(R.id.history_selection_toolbar);
-            selectionToolBar.getMenu().clear();
+            toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+            toolbar.getMenu().clear();
         }else {
-            selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
+            toolbar = (Toolbar)findViewById(R.id.selection_toolbar);
             String count = Integer.toString(selectedId.size());
             selectionTitle.setText(count + getString(R.string.selection_mode_title));
         }

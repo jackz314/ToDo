@@ -33,6 +33,13 @@
 -keepclassmembers class ** {
    public static *** parse(***);
 }
+-keepclassmembers class * extends android.view.View {
+    <fields>;
+}
+
+-keepclassmembers class android.support.v4.widget.EdgeEffectCompat {
+    <fields>;
+}
 -keep class com.android.vending.billing.**
 -keep public class com.google.android.gms.ads.** {
    public *;
