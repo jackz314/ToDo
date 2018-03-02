@@ -91,7 +91,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
+import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 

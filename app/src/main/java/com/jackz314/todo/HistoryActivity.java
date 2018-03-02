@@ -60,7 +60,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import static com.jackz314.todo.R.color.colorActualPrimary;
-import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
+import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 

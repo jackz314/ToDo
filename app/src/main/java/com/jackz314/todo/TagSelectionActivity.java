@@ -54,7 +54,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
+import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TAG;
 import static com.jackz314.todo.dtb.TAG_COLOR;

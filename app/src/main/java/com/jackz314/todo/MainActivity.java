@@ -126,7 +126,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.NetworkInterface;
 import java.net.URL;
@@ -142,7 +141,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static com.jackz314.todo.SetEdgeEffect.setEdgeColor;
+import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
@@ -170,20 +169,20 @@ import static com.jackz314.todo.dtb.TITLE;
 //todo pause ad function but preserve iap functions for good
 //todo edge effect doesn't work at first scroll, minor problem
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, NavigationView.OnNavigationItemSelectedListener, ImportantFragment.OnFragmentInteractionListener, ClipboardFragment.OnFragmentInteractionListener, MainFragment.OnFragmentInteractionListener{
-    private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
+    //paused ad//private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
+    private static final String PREMIUM_UPGRADE_SKU = "todo_iap_premium";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
     private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
-    static int REMOVE_REQUEST_ID =1022;
+    //paused ad//static int REMOVE_REQUEST_ID =1022;
+    static int PURCHASE_PREMIUM_REQUEST_ID = 1025;
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     public String searchText;
-    //IabBroadcastReceiver mBroadcastReceiver;
-    //public static int MODIFY_CONTEXT_ID = 1;
-    //public static int DELETE_CONTEXT_ID = 2;
     public boolean iapsetup = true;
-    public boolean isAdRemoved = false;
+    //paused ad//public boolean isAdRemoved = false;
+    public boolean isPremium = false;
     dtb todosql;
     EditText input;
     FloatingActionButton fab;
@@ -195,7 +194,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     boolean isConnected = false;
     boolean selectAll = false, unSelectAll = false;
     SharedPreferences sharedPreferences;
-    int resultCount = 0, cursorPos = 0;
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
@@ -207,14 +205,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView emptyTextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
-    AdView adView;
+    //paused ad//AdView adView;
     RecognitionProgressView recognitionProgressView;
     boolean isAdd = true;
     NavigationView navigationView;
     ProgressFloatingActionButton proFab;
     ProgressBar fabProgressBar;
     Menu menuNav;
-    MenuItem navRemoveAD;
+    MenuItem navPurchasePremium;
     BroadcastReceiver receiver;
     IInAppBillingService mService;
     Toolbar selectionToolBar, toolbar;
@@ -225,54 +223,44 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     //todo FIX change fragment issue
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
-            //Toast.makeText(getApplicationContext(),"dsada",Toast.LENGTH_SHORT).show();
-            /*if(consume){
-                try {
-                    mHelper.consumeAsync(inv.getPurchase(REMOVE_AD_SKU),mConsumeFinishedListener);
-                } catch (IabHelper.IabAsyncInProgressException e) {
-                    e.printStackTrace();
-                }
-            }*/
-            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){
+            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){//not premium
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
                     purchaseProgressDialog.dismiss();
                 }
-                adView= (AdView)findViewById(R.id.bannerAdView);
-                AdRequest adRequest = new AdRequest.Builder().build();
-                adView.loadAd(adRequest);
-                adView.setVisibility(View.VISIBLE);
-                isAdRemoved = false;
-                //iapsetup = false;
+                isPremium = false;
+                //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
+                //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
+                //paused ad//adView.loadAd(adRequest);
+                //paused ad//adView.setVisibility(View.VISIBLE);
+                //paused ad//isAdRemoved = false;
+                iapsetup = false;
                 return;
-            }
-            if(result.isSuccess()){
-                //Toast.makeText(getApplicationContext(),"dsds",Toast.LENGTH_LONG).show();
+            }if(result.isSuccess()){//first step succeed
                 iapsetup = true;
-                Purchase unlockPurchase = inv.getPurchase(REMOVE_AD_SKU);
-                isAdRemoved = (unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU));
-                if(unlockPurchase != null && verifyDeveloperPayload(unlockPurchase) && inv.hasPurchase(REMOVE_AD_SKU)){
-                    removeAd();
-                    return;
-                }else {
-                    adView= (AdView)findViewById(R.id.bannerAdView);
-                    AdRequest adRequest = new AdRequest.Builder().build();
-                    adView.loadAd(adRequest);
-                    adView.setVisibility(View.VISIBLE);
-                    isAdRemoved = false;
+                Purchase premiumPurchase = inv.getPurchase(PREMIUM_UPGRADE_SKU);
+                isPremium = (premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && inv.hasPurchase(PREMIUM_UPGRADE_SKU));
+                if(premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && inv.hasPurchase(PREMIUM_UPGRADE_SKU)){//purchased premium, unlock features here
+                    //unlock features here
+                    unlockPremium();
+                //paused ad//    removeAd();
+                }else {//not premium
+                //paused ad//    adView= (AdView)findViewById(R.id.bannerAdView);
+                //paused ad//    AdRequest adRequest = new AdRequest.Builder().build();
+                //paused ad//    adView.loadAd(adRequest);
+                //paused ad//    adView.setVisibility(View.VISIBLE);
+                //paused ad//    isAdRemoved = false;
                     if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                         Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                        //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
                         purchaseProgressDialog.dismiss();
                     }
                 }
-            }else {
-                adView= (AdView)findViewById(R.id.bannerAdView);
-                AdRequest adRequest = new AdRequest.Builder().build();
-                adView.loadAd(adRequest);
-                adView.setVisibility(View.VISIBLE);
-                isAdRemoved = false;
+            }else {//not premium
+            //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
+            //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
+            //paused ad//adView.loadAd(adRequest);
+            //paused ad//adView.setVisibility(View.VISIBLE);
+            //paused ad//isAdRemoved = false;
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
                     //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
@@ -283,7 +271,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     };
     IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-            //Toast.makeText(getApplicationContext(),"finished",Toast.LENGTH_SHORT).show();
             if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
                 //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
@@ -292,28 +279,25 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
                 return;
             }
-            if(purchase.getSku().equals(REMOVE_AD_SKU)){
+            if(purchase.getSku().equals(PREMIUM_UPGRADE_SKU)){
                 try {
-                    //Toast.makeText(getApplicationContext(),"SUCCESS",Toast.LENGTH_SHORT).show();
                     if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                         purchaseProgressDialog.setMessage(getString(R.string.verifying));
                     }
                     if (mHelper != null) mHelper.flagEndAsync();
-                    mHelper.queryInventoryAsync(mGotInventoryListener);
+                    mHelper.queryInventoryAsync(mGotInventoryListener);//continue verify purchase with query inventory
                     return;
-                    //iapsetup = true;
-                } catch (Exception e) {
+                } catch (Exception e) {//failed
                     e.printStackTrace();
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
                     //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
                     if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                         purchaseProgressDialog.dismiss();
                     }
-                    //System.out.println("qazwsx"+5);
                     iapsetup = false;
                     return;
                 }
-            }else {
+            }else {//failed
                 Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
                 //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
@@ -407,6 +391,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         }
     };*/
+
     private FirebaseAnalytics mFirebaseAnalytics;
     private String todoTableId = "HAHA! this is the real one, gotcha";
 
@@ -435,7 +420,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         }
     }
-    // TODO: 2017/9/29 Apply the margin setting to real ad remove situation(onCreate, ad loaded, resume and etc.
 
     public static void dataUpload(String data){// refresh firebase token
         if(data.equals("")) {
@@ -505,19 +489,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return "(Can't retrieve mac address)";
     }
 
-    /*
-    public View getViewByPosition(int pos) {
-        //final int firstListItemPosition = todoList.getFirstVisiblePosition();
-        final int lastListItemPosition = firstListItemPosition + todoList.getChildCount() - 1;
-
-        if (pos < firstListItemPosition || pos > lastListItemPosition ) {
-            return todoList.getAdapter().getView(pos, null, todoList);
-        } else {
-            final int childIndex = pos - firstListItemPosition;
-            return todoList.getChildAt(childIndex);
-        }
-    }*/
-
     /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
@@ -544,32 +515,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return MainActivity.class.getPackage().getName();
     }
 
-    /*public void setLauncherIcon(){
-        Intent launcherIntent = new Intent();
-        launcherIntent.setClassName("com.jackz314.todAAAo","MainActivity");
-        launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Intent intent = new Intent();
-        intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT,launcherIntent);
-        intent.putExtra(
-                Intent.EXTRA_SHORTCUT_ICON_RESOURCE,
-                Intent.ShortcutIconResource.fromContext(
-                    getApplicationContext(),
-                    R.drawable.common_google_signin_btn_icon_light_normal
-                )
-        );
-        getApplicationContext().sendBroadcast(intent);
-    }*/
-
-    //@SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        adView= (AdView)findViewById(R.id.bannerAdView);
+        //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        final AdRequest adRequest = new AdRequest.Builder().build();
+        //paused ad//final AdRequest adRequest = new AdRequest.Builder().build();
         mDrawerLayout =  findViewById(R.id.drawer_layout);
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        //LayoutInflater layoutInflater = LayoutInflater.from(this);
         //layoutInflater.inflate(R.layout.nav_header_main,null);
         //setLauncherIcon();
        // FirebaseCrash.report(new Exception("MainActivity created"));
@@ -605,7 +559,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         todoTableId = "0x397821dc97276";
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
-        //todo set tab functions
+        //set tabs
         final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
         final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),getApplicationContext());
         viewPager.setAdapter(pagerAdapter);
@@ -632,28 +586,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 "9IMuplWteD" +
                 "rBMyPRIDUm" +
                 "GcIdL4lDdR";
-        navRemoveAD = menuNav.findItem(R.id.unlock);
+        navPurchasePremium = menuNav.findItem(R.id.unlock);
         int size = menuNav.size();
         for (int i = 0; i < size; i++) {
             menuNav.getItem(i).setChecked(false);
         }
         mHelper = new IabHelper(this, historySettingPref);
         mHelper.enableDebugLogging(true);
-        if (mHelper != null) mHelper.flagEndAsync();
+        if(mHelper != null) mHelper.flagEndAsync();
         mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
             public void onIabSetupFinished(IabResult result) {
-                //Toast.makeText(getApplicationContext(),String.valueOf(isConnected),Toast.LENGTH_SHORT).show();
-                //Toast.makeText(getApplicationContext(),"Finished",Toast.LENGTH_SHORT).show();
-                //System.out.println("finisheddd");
                 if((!result.isSuccess())||result.isFailure()){
-                    //System.out.println("qazwsx"+3);
                     iapsetup = false;
                     return;
                 }
                 if(mHelper == null){
-                    //System.out.println("qazwsx"+4);
-                    //System.out.println("finisheddd");
-
                     iapsetup = false;
                     return;
                 }
@@ -662,7 +609,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     mHelper.queryInventoryAsync(mGotInventoryListener);
                 } catch (IabHelper.IabAsyncInProgressException e) {
                     e.printStackTrace();
-                    //System.out.println("qazwsx"+5);
                     iapsetup = false;
                 }
             }
@@ -673,17 +619,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if(isAdRemoved && navRemoveAD != null){
-                    adView.destroy();
-                    displayAllNotes();
+                if(isPremium && navPurchasePremium != null){
+                    //paused ad//adView.destroy();
                     menuNav.removeItem(R.id.unlock);
                 }else {
-                    adView.loadAd(adRequest);
+                    //paused ad//adView.loadAd(adRequest);
                 }
             }
-        },500);
-        if(navRemoveAD != null && !iapsetup){
-            //navRemoveAD.setEnabled(false);
+        },700);
+        if(navPurchasePremium != null && !iapsetup){
+            navPurchasePremium.setEnabled(false);
         }
         if(!sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) != null){
             navigationView.getMenu().removeItem(R.id.history);
@@ -1160,7 +1105,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
 
-        input.addTextChangedListener(new TextWatcher() {
+        input.addTextChangedListener(new TextWatcher() {//todo implement when input "#", pop up choosing list of in-use tags
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
@@ -1211,23 +1156,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             });
         }
-
-        input.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                interruptAutoSend();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                //interruptAutoSend();
-            }
-        });
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1410,7 +1338,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             e.printStackTrace();
             return false;
         }
-        return isAdRemoved;
+        return isPremium;
     }
 
     /*@Override
@@ -1498,7 +1426,17 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         animator.start();
     }
 
-    public void removeAd(){
+    private void unlockPremium(){
+        menuNav.removeItem(R.id.unlock);
+        if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+            purchaseProgressDialog.dismiss();
+            Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_purchase),Toast.LENGTH_SHORT).show();
+        }
+        //todo unlock premium features here
+    }
+    
+    //paused ad//
+    /*public void removeAd(){
         if(isAdRemoved){
             adView.destroy();
             adView.setEnabled(false);
@@ -1519,7 +1457,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else{
             return;
         }
-    }
+    }*/
 
     public void setOutOfSearchMode(){
         proFab.setVisibility(View.VISIBLE);
@@ -1951,7 +1889,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    public void purchaseRemoveAds(){
+    public void purchasePremium(){
         try {
             new ConnectionDetector().execute().get(1000, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
@@ -1967,7 +1905,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 purchaseProgressDialog.setCancelable(false);
                 purchaseProgressDialog.show();
                 if (mHelper != null) mHelper.flagEndAsync();
-                mHelper.launchPurchaseFlow(this, REMOVE_AD_SKU, REMOVE_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
+                mHelper.launchPurchaseFlow(this, PREMIUM_UPGRADE_SKU, PURCHASE_PREMIUM_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
             }
             catch (Exception e) {
                 Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed),Toast.LENGTH_LONG).show();
@@ -2655,16 +2593,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         for (int i = 0; i < size; i++) {
             menuNav.getItem(i).setChecked(false);
         }
-        if(isAdRemoved){
-            adView.destroy();
+        if(isPremium){
+            unlockPremium();
             displayAllNotes();
-            Log.i("unlock","skipped ad");
+            Log.i("IAP","PREMIUM ALREADY PURCHASED, UNLOCK FEATURES");
         }
-        else{
-            adView= (AdView)findViewById(R.id.bannerAdView);
-            AdRequest adRequest = new AdRequest.Builder().build();
-            adView.loadAd(adRequest);
-        }
+        //else{
+            //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
+            //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
+            //paused ad//adView.loadAd(adRequest);
+        //}
         if(!sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) != null){
             navigationView.getMenu().removeItem(R.id.history);
         }if(sharedPreferences.getBoolean(getString(R.string.main_history_switch),true) && menuNav.findItem(R.id.history) == null){
@@ -2720,8 +2658,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onDestroy(){
         if(todosql.isOpen()) todosql.stopService();
         hideKeyboard();
-        adView= (AdView)findViewById(R.id.bannerAdView);
-        adView.destroy();
+        //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
+        //paused ad//adView.destroy();
         if (receiver != null) {
             unregisterReceiver(receiver);
             receiver = null;
@@ -2731,7 +2669,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             mHelper.disposeWhenFinished();
             mHelper = null;
         }
-        sharedPreferences.edit().putBoolean("recreated_for_edge_effect",false).apply();
         super.onDestroy();
     }
 
@@ -2776,7 +2713,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         else if (id == R.id.unlock){
             if(iapsetup){
                 hideKeyboard();
-                purchaseRemoveAds();
+                purchasePremium();
                 //TEMPORARY CHANGE, CHANGE BACK BEFORE PUBLISH!!!$$$
                 //isAdRemoved = true;//
                 //removeAd();//
@@ -2811,7 +2748,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == REMOVE_REQUEST_ID){
+        if(requestCode == PURCHASE_PREMIUM_REQUEST_ID){
             if(resultCode == RESULT_OK){
                 if (!mHelper.handleActivityResult(requestCode, resultCode, data)) {
                     // not handled, so handle it ourselves (here's where you'd
@@ -2820,14 +2757,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     super.onActivityResult(requestCode, resultCode, data);
                 }
             }
-            if(resultCode == RESULT_CANCELED){
+            if(resultCode == RESULT_CANCELED){//purchase cancelled
                 if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
                     Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
                     //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
                     //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
                     purchaseProgressDialog.dismiss();
                 }
-                isAdRemoved = false;
+                isPremium = false;
             }
         }
     }

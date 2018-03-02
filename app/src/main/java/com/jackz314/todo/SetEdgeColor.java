@@ -24,8 +24,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Field;
 
-public final class SetEdgeEffect {
-    private SetEdgeEffect() {
+public final class SetEdgeColor {
+    private SetEdgeColor() {
         throw new AssertionError("No instances!");
     }
 
