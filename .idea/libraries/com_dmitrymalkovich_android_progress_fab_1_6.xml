@@ -1,8 +1,8 @@
 <component name="libraryTable">
   <library name="com.dmitrymalkovich.android:progress-fab-1.6">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/progress-fab-1.6.aar/a68494063aaffe2851c0a963fc77baaa/jars/classes.jar!/" />
-      <root url="file://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/progress-fab-1.6.aar/a68494063aaffe2851c0a963fc77baaa/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/progress-fab-1.6.aar/a88ce65e2e0e95955c44412fba79358d/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/progress-fab-1.6.aar/a88ce65e2e0e95955c44412fba79358d/jars/classes.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

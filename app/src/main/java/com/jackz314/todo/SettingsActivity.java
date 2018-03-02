@@ -315,7 +315,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         restorePurchase.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {
-                final boolean purchased = mainActivity.isAdRemoved;
+                final boolean purchased = mainActivity.determineIfPurchased();
                 if(purchased){
                     Toast.makeText(getApplicationContext(),getString(R.string.purchase_updated),Toast.LENGTH_SHORT).show();
                 } else {
