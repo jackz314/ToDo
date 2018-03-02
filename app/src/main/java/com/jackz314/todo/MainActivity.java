@@ -183,6 +183,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public boolean iapsetup = true;
     //paused ad//public boolean isAdRemoved = false;
     public boolean isPremium = false;
+    private FirebaseAnalytics mFirebaseAnalytics;
+    private String todoTableId = "HAHA! this is the real one, gotcha";
     dtb todosql;
     EditText input;
     FloatingActionButton fab;
@@ -391,9 +393,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         }
     };*/
-
-    private FirebaseAnalytics mFirebaseAnalytics;
-    private String todoTableId = "HAHA! this is the real one, gotcha";
 
     public static void setCursorColor(EditText view, int color) {//REFLECTION METHOD USED
         try {
@@ -1330,7 +1329,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }//--------end of onCreate!
 
-    public boolean restorePurchase(){
+    public boolean determineIfPurchased(){
         try {
             if (mHelper != null) mHelper.flagEndAsync();
             mHelper.queryInventoryAsync(mGotInventoryListener);
@@ -2399,7 +2398,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             handleVoiceSearch(intent);
         }
-
     }
     /*
     @Override
