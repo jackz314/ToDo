@@ -103,6 +103,7 @@ import java.util.Set;
 import static android.content.ContentValues.TAG;
 import static android.graphics.Color.BLACK;
 import static android.graphics.Color.luminance;
+import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.R.color.colorPrimary;
 import static com.jackz314.todo.R.color.dark_theme_background_default_color;
@@ -1013,32 +1014,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 return false;
             }
         });
-    }
-
-    public static void setCursorColor(EditText view, int color) {
-        try {
-            // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
-
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
-
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
-
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-        } catch (Exception ignored) {
-
-        }
     }
 
     public boolean restoreDataFromBackup(String filePath){

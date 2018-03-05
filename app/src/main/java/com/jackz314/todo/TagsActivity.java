@@ -91,6 +91,9 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static com.jackz314.todo.MainActivity.determineContainedTags;
+import static com.jackz314.todo.MainActivity.removeCharAt;
+import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
@@ -746,32 +749,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }*/
 
-    public static void setCursorColor(EditText view, int color) {//REFLECTION USED
-        try {
-            // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
-
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
-
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
-
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-        } catch (Exception ignored) {
-
-        }
-    }
-
     public void addSelectedId(long id){
         selectedId.add(0,id);
         String data = todosql.getOneDataInTODO(id);
@@ -901,32 +878,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         displayAllNotes();
     }
 
-    public ArrayList<String> determineContainedTags(String text){
-        int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
-        if(tagStartPos >= 0){//if contains tags
-            ArrayList<String> tags = new ArrayList<String>();
-            while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
-                int tagEndPos = -1;//assume neither enter nor space exists
-                if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
-                    tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
-                }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
-                    tagEndPos = text.indexOf("\n",tagStartPos);
-                }else {//contains only space
-                    tagEndPos = text.indexOf(" ",tagStartPos);
-                }
-                if(tagEndPos < 0){//if the tag is the last section of the note
-                    tagEndPos = text.length() - 1;
-                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
-                    continue;
-                }
-                String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
-                tags.add(tag);
-                tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
-            }
-            return tags;
-        }else return null;
-    }
-
     public void shareSetOfData(){//share note function
         Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
         sharingIntent.setType("text/plain");
@@ -987,7 +938,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             sort = "_id DESC";
         }
         if (args != null) {//if contains search request
-            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + " %", "%" + tagName + "\n%", "%" + tagName + ""};//todo solve this query multiple filter problem
+            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + " %", "%" + tagName + "\n%", "%" + tagName + ""};
             return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION + " OR title LIKE ?", selectionArgs, sort);
         }else {
             String[] selectionArgs = new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"};
@@ -1455,9 +1406,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         getSupportLoaderManager().restartLoader(123,null,this);
     }
 
-    public static String removeCharAt(String s, int pos) {
-        return s.substring(0, pos) + s.substring(pos + 1);
-    }
 
     public void setColorPreferences() {
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data", MODE_PRIVATE);

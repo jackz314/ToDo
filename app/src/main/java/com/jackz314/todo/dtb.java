@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * Created by zhang on 2017/6/15.
@@ -33,11 +34,13 @@ public class dtb extends SQLiteOpenHelper{
     public static String CONTENT = "content";
     public static String IMPORTANCE = "importance";
     public static String PINNED = "pinned";
+    public static String REMIND_TIME = "remind_time";
     public static String PINNED_TIMESTAMP = "pinned_timestamp";
     public static String CREATED_TIMESTAMP = "created_timestamp";
     public static String DELETED_TIMESTAMP = "deleted_timestamp";
     public static String SAVED_FOR_LATER_TIMESTAMP = "saved_for_later_timestamp";
     public static String SAVED_TIME = "saved_time";
+    public static String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 
 
@@ -48,8 +51,8 @@ public class dtb extends SQLiteOpenHelper{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         //db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ TAGS_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TAG + " TEXT," + TAG_COLOR + " TEXT," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
 
@@ -362,7 +365,7 @@ public class dtb extends SQLiteOpenHelper{
 
     long diff = 0;
     public long getTimeDifference(String timestampstr){
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        DateFormat df = new SimpleDateFormat(DATE_FORMAT,Locale.US);
         try
         {
             Date delTime = df.parse(timestampstr);
@@ -490,8 +493,8 @@ public class dtb extends SQLiteOpenHelper{
         cv.put(ID,id);
         cv.put(PINNED,true);
         Date nowTime = Calendar.getInstance().getTime();//get now time
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        cv.put(PINNED_TIMESTAMP,dateFormat.format(nowTime));
+        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+        cv.put(PINNED_TIMESTAMP, dateFormat.format(nowTime));
         db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
@@ -506,10 +509,22 @@ public class dtb extends SQLiteOpenHelper{
 
     public int returnPinnedNotesNumber(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,PINNED},PINNED + " = ?",new String[]{"true"},null,null,"_id desc",null );//filter for pinned tag
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,PINNED},PINNED + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
         int count = cs.getCount();
         cs.close();
         return count;
+    }
+
+    public int countRecentReminder(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Calendar recentTime = Calendar.getInstance();
+        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+        String currentTimeStr = MainActivity.getCurrentTimeString();
+        String recentTimeStr = dateFormat.format(recentTime.getTime());
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,REMIND_TIME},REMIND_TIME + "BETWEEN ? AND ?",new String[]{currentTimeStr,recentTimeStr},null,null,"_id desc",null );//filter for recent reminders
+        int recentReminderCount = cs.getCount();
+        cs.close();
+        return recentReminderCount;
     }
 
     /* OLD METHOD

@@ -59,6 +59,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Random;
 
+import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
@@ -504,10 +505,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             emptyHistory.setVisibility(View.GONE);
             emptyHistory.setText("");
         }
-    }
-
-    public static String removeCharAt(String s, int pos) {
-        return s.substring(0, pos) + s.substring(pos + 1);
     }
 
     ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0,ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT) {

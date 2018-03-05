@@ -1,8 +1,10 @@
 package com.jackz314.todo;
 
 import android.*;
+import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.app.ProgressDialog;
+import android.app.SearchManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -25,41 +27,56 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.os.Vibrator;
+import android.print.PageRange;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintDocumentInfo;
 import android.print.PrintManager;
+import android.print.pdf.PrintedPdfDocument;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.Editable;
 import android.text.Spannable;
+import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
@@ -69,6 +86,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -80,19 +98,29 @@ import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 import com.jackz314.todo.util.IabHelper;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+import static android.app.Activity.RESULT_CANCELED;
+import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
+import static com.jackz314.todo.MainActivity.PURCHASE_PREMIUM_REQUEST_ID;
+import static com.jackz314.todo.MainActivity.determineContainedTags;
+import static com.jackz314.todo.MainActivity.removeCharAt;
+import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.ID;
 import static com.jackz314.todo.dtb.TITLE;
 
 
-public class MainFragment extends Fragment {
+public class MainFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
     private static final String ARG_PARAM = "param";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
     private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
@@ -110,10 +138,8 @@ public class MainFragment extends Fragment {
     FloatingActionButton fab;
     TextView modifyId;
     RecyclerView todoList;
-    IabHelper mHelper;
     int exit=0;
     boolean justex = false;
-    boolean isConnected = false;
     boolean selectAll = false, unSelectAll = false;
     SharedPreferences sharedPreferences;
     String oldResult = "";
@@ -121,124 +147,20 @@ public class MainFragment extends Fragment {
     int doubleClickCount = 0;
     CoordinatorLayout main;
     Boolean noInterruption = true;
-    DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
-    ActionBarDrawerToggle mDrawerToggle;
     TextView emptyTextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
-    //paused ad//AdView adView;
     RecognitionProgressView recognitionProgressView;
     boolean isAdd = true;
-    NavigationView navigationView;
     ProgressFloatingActionButton proFab;
     ProgressBar fabProgressBar;
     Menu menuNav;
-    MenuItem navPurchasePremium;
-    BroadcastReceiver receiver;
-    IInAppBillingService mService;
     Toolbar selectionToolBar, toolbar;
-    ServiceConnection mServiceConn;
     CheckBox selectAllBox;
-    ProgressDialog purchaseProgressDialog;
     public MainFragment() {
         // Required empty public constructor
     }
-
-    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {//draw the options after swipe left
-
-        @Override
-        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
-            return false;
-        }
-
-        @Override
-        public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-            if(isInSelectionMode) return 0; //prevent swipe in selection mode
-            return super.getSwipeDirs(recyclerView, viewHolder);
-        }
-
-        @Override
-        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-            unSelectAll = false;
-            selectAll = false;
-            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
-                removeSelectedId(viewHolder.getItemId());
-            }
-            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
-            finishData(viewHolder.getItemId());
-            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    insertData(finishedContent);
-                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
-                    displayAllNotes();
-                }
-            }).show();
-        }
-
-        @Override
-        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-            if (viewHolder.getAdapterPosition() == -1) {
-                return;
-            }
-            View itemView = viewHolder.itemView;
-            Paint textPaint = new Paint();
-            textPaint.setStrokeWidth(2);
-            textPaint.setTextSize(80);
-            textPaint.setColor(themeColor);
-            textPaint.setTextAlign(Paint.Align.LEFT);
-            Rect bounds = new Rect();
-            textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
-            Drawable finishIcon = ContextCompat.getDrawable(MainActivity.this, R.drawable.ic_done_black_24dp);//draw finish icon
-            finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-            int finishIconMargin = 40;
-            int itemHeight = itemView.getBottom() - itemView.getTop();
-            int intrinsicWidth = finishIcon.getIntrinsicWidth();
-            int intrinsicHeight = finishIcon.getIntrinsicWidth();
-            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width() - 8;
-            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width() - 8;
-            int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-            int finishIconBottom = finishIconTop + intrinsicHeight;
-            finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
-            finishIcon.draw(c);
-            //fade out the view
-            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
-            viewHolder.itemView.setAlpha(alpha);
-            viewHolder.itemView.setTranslationX(dX);
-            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
-            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
-        }
-
-    };
-
-    public static void setCursorColor(EditText view, int color) {//REFLECTION METHOD USED
-        try {
-            // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
-
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
-
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
-
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-        } catch (Exception ignored) {
-
-        }
-    }
-
 
     public static MainFragment newInstance(int position) {
         MainFragment fragment = new MainFragment();
@@ -249,23 +171,68 @@ public class MainFragment extends Fragment {
     }
 
     @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.fragment_main, container, false);
+    }
+
+    // TODO: Rename method, update argument and hook method into UI event
+    public void onButtonPressed(Uri uri) {
+        if (mListener != null) {
+            mListener.onFragmentInteraction(uri);
+        }
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        if (context instanceof OnFragmentInteractionListener) {
+            mListener = (OnFragmentInteractionListener) context;
+        } else {
+            throw new RuntimeException(context.toString()
+                    + " must implement OnFragmentInteractionListener");
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mListener = null;
+    }
+
+    /**
+     * This interface must be implemented by activities that contain this
+     * fragment to allow an interaction in this fragment to be communicated
+     * to the activity and potentially other fragments contained in that
+     * activity.
+     * <p>
+     * See the Android Training lesson <a href=
+     * "http://developer.android.com/training/basics/fragments/communicating.html"
+     * >Communicating with Other Fragments</a> for more information.
+     */
+    public interface OnFragmentInteractionListener {
+        // TODO: Update argument type and name
+        void onFragmentInteraction(Uri uri);
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mParam = getArguments().getString(ARG_PARAM);
         }
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-        input = (EditText)findViewById(R.id.input);
-        modifyId = (TextView)findViewById(R.id.modifyId);
-        navigationView = (NavigationView) findViewById(R.id.nav_view);
-        emptyTextView = (TextView)findViewById(R.id.emptyText);
-        todoList = (RecyclerView) findViewById(R.id.todolist);
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
+        sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+        input = getView().findViewById(R.id.input);
+        modifyId = getView().findViewById(R.id.modify_id);
+        emptyTextView = getView().findViewById(R.id.empty_text);
+        todoList = getView().findViewById(R.id.todolist);
         todoList.setHasFixedSize(true);
-        fab = (FloatingActionButton)findViewById(R.id.fab);
-        proFab = findViewById(R.id.progress_fab);
-        fabProgressBar = (ProgressBar)findViewById(R.id.fab_progress_bar);
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        fab = getView().findViewById(R.id.fab);
+        proFab = getView().findViewById(R.id.progress_fab);
+        fabProgressBar = getView().findViewById(R.id.fab_progress_bar);
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
         todoList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -280,9 +247,8 @@ public class MainFragment extends Fragment {
             }
         });
         //speechRecognizer.setRecognitionListener(new speechListener());
-        todosql = new dtb(this);
+        todosql = new dtb(getContext());
         todoTableId = "0x397821dc97276";
-        main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
         //set tabs
         input.setTextIsSelectable(true);
         input.setFocusable(true);
@@ -316,7 +282,7 @@ public class MainFragment extends Fragment {
             public void onError(int error)
             {
                 if(error == SpeechRecognizer.ERROR_NO_MATCH){
-                    //Toast.makeText(getApplicationContext(),String.valueOf(error),Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(getContext(,String.valueOf(error),Toast.LENGTH_SHORT).show();
                     recognitionProgressView.stop();
                     recognitionProgressView.play();
                     recognitionProgressView.setSpeechRecognizer(speechRecognizer);
@@ -329,19 +295,19 @@ public class MainFragment extends Fragment {
                     recognitionProgressView.stop();
                     recognitionProgressView.play();
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
-                        Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
-                        ActivityCompat.requestPermissions(MainActivity.this,new String[]{android.Manifest.permission.RECORD_AUDIO},0);
+                        Toast.makeText(getContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                        ActivityCompat.requestPermissions(getActivity(),new String[]{android.Manifest.permission.RECORD_AUDIO},0);
                     }else if(error == SpeechRecognizer.ERROR_AUDIO){
-                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(),getString(R.string.voice_recon_audio_record_err),Toast.LENGTH_SHORT).show();
                     }else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_SERVER ){
-                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(),getString(R.string.voice_recon_internet_err),Toast.LENGTH_SHORT).show();
                     }else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY){
-                        Toast.makeText(getApplicationContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(),getString(R.string.voice_recon_busy_err),Toast.LENGTH_SHORT).show();
                     }else if(error == SpeechRecognizer.ERROR_CLIENT){
 
                     }
                 }
-                //Toast.makeText(getApplicationContext(),getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getContext(,getString(R.string.speech_to_text_failed) + String.valueOf(error), Toast.LENGTH_LONG).show();
             }
             public void onResults(Bundle results)
             {
@@ -353,7 +319,7 @@ public class MainFragment extends Fragment {
                     if(oldResult.isEmpty()){
                         String originalText = input.getText().toString();
                         if(!originalText.isEmpty()){
-                            Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
+                            //Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
                             if( input.getSelectionStart() == -1 || input.getSelectionStart()-1 == input.getText().toString().length() - 1){//cursor at last or not exist
                                 if(!Character.isWhitespace(originalText.charAt(originalText.length() - 1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(originalText.length() - 1)))){
                                     input.append(" ");
@@ -366,7 +332,7 @@ public class MainFragment extends Fragment {
                         }
                     }
                     str = (String) data.get(0);
-                    Log.i("VOICERECOGNITION", ">"+str+"<");
+                    //Log.i("VOICERECOGNITION", ">"+str+"<");
                     if(!oldResult.isEmpty()){
                         String originalText = input.getText().toString();
                         if(oldResult.length() <= str.length()){
@@ -431,7 +397,7 @@ public class MainFragment extends Fragment {
                     if(oldResult.isEmpty()){
                         String originalText = input.getText().toString();
                         if(!originalText.isEmpty()){
-                            Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
+                            //Log.i("VOICERECOGNITION", "|LAST CHARACTER|"+originalText.substring(originalText.length() - 1)+"|");
                             if( input.getSelectionStart() == -1 || input.getSelectionStart() == input.getText().toString().length() - 1){//cursor at last or not exist
                                 if(!Character.isWhitespace(originalText.charAt(originalText.length() - 1)) || Pattern.matches("\\p{Punct}", String.valueOf(originalText.charAt(originalText.length() - 1)))){
                                     input.append(" ");
@@ -448,7 +414,7 @@ public class MainFragment extends Fragment {
                         }
                     }
                     // resultCount++;
-                    Log.i("VOICERECOGNITION", "|"+result+"|");
+                    //Log.i("VOICERECOGNITION", "|"+result+"|");
                     //Handler handler = new Handler();
                     //   handler.post(new Runnable() {
                     //   @Override
@@ -508,7 +474,7 @@ public class MainFragment extends Fragment {
                     }else {
                         selectedId.add(0,id);
                     }*/
-                    // Toast.makeText(getApplicationContext(),selectedId.toString(),Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(getContext(,selectedId.toString(),Toast.LENGTH_SHORT).show();
                 }else {
                     /*doubleClickCout++; DOUBLE CLICK METHOD DEPRECIATED
                     Handler handler = new Handler();
@@ -520,7 +486,7 @@ public class MainFragment extends Fragment {
                     };
                     if (doubleClickCout == 2) {
                         //Double click
-                        // Toast.makeText(getApplicationContext(),"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
+                        // Toast.makeText(getContext(,"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
                         final String finishedContent = todosql.getOneDataInTODO(String.valueOf(id));
                         finishData(id);
                         if(!modifyId.getText().toString().equals("")){
@@ -558,7 +524,7 @@ public class MainFragment extends Fragment {
                     }
                     modifyId.setText(String.valueOf(id));
                     if(isAdd){//if current button displays "+" sign
-                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
                         isAdd = false;
                         d.start();
@@ -570,7 +536,7 @@ public class MainFragment extends Fragment {
                     showKeyboard();
                     int top = view.getTop();
                     todoList.smoothScrollBy(0,top);//scroll the clicked item to top
-                    //Toast.makeText(getApplicationContext(),String.valueOf(position),Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getContext(,String.valueOf(position),Toast.LENGTH_LONG).show();
                     //handler.postDelayed(r,250);//double click interval
                     //(new Handler()).postDelayed(new Runnable() {
                     //  @Override
@@ -589,10 +555,10 @@ public class MainFragment extends Fragment {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
-                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                Vibrator v = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                 //v.vibrate(30);
                 if(isInSelectionMode){
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
@@ -601,13 +567,13 @@ public class MainFragment extends Fragment {
                     proFab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
-                    getSupportLoaderManager().restartLoader(123,null,MainActivity.this);
-                    //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
+                    getActivity().getSupportLoaderManager().restartLoader(123,null,MainFragment.this);
+                    //multiSelectionBox = (CheckBox)view.getView().(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
-                    selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
+                    selectionToolBar = (Toolbar)getView().findViewById(R.id.selection_toolbar);
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
-                    toolbar = (Toolbar) findViewById(R.id.toolbar);
+                    toolbar = (Toolbar) getView().findViewById(R.id.toolbar);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
@@ -659,9 +625,9 @@ public class MainFragment extends Fragment {
                                             }else if (item.getItemId() == R.id.selection_menu_export){
                                                 boolean succ = exportOrPrint();
                                                 if (succ){
-                                                    Toast.makeText(getApplicationContext(),getString(R.string.export_succeed),Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(getContext(),getString(R.string.export_succeed),Toast.LENGTH_SHORT).show();
                                                 }else {
-                                                    Toast.makeText(getApplicationContext(),getString(R.string.export_failed),Toast.LENGTH_LONG).show();
+                                                    Toast.makeText(getContext(),getString(R.string.export_failed),Toast.LENGTH_LONG).show();
                                                 }
                                             }
                                             return false;
@@ -702,7 +668,7 @@ public class MainFragment extends Fragment {
                             //What to do on back clicked
                         }
                     });*/
-                    getSupportActionBar().setDisplayShowTitleEnabled(true);
+                    ((AppCompatActivity)getActivity()).getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
                 return true;
             }
@@ -717,7 +683,7 @@ public class MainFragment extends Fragment {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if(charSequence.equals("#")){
-                    Toast.makeText(getApplicationContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo implement ontextchangecolor method
+                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo implement ontextchangecolor method
                 }
             }
 
@@ -730,12 +696,12 @@ public class MainFragment extends Fragment {
         input.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //Toast.makeText(getApplicationContext(),"clicked",Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getContext(,"clicked",Toast.LENGTH_SHORT).show();
                 input.requestFocus();
                 interruptAutoSend();
                 showKeyboard();
                 if(isAdd){
-                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                     fab.setImageDrawable(d);
                     isAdd = false;
                     d.start();
@@ -768,7 +734,7 @@ public class MainFragment extends Fragment {
                 interruptAutoSend();
                 if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
                     if(isAdd){
-                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
                         isAdd = false;
                         d.start();
@@ -802,7 +768,7 @@ public class MainFragment extends Fragment {
                         hideKeyboard();
                         displayAllNotes();
                         if(!isAdd){
-                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
                             fab.setImageDrawable(d);
                             isAdd = true;
                             d.start();
@@ -812,7 +778,7 @@ public class MainFragment extends Fragment {
                         input.setText("");
                         modifyId.setText("");
                     } else{
-                        Toast.makeText(getApplicationContext(),getString(R.string.error_message),Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(),getString(R.string.error_message),Toast.LENGTH_SHORT).show();
                         input.requestFocus();
                     }
                 }
@@ -822,7 +788,7 @@ public class MainFragment extends Fragment {
         fab.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                 vibrator.vibrate(20);
                 //speechRecognizer.stopListening();
                 interruptAutoSend();
@@ -842,7 +808,7 @@ public class MainFragment extends Fragment {
                 input.setVisibility(View.VISIBLE);
                 input.setEnabled(false);
                 if(isAdd){
-                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
+                    AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                     fab.setImageDrawable(d);
                     isAdd = false;
                     d.start();
@@ -862,7 +828,6 @@ public class MainFragment extends Fragment {
             }
         });
 
-        navigationView.setNavigationItemSelectedListener(this);
 
         input.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -877,23 +842,23 @@ public class MainFragment extends Fragment {
             public void onFocusChange(View v, boolean hasFocus){
                 if (hasFocus){
                     //if(!input.getText().toString().equals("")) clearEditText.setDrawableVisible(true);
-                    //Toast.makeText(getApplicationContext(),"called showKeyboard!",Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(getContext(,"called showKeyboard!",Toast.LENGTH_SHORT).show();
                     showKeyboard();
                 }
                 else {
                     hideKeyboard();
                     main.requestFocus();
-                    //Toast.makeText(getApplicationContext(),"focus cleared, touched, request focus",Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(getContext(,"focus cleared, touched, request focus",Toast.LENGTH_SHORT).show();
                     if(input.isCursorVisible()||input.isInEditMode()||input.isInputMethodTarget()||input.isFocused()||input.hasFocus()){
                         //input.clearFocus();
-                        //Toast.makeText(getApplicationContext(),"focus cleared, touched, request focus",Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(getContext(,"focus cleared, touched, request focus",Toast.LENGTH_SHORT).show();
                         //main.requestFocus();
                         hideKeyboard();
                         if(input.getText().toString().equals("")||input.getText().toString().isEmpty()){
-                            //Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(getContext(,"3",Toast.LENGTH_SHORT).show();
                             modifyId.setText("");
                             if(!isAdd){
-                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
                                 fab.setImageDrawable(d);
                                 isAdd = true;
                                 d.start();
@@ -907,53 +872,95 @@ public class MainFragment extends Fragment {
                 }
             }
         });
+
+        doubleClickCount = 0;
+        toolbar.setOnClickListener(new View.OnClickListener() {//double click toolbar to scroll to the top
+            @Override
+            public void onClick(View v) {
+                doubleClickCount++;
+                Handler handler = new Handler();
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        doubleClickCount = 0;
+                    }
+                };
+                handler.postDelayed(r,250);
+                if (doubleClickCount == 2) {//double clicked
+                    doubleClickCount = 0;
+                    todoList.smoothScrollToPosition(0);//smooth scroll to top
+                }
+            }
+        });
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_main, container, false);
-    }
+    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {//draw the options after swipe left
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
+        @Override
+        public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+            return false;
         }
-    }
 
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
+        @Override
+        public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+            if(isInSelectionMode) return 0; //prevent swipe in selection mode
+            return super.getSwipeDirs(recyclerView, viewHolder);
         }
-    }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
-    }
+        @Override
+        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+            unSelectAll = false;
+            selectAll = false;
+            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
+                removeSelectedId(viewHolder.getItemId());
+            }
+            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
+            finishData(viewHolder.getItemId());
+            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    insertData(finishedContent);
+                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
+                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                    displayAllNotes();
+                }
+            }).show();
+        }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
-    public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
-    }
+        @Override
+        public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+            if (viewHolder.getAdapterPosition() == -1) {
+                return;
+            }
+            View itemView = viewHolder.itemView;
+            Paint textPaint = new Paint();
+            textPaint.setStrokeWidth(2);
+            textPaint.setTextSize(80);
+            textPaint.setColor(themeColor);
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            Rect bounds = new Rect();
+            textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
+            Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_black_24dp);//draw finish icon
+            finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+            int finishIconMargin = 40;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
+            int intrinsicWidth = finishIcon.getIntrinsicWidth();
+            int intrinsicHeight = finishIcon.getIntrinsicWidth();
+            int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width() - 8;
+            int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width() - 8;
+            int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+            int finishIconBottom = finishIconTop + intrinsicHeight;
+            finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
+            finishIcon.draw(c);
+            //fade out the view
+            final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
+            viewHolder.itemView.setAlpha(alpha);
+            viewHolder.itemView.setTranslationX(dX);
+            c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+        }
+
+    };
 
     public void fakeProgress(int ms){
         ObjectAnimator animator = ObjectAnimator.ofInt(fabProgressBar,"progress",0,1000);
@@ -962,13 +969,85 @@ public class MainFragment extends Fragment {
         animator.start();
     }
 
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case android.R.id.home:{
+                interruptAutoSend();
+                if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
+                    recognitionProgressView.setVisibility(View.GONE);
+                    fab.setVisibility(View.VISIBLE);
+                    proFab.setVisibility(View.VISIBLE);
+                }
+                speechRecognizer.stopListening();
+                if(isInSelectionMode || isInSearchMode){
+                    if(isInSelectionMode){
+                        setOutOfSelectionMode();
+                    }
+                    if (isInSearchMode){
+                        setOutOfSearchMode();
+                    }
+                }else {
+                    //System.out.println(String.valueOf(exit));
+                    DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                    //main.requestFocus();
+                    //input.clearFocus();
+                    hideKeyboard();
+                    displayAllNotes();
+                    if (input.getVisibility() == View.GONE){
+                        justex = true;
+                    }else {
+                        if(input.getText().toString().equals("")){
+                            if(!isAdd){
+                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                                fab.setImageDrawable(d);
+                                isAdd = true;
+                                d.start();
+                            }
+                            input.setVisibility(View.GONE);
+                            justex = false;
+                            modifyId.setText("");
+                            hideKeyboard();
+                        } else {
+                            input.setText("");
+                            modifyId.setText("");
+                            justex=false;
+                            hideKeyboard();
+                        }
+                    }
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            exit=0;
+                        }
+                    }, 1500);
+                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
+                        exit++;
+                        Toast.makeText(getContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
+                    }
+                    //justex = true;
+                    if (drawer.isDrawerOpen(GravityCompat.START)) {
+                        drawer.closeDrawer(GravityCompat.START);
+                    }
+                    else {
+                        if(exit>=2){
+                            super.onOptionsItemSelected(item);
+                        }
+                    }
+                }
+            }
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     public void setOutOfSearchMode(){
         proFab.setVisibility(View.VISIBLE);
         if(!(input.getText().toString().equals(""))){//if input had text before entering the search mode, set it to visible here
             input.setVisibility(View.VISIBLE);
         }
         isInSearchMode = false;
-        getSupportLoaderManager().restartLoader(123,null,this);
+        getActivity().getSupportLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
         hideKeyboard();
     }
@@ -976,15 +1055,15 @@ public class MainFragment extends Fragment {
     public void setOutOfSelectionMode(){
         isInSelectionMode = false;
         proFab.setVisibility(View.VISIBLE);
-        getSupportLoaderManager().restartLoader(123,null,this);
+        getActivity().getSupportLoaderManager().restartLoader(123,null,this);
         selectedId.clear();
         selectedContent.clear();
         selectAll = false;
         unSelectAll = false;
         displayAllNotes();
-        selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
+        selectionToolBar = (Toolbar)getActivity().findViewById(R.id.selection_toolbar);
         selectionToolBar.getMenu().clear();
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = (Toolbar) getActivity().findViewById(R.id.toolbar);
         selectionToolBar.setVisibility(View.GONE);
         if(selectAllBox != null){
             selectAllBox.setChecked(false);
@@ -997,7 +1076,7 @@ public class MainFragment extends Fragment {
         selectedId.add(0,id);
         String data = todosql.getOneDataInTODO(id);
         selectedContent.add(0,data);
-        selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
+        selectionToolBar = (Toolbar)getView().findViewById(R.id.selection_toolbar);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
             selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
@@ -1033,14 +1112,14 @@ public class MainFragment extends Fragment {
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
             selectionToolBar.getMenu().clear();
         }else {
-            selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
+            selectionToolBar = (Toolbar)getView().findViewById(R.id.selection_toolbar);
             String count = Integer.toString(selectedId.size());
             selectionTitle.setText(count + getString(R.string.selection_mode_title));
         }
     }
 
     public void setColorPreferences(){
-        sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+        sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
         textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
         textSize = sharedPreferences.getInt(getString(R.string.text_size_key),24);
@@ -1067,7 +1146,7 @@ public class MainFragment extends Fragment {
 
         //int[] heights = { 20, 24, 18, 23, 16 };
         int[] heights = { 30, 36, 27, 35, 24 };
-        recognitionProgressView = (RecognitionProgressView) findViewById(R.id.recognition_view);
+        recognitionProgressView = (RecognitionProgressView) getView().findViewById(R.id.recognition_view);
         recognitionProgressView.setColors(colors);
         recognitionProgressView.setBarMaxHeightsInDp(heights);
         recognitionProgressView.setCircleRadiusInDp(3);
@@ -1075,49 +1154,24 @@ public class MainFragment extends Fragment {
         recognitionProgressView.setIdleStateAmplitudeInDp(2);
         recognitionProgressView.setRotationRadiusInDp(12);
         recognitionProgressView.play();
-        LayoutInflater inflater = LayoutInflater.from(this);
+        LayoutInflater inflater = LayoutInflater.from(getContext());
         //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        if(ColorUtils.determineBrightness(backgroundColor) < 0.5){
-            navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#fafafa")));
-        }else {
-            navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
-        }
         //setEdgeColor(todoList,themeColor);
-        navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
         //int[] themeColors = {backgroundColor,themeColor};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
         //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
-        Handler handler = new Handler();
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Drawable navHeadImage = getDrawable(R.drawable.nav_header);
-                navHeadImage.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-                View navHeader = navigationView.getHeaderView(0);
-                TextView navHeadText = (TextView)navHeader.findViewById(R.id.navHeadText);
-                navHeadText.setTextColor(Color.WHITE);
-                navHeader.setBackground(navHeadImage);
-            }
-        });
         //navHeadText.setTextSize(textSize);
         //navHeader.setBackgroundColor(Color.RED);
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-        toolbar.setBackgroundColor(themeColor);
         input.setTextColor(textColor);
         input.setTextSize(24);
         setCursorColor(input,themeColor);
-        main.setBackgroundColor(backgroundColor);
-        Window window = this.getWindow();
-        window.setStatusBarColor(themeColor);
-        window.setNavigationBarColor(themeColor);
         if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
             emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
         }else {//bright
             emptyTextView.setTextColor(Color.parseColor("#61000000"));
-
         }
         todoList.setBackgroundColor(backgroundColor);
-        navigationView.setBackgroundColor(backgroundColor);
         if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
             input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.5));
         }else {
@@ -1136,13 +1190,13 @@ public class MainFragment extends Fragment {
             case 0:{
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(getApplicationContext(),getString(R.string.thanks_for_corporation),Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(),getString(R.string.thanks_for_corporation),Toast.LENGTH_SHORT).show();
                     fab.performLongClick();
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
 
                 } else {
-                    Toast.makeText(getApplicationContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(),getString(R.string.voice_permission_request),Toast.LENGTH_SHORT).show();
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
                 }
@@ -1154,7 +1208,7 @@ public class MainFragment extends Fragment {
     public void displayAllNotes(){
         if(todoList.getAdapter() == null){
             ////System.out.println("null called");
-            LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+            LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             todoList.setLayoutManager(linearLayoutManager);
             todoListAdapter = (new TodoListAdapter(null){
@@ -1299,53 +1353,17 @@ public class MainFragment extends Fragment {
                 }
             });
             todoList.setAdapter(todoListAdapter);
-            getSupportLoaderManager().initLoader(123, null, this);
+            getActivity().getSupportLoaderManager().initLoader(123, null, this);
             ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
             mItemTouchHelper.attachToRecyclerView(todoList);
         }
-        getSupportLoaderManager().restartLoader(123,null,this);
-    }
-
-    public ArrayList<String> determineContainedTags(String text){
-        int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
-        if(tagStartPos >= 0){//if contains tags
-            ArrayList<String> tags = new ArrayList<String>();
-            boolean isTagAtTheEnd = false;
-            while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
-                int tagEndPos = -1;//assume neither enter nor space exists
-                if(text.indexOf(" ",tagStartPos) >= 0 && text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
-                    tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
-                }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
-                    tagEndPos = text.indexOf("\n",tagStartPos);
-                }else {//contains only space
-                    tagEndPos = text.indexOf(" ",tagStartPos);
-                }
-                if(tagEndPos < 0){//if the tag is the last section of the note
-                    tagEndPos = text.length();
-                    isTagAtTheEnd = true;
-                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
-                    continue;
-                }
-                String tag = text.toLowerCase().substring(tagStartPos,tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
-                tags.add(tag);
-                if(isTagAtTheEnd){
-                    break;
-                }else {
-                    tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
-                }
-            }
-            return tags;
-        }else return null;
+        getActivity().getSupportLoaderManager().restartLoader(123,null,this);
     }
 
     public void interruptAutoSend(){
         noInterruption = false;
         fabProgressBar.setVisibility(View.INVISIBLE);
         //stop circle
-    }
-
-    public static String removeCharAt(String s, int pos) {
-        return s.substring(0, pos) + s.substring(pos + 1);
     }
 
     public void finishSetOfData(){
@@ -1392,7 +1410,7 @@ public class MainFragment extends Fragment {
 
     public boolean exportOrPrint(){//print list or export as pdf
         //todo print list or export as pdf
-        Toast.makeText(getApplicationContext(),getString(R.string.exporting),Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(),getString(R.string.exporting),Toast.LENGTH_SHORT).show();
         String exportBody = null;
         StringBuilder exportBodyBuilder = new StringBuilder();
         exportBody = getString(R.string.note_export_content_header);
@@ -1401,13 +1419,12 @@ public class MainFragment extends Fragment {
             exportBodyBuilder.append("\n\n");//empty line after each note
         }
         exportBody = exportBodyBuilder.toString();//this is the final string for export
-        PrintManager printManager = (PrintManager) MainActivity.this
-                .getSystemService(Context.PRINT_SERVICE);
-        String jobName = MainActivity.this.getString(R.string.app_name) + " Document";
+        PrintManager printManager = (PrintManager)getActivity().getSystemService(Context.PRINT_SERVICE);
+        String jobName = getString(R.string.app_name) + " Document";
         try{
-            printManager.print(jobName, new MainActivity.ExportPrintAdapter(MainActivity.this),null);//print with print adapter
+            printManager.print(jobName, new MainFragment.ExportPrintAdapter(getContext()),null);//print with print adapter
         }catch (Exception e){
-            Toast.makeText(getApplicationContext(),e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(),e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
             e.printStackTrace();
             return false;
         }
@@ -1417,10 +1434,7 @@ public class MainFragment extends Fragment {
         return true;
     }
 
-    public Canvas generatePDFCanvas(Canvas canvas){
 
-        return null;
-    }
 
     public void shareSetOfData(){//share note function
         Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
@@ -1445,12 +1459,12 @@ public class MainFragment extends Fragment {
     }
 
     public void hideKeyboard() {
-        View view = this.getCurrentFocus();
+        View view = getActivity().getCurrentFocus();
         if(view != null){
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            InputMethodManager imm = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(view.getWindowToken(),0);
         }else {
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            InputMethodManager imm = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
             try{
                 imm.hideSoftInputFromWindow(input.getWindowToken(),0);
             }catch (NullPointerException ignored){}
@@ -1458,40 +1472,90 @@ public class MainFragment extends Fragment {
     }
 
     public void showKeyboard() {
-        View view = this.getCurrentFocus();
+        View view = getActivity().getCurrentFocus();
         if(view != null){
-            InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            InputMethodManager imManager = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
             imManager.showSoftInput(view,InputMethodManager.SHOW_IMPLICIT);
         }else{
             try{
-                InputMethodManager imManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                InputMethodManager imManager = (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
                 imManager.showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);
             }catch (NullPointerException ignored){}
         }
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == PURCHASE_PREMIUM_REQUEST_ID){
-            if(resultCode == RESULT_OK){
-                if (!mHelper.handleActivityResult(requestCode, resultCode, data)) {
-                    // not handled, so handle it ourselves (here's where you'd
-                    // perform any handling of activity results not related to in-app
-                    // billing...
-                    super.onActivityResult(requestCode, resultCode, data);
-                }
-            }
-            if(resultCode == RESULT_CANCELED){//purchase cancelled
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
-                    //Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
-                    purchaseProgressDialog.dismiss();
-                }
-                isPremium = false;
-            }
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        getActivity().getMenuInflater().inflate(R.menu.search_menu, menu);
+        SearchManager searchManager = (SearchManager) getActivity().getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) menu.findItem(R.id.todo_search).getActionView();
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
+        searchView.setIconifiedByDefault(true);
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        searchBar.setLayoutTransition(new LayoutTransition());
+        Spannable hintText = new SpannableString(getString(R.string.search_hint));
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );
+        }else {//light themeColor
+            hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
         }
+        searchView.setQueryHint(hintText);
+        MenuItem searchMenuIem = menu.findItem(R.id.todo_search);
+        MenuItemCompat.setOnActionExpandListener(searchMenuIem, new MenuItemCompat.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                isInSearchMode = true;
+                proFab.setVisibility(View.GONE);
+                input.setVisibility(View.GONE);
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                if(isInSelectionMode){
+                    setOutOfSelectionMode();
+                    return false;
+                }else {
+                    setOutOfSearchMode();
+                }
+                return true;
+            }
+        });
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isInSearchMode = true;
+                proFab.setVisibility(View.GONE);
+                input.setVisibility(View.GONE);
+            }
+        });
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                query(query);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                query(newText);
+                return false;
+            }
+
+
+        });
+        //return true;
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    public void query(String query) {
+        Bundle bundle = new Bundle();
+        bundle.putString("QUERY", query);
+        searchText = query;
+        //System.out.println("calledquery" + " " + text);
+        getActivity().getSupportLoaderManager().restartLoader(123, bundle, MainFragment.this);
     }
 
     @Override
@@ -1504,9 +1568,9 @@ public class MainFragment extends Fragment {
         }
         if (args != null) {
             String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
-            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
-        return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
+        return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
     }
 
     @Override
@@ -1536,7 +1600,7 @@ public class MainFragment extends Fragment {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
             Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
-            return getContentResolver().update(uri, values, null, null);
+            return getActivity().getContentResolver().update(uri, values, null, null);
         }else return -1;
     }
 
@@ -1544,7 +1608,7 @@ public class MainFragment extends Fragment {
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
-            return getContentResolver().insert(AppContract.Item.TODO_URI, values);
+            return getActivity().getContentResolver().insert(AppContract.Item.TODO_URI, values);
         } else return null;
     }
 
@@ -1554,20 +1618,20 @@ public class MainFragment extends Fragment {
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
-        getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
+        getActivity().getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
     }
 
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
         String note = todosql.getOneDataInTODO(id);
-        getContentResolver().delete(uri, null, null);
+        getActivity().getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
                 if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
                     Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
-                    getContentResolver().delete(tagUri,null,null);
+                    getActivity().getContentResolver().delete(tagUri,null,null);
                 }
             }
         }
@@ -1613,5 +1677,182 @@ public class MainFragment extends Fragment {
             }
         }
         super.onResume();
+    }
+
+    public class ExportPrintAdapter extends PrintDocumentAdapter//print adapter for exportation
+    {
+        public PdfDocument myPdfDocument;
+        public int totalpages = 0;
+        Context context;
+        private int pageHeight;
+        private int pageWidth;
+
+        public ExportPrintAdapter(Context context)
+        {
+            this.context = context;
+        }
+
+        @Override
+        public void onLayout(PrintAttributes oldAttributes,
+                             PrintAttributes newAttributes,
+                             CancellationSignal cancellationSignal,
+                             LayoutResultCallback callback,
+                             Bundle metadata) {
+            myPdfDocument = new PrintedPdfDocument(context, newAttributes);//create new PDF document
+
+            pageHeight = newAttributes.getMediaSize().getHeightMils()/1000 * 72;
+            pageWidth = newAttributes.getMediaSize().getWidthMils()/1000 * 72;//calculate page height/width
+
+            if (cancellationSignal.isCanceled() ) {//handle cancellation requests
+                callback.onLayoutCancelled();
+                return;
+            }
+            totalpages = computePageCount(newAttributes);//get total page number
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+            PrintDocumentInfo.Builder builder = new PrintDocumentInfo
+                    .Builder(getString(R.string.export_file_name) + dateFormat.format(Calendar.getInstance().getTime()) + ".pdf")//exported file name
+                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                    .setPageCount(totalpages);//set page number
+            PrintDocumentInfo info = builder.build();
+            callback.onLayoutFinished(info, true);
+        }
+
+
+        @Override
+        public void onWrite(final PageRange[] pageRanges,
+                            final ParcelFileDescriptor destination,
+                            final CancellationSignal cancellationSignal,
+                            final PrintDocumentAdapter.WriteResultCallback callback) {//render final export document
+            for (int i = 0; i < totalpages; i++) {
+                if (pageInRange(pageRanges, i))
+                {
+                    PdfDocument.PageInfo newPage = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i).create();
+
+                    PdfDocument.Page page = myPdfDocument.startPage(newPage);
+
+                    if (cancellationSignal.isCanceled()) {
+                        callback.onWriteCancelled();
+                        myPdfDocument.close();
+                        myPdfDocument = null;
+                        return;
+                    }
+                    //drawPage(page, i);//DEPRECIATED METHOD
+                    Canvas canvas = page.getCanvas();
+                    int titleBaseLine = 72;
+                    int leftMargin = 54;
+                    int verticalMargin = 16;
+                    Paint paint = new Paint();
+                    paint.setColor(Color.BLACK);
+                    paint.setTextSize(40);//set title font                    canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+                    canvas.drawText(getString(R.string.export_title), leftMargin, titleBaseLine + 35, paint);
+                    paint.setTextSize(14);
+                    for(String text : selectedContent){
+                        canvas.drawText(
+                                text,
+                                leftMargin,
+                                titleBaseLine,
+                                paint);
+                        if(canvas.getClipBounds().height()-verticalMargin >= pageHeight) return;
+                    }
+                    myPdfDocument.finishPage(page);
+                }
+            }
+
+            try {
+                myPdfDocument.writeTo(new FileOutputStream(
+                        destination.getFileDescriptor()));
+            } catch (IOException e) {
+                callback.onWriteFailed(e.toString());
+                return;
+            } finally {
+                myPdfDocument.close();
+                myPdfDocument = null;
+            }
+            callback.onWriteFinished(pageRanges);
+            setOutOfSelectionMode();
+        }
+
+        private void drawPage(PdfDocument.Page page, int pagenumber) {//DEPRECIATED method, see onWrite() part
+            Canvas canvas = page.getCanvas();
+
+            pagenumber++; // Make sure page numbers start at 1
+
+            int titleBaseLine = 72;
+            int leftMargin = 54;
+            int dynamicTextSize = 0;//determine text size based on the content size
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Paint paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(dynamicTextSize);//set title font
+            canvas.drawText(
+                    "Test Print Document Page " + pagenumber,
+                    leftMargin,
+                    titleBaseLine,
+                    paint);
+
+            paint.setTextSize(14);
+            canvas.drawText("This is some test content to verify that custom document printing works", leftMargin, titleBaseLine + 35, paint);
+
+            //PdfDocument.PageInfo pageInfo = page.getInfo();
+
+            /*canvas.drawCircle(pageInfo.getPageWidth()/2,
+                    pageInfo.getPageHeight()/2,
+                    150,
+                    paint);*///draw circle todo mark on the page
+        }
+
+        private boolean pageInRange(PageRange[] pageRanges, int page)
+        {
+            for (int i = 0; i<pageRanges.length; i++)
+            {
+                if ((page >= pageRanges[i].getStart()) &&
+                        (page <= pageRanges[i].getEnd()))
+                    return true;
+            }
+            return false;
+        }
+
+        private int computePageCount(PrintAttributes printAttributes) { //calculate total page number todo improve this algorithm
+            int itemsPerPage = 4; // default item count for portrait mode
+
+            PrintAttributes.MediaSize pageSize = printAttributes.getMediaSize();
+            if (!pageSize.isPortrait()) {
+                // Six items per page in landscape orientation
+                itemsPerPage = 6;
+            }
+
+            // Determine number of print items
+            int finalPageNumber = 0;
+            int printItemCount = selectedContent.size();
+            int pageHeight = pageSize.getHeightMils();
+            int dynamicTextSize = 0;//determine text size based on the content
+            int textCount = selectedContent.toArray().length;
+            if (textCount <= 150){
+                dynamicTextSize = 30;
+            }else if(textCount < 500 && textCount > 150){
+                dynamicTextSize = 22;
+            }else {
+                dynamicTextSize = 18;
+            }
+            Toast.makeText(getContext(),printItemCount,Toast.LENGTH_LONG).show();
+            Paint fontPaint = new Paint();//determine content size'
+            Rect fontRect = new Rect();
+            fontPaint.setStyle(Paint.Style.FILL);
+            fontPaint.setColor(Color.BLACK);
+            fontPaint.setTextSize(dynamicTextSize);
+            fontPaint.getTextBounds(selectedContent.toString(),0,selectedContent.size(),fontRect);
+            int textTotalHeight = fontRect.height();
+            if (pageHeight >= textTotalHeight) finalPageNumber = 1;//in case the content is less than one page
+            else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
+            return finalPageNumber; //todo temporary, change later
+            //return (int) Math.ceil(printItemCount / itemsPerPage);
+        }
     }
 }
