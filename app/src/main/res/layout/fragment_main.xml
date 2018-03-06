@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:id="@+id/mainFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,15 +12,17 @@
     android:focusableInTouchMode="true"
     android:theme="@style/Base.Theme.AppCompat"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.jackz314.todo.MainFragment">
+    tools:context="com.jackz314.todo.MainFragment"
+    tools:layout_editor_absoluteY="81dp">
 
     <EditText
         android:id="@+id/input"
         style="@android:style/Widget.EditText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:layout_marginLeft="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
         android:ems="10"
         android:focusable="true"
         android:focusableInTouchMode="true"
@@ -28,12 +30,11 @@
         android:inputType="textMultiLine"
         android:selectAllOnFocus="false"
         android:textSize="24sp"
-        android:visibility="visible"
-        app:layout_constraintBottom_toTopOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        tools:ignore="RtlHardcoded"
-        app:layout_constraintRight_toLeftOf="@+id/fab_coordinator_layout"
-        android:layout_marginRight="0dp" />
+        android:visibility="gone"
+        ads:layout_constraintBottom_toBottomOf="parent"
+        ads:layout_constraintEnd_toStartOf="@+id/fab_coordinator_layout"
+        ads:layout_constraintStart_toStartOf="parent"
+        tools:ignore="RtlHardcoded" />
 
     <TextView
         android:id="@+id/modify_id"
@@ -47,15 +48,16 @@
         android:id="@+id/todolist"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        tools:listitem="@layout/todolist"
-        android:stackFromBottom="false"
-        android:paddingTop="8dp"
         android:clipToPadding="false"
+        android:paddingTop="8dp"
+        android:stackFromBottom="false"
         app:layout_constraintBottom_toTopOf="@+id/input"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0"
+        tools:listitem="@layout/todolist" />
 
     <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
         android:id="@+id/recognition_view"
@@ -63,10 +65,10 @@
         android:layout_height="60dp"
         android:layout_gravity="center"
         android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
-        app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toTopOf="parent"
-        android:layout_marginEnd="8dp" />
+        app:layout_constraintRight_toRightOf="parent" />
 
     <!--<com.google.android.gms.ads.AdView
         android:id="@+id/bannerAdView"
@@ -80,13 +82,14 @@
     </com.google.android.gms.ads.AdView> paused ad-->
 
     <android.support.design.widget.CoordinatorLayout
+        android:id="@+id/fab_coordinator_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/fab_coordinator_layout"
+        android:layout_marginBottom="0dp"
         android:layout_marginRight="8dp"
-        app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toTopOf="parent"
-        android:layout_marginBottom="0dp">
+        app:layout_constraintRight_toRightOf="parent">
+
         <com.dmitrymalkovich.android.ProgressFloatingActionButton
             android:id="@+id/progress_fab"
             android:layout_width="wrap_content"
@@ -100,16 +103,15 @@
                 android:layout_height="wrap_content"
                 android:max="1000"
                 android:progress="0"
-                android:progressDrawable="@drawable/circular"
-                />
+                android:progressDrawable="@drawable/circular" />
 
             <android.support.design.widget.FloatingActionButton
                 android:id="@+id/fab"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="8dp"
                 android:layout_marginBottom="@dimen/fab_margin"
                 android:layout_marginLeft="8dp"
+                android:layout_marginRight="8dp"
                 android:layout_marginTop="@dimen/fab_margin"
                 android:src="@drawable/avd_plus_to_send"
                 app:backgroundTint="@color/colorPrimary" />

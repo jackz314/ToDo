@@ -507,7 +507,7 @@ public class dtb extends SQLiteOpenHelper{
         db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
-    public int returnPinnedNotesNumber(){
+    public int countPinnedNotesNumber(){
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,PINNED},PINNED + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
         int count = cs.getCount();
@@ -521,11 +521,12 @@ public class dtb extends SQLiteOpenHelper{
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
         String currentTimeStr = MainActivity.getCurrentTimeString();
         String recentTimeStr = dateFormat.format(recentTime.getTime());
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,REMIND_TIME},REMIND_TIME + "BETWEEN ? AND ?",new String[]{currentTimeStr,recentTimeStr},null,null,"_id desc",null );//filter for recent reminders
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,REMIND_TIME},REMIND_TIME + " BETWEEN ? AND ?",new String[]{currentTimeStr,recentTimeStr},null,null,"_id desc",null );//filter for recent reminders
         int recentReminderCount = cs.getCount();
         cs.close();
         return recentReminderCount;
     }
+
 
     /* OLD METHOD
     public boolean updateData(String id, String title){

@@ -70,7 +70,6 @@ import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -113,7 +112,6 @@ import static com.jackz314.todo.dtb.PINNED;
 import static com.jackz314.todo.dtb.PINNED_TIMESTAMP;
 import static com.jackz314.todo.dtb.REMIND_TIME;
 import static com.jackz314.todo.dtb.TITLE;
-import static com.jackz314.todo.dtb.TODO_TABLE;
 
 
 /**
@@ -131,7 +129,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     private String mParam;
     private static final String[] PROJECTION = new String[]{ID, TITLE, PINNED, PINNED_TIMESTAMP};//
     private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + PINNED + " = 1";//ignore markdown signs whe handling displaying notes
-    private static final String SELECTION = "REPLACE (title, '*', '')" + PINNED + " = 1";//ignore markdown signs whe handling displaying notes
+    private static final String SELECTION = "REPLACE (title, '*', '')" + " AND (" + PINNED + " = 1";//ignore markdown signs whe handling displaying notes //1 in sqlite means TRUE for boolean values
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -220,12 +218,14 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         input = getView().findViewById(R.id.important_input);
         modifyId = getView().findViewById(R.id.important_modify_id);
-        emptyTextView = getView().findViewById(R.id.empty_text);
+        emptyTextView = getActivity().findViewById(R.id.empty_text);
         todoList = getView().findViewById(R.id.important_todolist);
         todoList.setHasFixedSize(true);
         fab = getView().findViewById(R.id.important_fab);
         proFab = getView().findViewById(R.id.important_progress_fab);
         fabProgressBar = getView().findViewById(R.id.important_fab_progress_bar);
+        toolbar =  getActivity().findViewById(R.id.toolbar);
+        selectionToolBar = getActivity().findViewById(R.id.selection_toolbar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
         todoList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -497,7 +497,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                 mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                             }
                         }
-                        Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                        Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
                                 insertData(finishedContent);
@@ -553,26 +553,24 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
                     clipboard.setPrimaryClip(clip);
-                    Snackbar.make(main,getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
                     setOutOfSelectionMode();
                     proFab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
-                    getActivity().getSupportLoaderManager().restartLoader(123,null,ImportantFragment.this);
+                    getLoaderManager().restartLoader(123,null,ImportantFragment.this);
                     //multiSelectionBox = (CheckBox)view.getView().(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
-                    selectionToolBar = (Toolbar)getView().findViewById(R.id.selection_toolbar);
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
-                    toolbar = (Toolbar) getView().findViewById(R.id.toolbar);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
                     //Drawable backArrow = getDrawable(R.drawable.ic_close_black_24dp);
                     //selectionToolBar.setNavigationIcon(backArrow);
                     selectionToolBar.setBackgroundColor(themeColor);
-                    selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.select_all_box);
+                    selectAllBox = selectionToolBar.findViewById(R.id.select_all_box);
                     ColorStateList colorStateList = new ColorStateList(
                             new int[][]{
                                     new int[]{-android.R.attr.state_checked}, //disabled
@@ -917,7 +915,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             }
             final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
             finishData(viewHolder.getItemId());
-            Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+            Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     insertData(finishedContent);
@@ -1039,7 +1037,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             input.setVisibility(View.VISIBLE);
         }
         isInSearchMode = false;
-        getActivity().getSupportLoaderManager().restartLoader(123,null,this);
+        getLoaderManager().restartLoader(123,null,this);
         displayAllNotes();
         hideKeyboard();
     }
@@ -1047,15 +1045,13 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public void setOutOfSelectionMode(){
         isInSelectionMode = false;
         proFab.setVisibility(View.VISIBLE);
-        getActivity().getSupportLoaderManager().restartLoader(123,null,this);
+        getLoaderManager().restartLoader(123,null,this);
         selectedId.clear();
         selectedContent.clear();
         selectAll = false;
         unSelectAll = false;
         displayAllNotes();
-        selectionToolBar = (Toolbar)getActivity().findViewById(R.id.selection_toolbar);
         selectionToolBar.getMenu().clear();
-        toolbar = (Toolbar) getActivity().findViewById(R.id.toolbar);
         selectionToolBar.setVisibility(View.GONE);
         if(selectAllBox != null){
             selectAllBox.setChecked(false);
@@ -1068,7 +1064,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         selectedId.add(0,id);
         String data = todosql.getOneDataInTODO(id);
         selectedContent.add(0,data);
-        selectionToolBar = (Toolbar)getView().findViewById(R.id.selection_toolbar);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
             selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
@@ -1104,7 +1099,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
             selectionToolBar.getMenu().clear();
         }else {
-            selectionToolBar = (Toolbar)getView().findViewById(R.id.selection_toolbar);
             String count = Integer.toString(selectedId.size());
             selectionTitle.setText(count + getString(R.string.selection_mode_title));
         }
@@ -1214,7 +1208,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     holder.todoText.setTextSize(textSize);
                     SpannableStringBuilder spannable = new SpannableStringBuilder(text);
                     //pin section
-                    if(todosql.returnPinnedNotesNumber() > 5){
+                    if(todosql.countPinnedNotesNumber() > 5){
 
                     }else {
 
@@ -1345,11 +1339,11 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 }
             });
             todoList.setAdapter(todoListAdapter);
-            getActivity().getSupportLoaderManager().initLoader(123, null, this);
+            getLoaderManager().initLoader(123, null, this);
             ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
             mItemTouchHelper.attachToRecyclerView(todoList);
         }
-        getActivity().getSupportLoaderManager().restartLoader(123,null,this);
+        getLoaderManager().restartLoader(123,null,this);
     }
 
     public void interruptAutoSend(){
@@ -1369,7 +1363,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
         displayAllNotes();
-        Snackbar.make(main, String.valueOf(CLONESelectedContent.size()) + " "  + getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(getView(), String.valueOf(CLONESelectedContent.size()) + " "  + getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 for (String content : CLONESelectedContent){
@@ -1389,7 +1383,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
         displayAllNotes();
-        Snackbar.make(main, String.valueOf(CLONESelectedContent.size()) + " " + getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(getView(), String.valueOf(CLONESelectedContent.size()) + " " + getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 for (String content : CLONESelectedContent){
@@ -1547,7 +1541,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         bundle.putString("QUERY", query);
         searchText = query;
         //System.out.println("calledquery" + " " + text);
-        getActivity().getSupportLoaderManager().restartLoader(123, bundle, ImportantFragment.this);
+        getLoaderManager().restartLoader(123, bundle, ImportantFragment.this);
     }
 
     @Override
@@ -1556,7 +1550,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         //determine order of the list
         String sort = PINNED + " DESC, " + REMIND_TIME + " ASC";
         String currentTImeString = MainActivity.getCurrentTimeString();
-        String selection = "";
+        String selectionAddOn = "";
         String[] selectionArgs = null;
         String[] selectionArgsCombined = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
@@ -1567,18 +1561,23 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
             String currentTimeStr = MainActivity.getCurrentTimeString();
             String recentTimeStr = dateFormat.format(recentTime.getTime());
-            selection = " OR " + REMIND_TIME + "BETWEEN ? AND ?)";
+            selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?)";
             selectionArgs = new String[]{currentTimeStr,recentTimeStr};
         }else {
-            //selection = " OR " + REMIND_TIME + "IS NOT NULL)";
-            sort = sort + "UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIME + " IS NOT NULL ORDER BY " + REMIND_TIME + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
+            if(todosql.countPinnedNotesNumber() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
+                selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
+                sort = sort + " LIMIT 5";
+            }else{
+                selectionAddOn = ")";//complete the parentheses
+            }
+            //" UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIME + " IS NOT NULL ORDER BY " + REMIND_TIME + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
         }
         if (args != null) {
             String[] selectionArgsQuery = new String[]{"%" + args.getString("QUERY") + "%"};
             selectionArgsCombined = MainActivity.combineStringArray(selectionArgsQuery,selectionArgs);
-            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION_WITH_QUERY + selection, selectionArgsCombined, sort);
+            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION_WITH_QUERY + selectionAddOn, selectionArgsCombined, sort);
         }else {
-            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION + selection, selectionArgs , sort);
+            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION + selectionAddOn, selectionArgs , sort);
         }
     }
 
@@ -1667,7 +1666,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         if(!(input.getText().toString().equals("")) && input.getVisibility() == View.VISIBLE) showKeyboard();
         displayAllNotes();
         setColorPreferences();
-        int size = menuNav.size();
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todosql.getData();
             if (cs.getCount()==0){

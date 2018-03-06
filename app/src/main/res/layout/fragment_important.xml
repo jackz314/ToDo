@@ -28,11 +28,11 @@
         android:inputType="textMultiLine"
         android:selectAllOnFocus="false"
         android:textSize="24sp"
-        android:visibility="visible"
-        app:layout_constraintBottom_toTopOf="parent"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         tools:ignore="RtlHardcoded"
-        app:layout_constraintRight_toLeftOf="@+id/fab_coordinator_layout"
+        app:layout_constraintRight_toLeftOf="@+id/important_fab_coordinator_layout"
         android:layout_marginRight="0dp" />
 
     <TextView
@@ -51,7 +51,7 @@
         android:stackFromBottom="false"
         android:paddingTop="8dp"
         android:clipToPadding="false"
-        app:layout_constraintBottom_toTopOf="@+id/input"
+        app:layout_constraintBottom_toTopOf="@+id/important_input"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

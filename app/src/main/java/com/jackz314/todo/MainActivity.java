@@ -1393,9 +1393,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         if(tabLayout.getSelectedTabPosition() == 1){
+            mainFragment = (MainFragment) getSupportFragmentManager().findFragmentById(R.id.mainFragment);
             mainFragment.setOutOfSelectionMode();
         }else if (tabLayout.getSelectedTabPosition() == 0){
-            importantFragment.setOutOfSelectionMode();
+            importantFragment = (ImportantFragment)getSupportFragmentManager().findFragmentById(R.id.importantFragment);
+            importantFragment.setOutOfSelectionMode(); //todo fix all calling methods inside fragment from activity, not working!
         }
         if (id == R.id.history) {
             hideKeyboard();
