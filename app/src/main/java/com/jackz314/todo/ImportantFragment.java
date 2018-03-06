@@ -2,6 +2,7 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
+import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentManager;
 import android.app.SearchManager;
@@ -213,11 +214,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam = getArguments().getString(ARG_PARAM);
-        }
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
         sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         input = getView().findViewById(R.id.important_input);
@@ -886,6 +884,15 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 }
             }
         });
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (getArguments() != null) {
+            mParam = getArguments().getString(ARG_PARAM);
+        }
+
     }
 
     ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {//draw the options after swipe left
