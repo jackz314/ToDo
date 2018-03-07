@@ -228,7 +228,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         toolbar =  getActivity().findViewById(R.id.toolbar);
         selectionToolBar = getActivity().findViewById(R.id.selection_toolbar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
-        main = getView().findViewById(R.id.importantFragment);
+        main = getView().findViewById(R.id.importantFragmentLayout);
         todoList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -1021,7 +1021,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                         Fragment fragment = new MainFragment();
                         FragmentManager fragmentManager = getFragmentManager();
                         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                        fragmentTransaction.replace(R.id.mainFragment,fragment);
+                        fragmentTransaction.replace(R.id.mainFragmentLayout,fragment);
                         fragmentTransaction.commit();
                     }
                     if (drawer.isDrawerOpen(GravityCompat.START)) {

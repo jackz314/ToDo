@@ -196,6 +196,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     SharedPreferences sharedPreferences;
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
+    ViewPager viewPager;
+    PagerAdapter pagerAdapter;
     int doubleClickCount = 0;
     ImportantFragment importantFragment;
     MainFragment mainFragment;
@@ -432,11 +434,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //setLauncherIcon();
        // FirebaseCrash.report(new Exception("MainActivity created"));
         //FirebaseCrash.log("MainActivity created log");
+        //Fragment currentFragment = getFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + viewPager.getCurrentItem);
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         navigationView = (NavigationView) findViewById(R.id.nav_view);
-        importantFragment = (ImportantFragment)getSupportFragmentManager().findFragmentById(R.id.importantFragment);
-        mainFragment = (MainFragment) getSupportFragmentManager().findFragmentById(R.id.mainFragment);
-        clipboardFragment = (ClipboardFragment) getSupportFragmentManager().findFragmentById(R.id.clipboardFragment);
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         tabLayout = findViewById(R.id.tabs_layout);
@@ -445,11 +445,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         setSupportActionBar(toolbar);
         main = (CoordinatorLayout)findViewById(R.id.total_main_bar);
         //set tabs
-        final ViewPager viewPager = (ViewPager)findViewById(R.id.pager);
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(),getApplicationContext());
+        viewPager = (ViewPager)findViewById(R.id.pager);
+        pagerAdapter = new PagerAdapter(getSupportFragmentManager(),getApplicationContext());
         viewPager.setAdapter(pagerAdapter);
         tabLayout.setupWithViewPager(viewPager);
         viewPager.setCurrentItem(1);
+        importantFragment = (ImportantFragment)getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + 0);
+        mainFragment = (MainFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + 1);
+        clipboardFragment = (ClipboardFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + 2);
         String historySettingPref = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
         historySettingPref += "BIjAN" + bep.substring(2,bep.length());
@@ -555,7 +558,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
             /** Called when a drawer has settled in a completely closed state. */
             public void onDrawerClosed(View view) {
-                MainFragment mainFragment = (MainFragment)getSupportFragmentManager().findFragmentById(R.id.mainFragment);
                 EditText input = mainFragment.input;
                 if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
                     showKeyboard();
@@ -1393,10 +1395,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         if(tabLayout.getSelectedTabPosition() == 1){
-            mainFragment = (MainFragment) getSupportFragmentManager().findFragmentById(R.id.mainFragment);
+            mainFragment = (MainFragment)pagerAdapter.getItem(1);
             mainFragment.setOutOfSelectionMode();
         }else if (tabLayout.getSelectedTabPosition() == 0){
-            importantFragment = (ImportantFragment)getSupportFragmentManager().findFragmentById(R.id.importantFragment);
+            importantFragment = (ImportantFragment)pagerAdapter.getItem(0);
             importantFragment.setOutOfSelectionMode(); //todo fix all calling methods inside fragment from activity, not working!
         }
         if (id == R.id.history) {

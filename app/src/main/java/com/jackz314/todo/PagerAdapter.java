@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.view.ViewPager;
 
 /**
  * Created by jack on 2/26/18.
@@ -13,13 +14,24 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 
 public class PagerAdapter extends FragmentStatePagerAdapter {
     private int mNumOfTabs = 3;
-    Context mContext;
+    private Context mContext;
+    private FragmentManager mFragmentManager;
 
     public PagerAdapter(FragmentManager fragmentManager, Context context){
         super(fragmentManager);
         mContext = context;
+        mFragmentManager = fragmentManager;
         //this.mNumOfTabs = numOfTabs;
     }
+
+   // public Fragment getActiveFragment(ViewPager container, int position) {
+   //     String name = getFragmentTag(container, position);
+   //     return  mFragmentManager.findFragmentByTag(name);
+   // }
+
+    //public static String getFragmentTag(int index) {
+        //return "android:switcher:" + container.getId() + ":" + index;//depreciated
+    //}
 
     @Override
     public Fragment getItem(int position) {

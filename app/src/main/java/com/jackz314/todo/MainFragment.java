@@ -164,7 +164,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
-    //todo select all box not refreshing when there's only one view and it's selected
+
     // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
         if (mListener != null) {
@@ -219,7 +219,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoList.setHasFixedSize(true);
         toolbar = getActivity().findViewById(R.id.toolbar);
         selectionToolBar = (Toolbar)getActivity().findViewById(R.id.selection_toolbar);
-        main = getView().findViewById(R.id.mainFragment);
+        main = getView().findViewById(R.id.mainFragmentLayout);
         fab = getView().findViewById(R.id.fab);
         proFab = getView().findViewById(R.id.progress_fab);
         fabProgressBar = getView().findViewById(R.id.fab_progress_bar);

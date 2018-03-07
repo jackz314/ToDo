@@ -227,6 +227,9 @@
     <string name="dark_theme_key" translatable="false">dark_theme_key</string>
     <string name="dark_theme_title">Dark theme</string>
     <string name="dark_theme_content">Change to a darker theme</string>
+    <string name="main_fragment_tag">main_fragment_tag</string>
+    <string name="important_fragment_tag">important_fragment_tag</string>
+    <string name="clipboard_fragment_tag">clipboard_fragment_tag</string>
     <string name="voice_search_prompt">Say something…</string>
     <string name="speech_to_text_failed">Google voice recognizing service not installed or no internet connection, please try again later!</string>
     <string name="voice_permission_request">We\'ll need the record audio permission to enable voice recognition!</string>
