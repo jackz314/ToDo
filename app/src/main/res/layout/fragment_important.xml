@@ -115,4 +115,18 @@
                 app:backgroundTint="@color/colorPrimary" />
         </com.dmitrymalkovich.android.ProgressFloatingActionButton>
     </android.support.design.widget.CoordinatorLayout>
+
+    <TextView
+        android:id="@+id/important_empty_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:textColor="@android:color/darker_gray"
+        android:visibility="gone"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </android.support.constraint.ConstraintLayout>

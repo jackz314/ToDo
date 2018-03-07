@@ -3,6 +3,7 @@ package com.jackz314.todo;
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentManager;
 import android.app.SearchManager;
@@ -149,7 +150,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
-    CoordinatorLayout main;
+    ConstraintLayout main;
     Boolean noInterruption = true;
     TodoListAdapter todoListAdapter;
     TextView emptyTextView, selectionTitle;
@@ -218,7 +219,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         input = getView().findViewById(R.id.important_input);
         modifyId = getView().findViewById(R.id.important_modify_id);
-        emptyTextView = getActivity().findViewById(R.id.empty_text);
+        emptyTextView = getActivity().findViewById(R.id.important_empty_text);
         todoList = getView().findViewById(R.id.important_todolist);
         todoList.setHasFixedSize(true);
         fab = getView().findViewById(R.id.important_fab);
@@ -227,6 +228,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         toolbar =  getActivity().findViewById(R.id.toolbar);
         selectionToolBar = getActivity().findViewById(R.id.selection_toolbar);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
+        main = getView().findViewById(R.id.importantFragment);
         todoList.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -1588,8 +1590,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(getString(R.string.empty_search_result));
         }else if(data.getCount() == 0 && !isInSearchMode){
+            System.out.println("EMPTY_IMPORTANT");
             emptyTextView.setVisibility(View.VISIBLE);
-            emptyTextView.setText(R.string.empty_todolist);
+            emptyTextView.setText(R.string.empty_important_todolist);
         }else {
             emptyTextView.setVisibility(View.GONE);
             emptyTextView.setText("");

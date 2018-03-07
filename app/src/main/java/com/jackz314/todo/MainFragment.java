@@ -41,6 +41,7 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -132,7 +133,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
-    CoordinatorLayout main;
+    ConstraintLayout main;
     Boolean noInterruption = true;
     TodoListAdapter todoListAdapter;
     TextView emptyTextView, selectionTitle;
@@ -163,7 +164,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
-
+    //todo select all box not refreshing when there's only one view and it's selected
     // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
         if (mListener != null) {
@@ -219,7 +220,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoList.setHasFixedSize(true);
         toolbar = getActivity().findViewById(R.id.toolbar);
         selectionToolBar = (Toolbar)getActivity().findViewById(R.id.selection_toolbar);
-
+        main = getView().findViewById(R.id.mainFragment);
         fab = getView().findViewById(R.id.fab);
         proFab = getView().findViewById(R.id.progress_fab);
         fabProgressBar = getView().findViewById(R.id.fab_progress_bar);
@@ -1569,12 +1570,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
+        //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
         if(data.getCount() == 0 && isInSearchMode){
-            //emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(getString(R.string.empty_search_result));
         }else if(data.getCount() == 0 && !isInSearchMode){
-            //emptyTextView.setVisibility(View.VISIBLE);
+            System.out.println("EMPTY_MAIN");
+            emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(R.string.empty_todolist);
         }else {
             emptyTextView.setVisibility(View.GONE);

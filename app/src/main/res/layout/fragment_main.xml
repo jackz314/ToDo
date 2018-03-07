@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mainFragment"
@@ -11,9 +10,22 @@
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:theme="@style/Base.Theme.AppCompat"
+    android:layout_marginTop="?attr/actionBarSize"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.jackz314.todo.MainFragment"
-    tools:layout_editor_absoluteY="81dp">
+    tools:context="com.jackz314.todo.MainFragment">
+
+    <TextView
+        android:id="@+id/empty_text"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:textColor="@android:color/darker_gray"
+        android:visibility="gone"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <EditText
         android:id="@+id/input"
@@ -31,9 +43,9 @@
         android:selectAllOnFocus="false"
         android:textSize="24sp"
         android:visibility="gone"
-        ads:layout_constraintBottom_toBottomOf="parent"
-        ads:layout_constraintEnd_toStartOf="@+id/fab_coordinator_layout"
-        ads:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/fab_coordinator_layout"
+        app:layout_constraintStart_toStartOf="parent"
         tools:ignore="RtlHardcoded" />
 
     <TextView
@@ -117,4 +129,5 @@
                 app:backgroundTint="@color/colorPrimary" />
         </com.dmitrymalkovich.android.ProgressFloatingActionButton>
     </android.support.design.widget.CoordinatorLayout>
+
 </android.support.constraint.ConstraintLayout>

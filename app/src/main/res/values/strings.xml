@@ -116,6 +116,7 @@
     <string name="about_name">About</string>
     <string name="empty_history">Nothing finished yet…\nYour finished items will be here</string>
     <string name="empty_todolist">Got nothing to do?</string>
+    <string name="empty_important_todolist">Nothing important found yet, add one now?</string>
     <string name="empty_tag_pt1">Tap \"+\" to create a new </string>
     <string name="empty_tag_pt2"> note.</string>
     <string name="empty_tag_selection">No tags used yet, add one now?</string>
