@@ -204,10 +204,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         void onFragmentInteraction(Uri uri);
     }
 
-    //todo migrate emptyTextView to each individual fragments
-    //todo solve tabLayout positioning problem (it's covering RecyclerView now)
     //todo implement Travis CI
     //todo solve git project error (possibly caused by app.iml, remove it!)
+    //todo searchVIew is gone, fix it
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
