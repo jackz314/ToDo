@@ -180,6 +180,73 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+        ((MainActivity)getActivity()).setOnBackPressedListener(new MainFragment.BaseBackPressedListener(getActivity()) {
+            @Override
+            public void doBack() {
+                interruptAutoSend();
+                if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
+                    recognitionProgressView.setVisibility(View.GONE);
+                    fab.setVisibility(View.VISIBLE);
+                    proFab.setVisibility(View.VISIBLE);
+                }
+                speechRecognizer.stopListening();
+                if(isInSelectionMode || isInSearchMode){
+                    if(isInSelectionMode){
+                        setOutOfSelectionMode();
+                    }
+                    if (isInSearchMode){
+                        setOutOfSearchMode();
+                    }
+                }else {//todo adapt this to ImportantFragment and ClipboardFragment
+                    //System.out.println(String.valueOf(exit));
+                    DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                    //main.requestFocus();
+                    //input.clearFocus();
+                    hideKeyboard();
+                    displayAllNotes();
+                    if (input.getVisibility() == View.GONE){
+                        justex = true;
+                    }else {
+                        if(input.getText().toString().equals("")){
+                            if(!isAdd){
+                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                                fab.setImageDrawable(d);
+                                isAdd = true;
+                                d.start();
+                            }
+                            input.setVisibility(View.GONE);
+                            justex = false;
+                            modifyId.setText("");
+                            hideKeyboard();
+                        } else {
+                            input.setText("");
+                            modifyId.setText("");
+                            justex=false;
+                            hideKeyboard();
+                        }
+                    }
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            exit=0;
+                        }
+                    }, 1500);
+                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
+                        exit++;
+                        Toast.makeText(getContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
+                    }
+                    //justex = true;
+                    if (drawer.isDrawerOpen(GravityCompat.START)) {
+                        drawer.closeDrawer(GravityCompat.START);
+                    }
+                    else {
+                        if(exit>=2){
+                            getActivity().finish();
+                        }
+                    }
+                }
+            }
+        });
         return inflater.inflate(R.layout.fragment_important, container, false);
     }
 
@@ -252,7 +319,10 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         todoList.setFocusableInTouchMode(true);
         setColorPreferences();
         displayAllNotes();
-
+        if(!input.getText().toString().equals("")){
+            input.setVisibility(View.VISIBLE);
+            showKeyboard();
+        }
         recognitionProgressView.setVisibility(View.GONE);
         fab.setVisibility(View.VISIBLE);
         proFab.setVisibility(View.VISIBLE);

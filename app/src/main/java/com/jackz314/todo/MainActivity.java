@@ -188,6 +188,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean isPremium = false;
     private FirebaseAnalytics mFirebaseAnalytics;
     private String todoTableId = "HAHA! this is the real one, gotcha";
+    protected MainFragment.OnBackPressedListener onBackPressedListener;
     IabHelper mHelper;
     int exit=0;
     boolean justex = false;
@@ -702,6 +703,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }*/
 
+    public void setOnBackPressedListener(MainFragment.OnBackPressedListener onBackPressedListener) {
+        this.onBackPressedListener = onBackPressedListener;
+    }
+
     boolean verifyDeveloperPayload(Purchase p) {
         if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
             if(p.getDeveloperPayload().equals(
@@ -1126,6 +1131,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         }
     }*/
+
+    @Override
+    public void onBackPressed() {
+        if (onBackPressedListener != null){
+            onBackPressedListener.doBack();
+        }
+        else{
+            super.onBackPressed();
+
+        }
+    }
 
     //TODO FIX THEME SELECTOR SUMMARY TEXT COLOR
     //TODO SET SEARCHVIEW ANIMATION

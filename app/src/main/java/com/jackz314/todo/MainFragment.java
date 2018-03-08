@@ -2,6 +2,7 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
+import android.support.v4.app.FragmentManager;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -42,11 +43,11 @@ import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
@@ -150,6 +151,23 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         // Required empty public constructor
     }
 
+    public interface OnBackPressedListener {
+        public void doBack();
+    }
+
+    public class BaseBackPressedListener implements OnBackPressedListener {
+        private final FragmentActivity activity;
+
+        public BaseBackPressedListener(FragmentActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void doBack() {
+            activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        }
+    }
+
     public static MainFragment newInstance(int position) {
         MainFragment fragment = new MainFragment();
         Bundle args = new Bundle();
@@ -162,10 +180,76 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+        ((MainActivity)getActivity()).setOnBackPressedListener(new BaseBackPressedListener(getActivity()) {
+            @Override
+            public void doBack() {
+                interruptAutoSend();
+                if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
+                    recognitionProgressView.setVisibility(View.GONE);
+                    fab.setVisibility(View.VISIBLE);
+                    proFab.setVisibility(View.VISIBLE);
+                }
+                speechRecognizer.stopListening();
+                if(isInSelectionMode || isInSearchMode){
+                    if(isInSelectionMode){
+                        setOutOfSelectionMode();
+                    }
+                    if (isInSearchMode){
+                        setOutOfSearchMode();
+                    }
+                }else {
+                    //System.out.println(String.valueOf(exit));
+                    DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                    //main.requestFocus();
+                    //input.clearFocus();
+                    hideKeyboard();
+                    displayAllNotes();
+                    if (input.getVisibility() == View.GONE){
+                        justex = true;
+                    }else {
+                        if(input.getText().toString().equals("")){
+                            if(!isAdd){
+                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                                fab.setImageDrawable(d);
+                                isAdd = true;
+                                d.start();
+                            }
+                            input.setVisibility(View.GONE);
+                            justex = false;
+                            modifyId.setText("");
+                            hideKeyboard();
+                        } else {
+                            input.setText("");
+                            modifyId.setText("");
+                            justex=false;
+                            hideKeyboard();
+                        }
+                    }
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            exit=0;
+                        }
+                    }, 1500);
+                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
+                        exit++;
+                        Toast.makeText(getContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
+                    }
+                    //justex = true;
+                    if (drawer.isDrawerOpen(GravityCompat.START)) {
+                        drawer.closeDrawer(GravityCompat.START);
+                    }
+                    else {
+                        if(exit>=2){
+                            getActivity().finish();
+                        }
+                    }
+                }
+            }
+        });
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
         if (mListener != null) {
             mListener.onFragmentInteraction(uri);
@@ -186,14 +270,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     @Override
     public void onDetach() {
         super.onDetach();
-        setOutOfSelectionMode();
         mListener = null;
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        setOutOfSelectionMode();
+        //setOutOfSelectionMode();
     }
 
     /**
@@ -207,7 +290,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
      * >Communicating with Other Fragments</a> for more information.
      */
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
     }
 
@@ -254,7 +336,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoList.setFocusableInTouchMode(true);
         setColorPreferences();
         displayAllNotes();
-
+        if(!input.getText().toString().equals("")){
+            input.setVisibility(View.VISIBLE);
+            showKeyboard();
+        }
         recognitionProgressView.setVisibility(View.GONE);
         fab.setVisibility(View.VISIBLE);
         proFab.setVisibility(View.VISIBLE);
@@ -978,68 +1063,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public boolean onOptionsItemSelected(MenuItem item) {//todo fix on back pressed, not working for now!
         switch (item.getItemId()){
             case android.R.id.home:{
-                interruptAutoSend();
-                if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
-                    recognitionProgressView.setVisibility(View.GONE);
-                    fab.setVisibility(View.VISIBLE);
-                    proFab.setVisibility(View.VISIBLE);
-                }
-                speechRecognizer.stopListening();
-                if(isInSelectionMode || isInSearchMode){
-                    if(isInSelectionMode){
-                        setOutOfSelectionMode();
-                    }
-                    if (isInSearchMode){
-                        setOutOfSearchMode();
-                    }
-                }else {
-                    //System.out.println(String.valueOf(exit));
-                    DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
-                    //main.requestFocus();
-                    //input.clearFocus();
-                    hideKeyboard();
-                    displayAllNotes();
-                    if (input.getVisibility() == View.GONE){
-                        justex = true;
-                    }else {
-                        if(input.getText().toString().equals("")){
-                            if(!isAdd){
-                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
-                                fab.setImageDrawable(d);
-                                isAdd = true;
-                                d.start();
-                            }
-                            input.setVisibility(View.GONE);
-                            justex = false;
-                            modifyId.setText("");
-                            hideKeyboard();
-                        } else {
-                            input.setText("");
-                            modifyId.setText("");
-                            justex=false;
-                            hideKeyboard();
-                        }
-                    }
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            exit=0;
-                        }
-                    }, 1500);
-                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
-                        exit++;
-                        Toast.makeText(getContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
-                    }
-                    //justex = true;
-                    if (drawer.isDrawerOpen(GravityCompat.START)) {
-                        drawer.closeDrawer(GravityCompat.START);
-                    }
-                    else {
-                        if(exit>=2){
-                            super.onOptionsItemSelected(item);
-                        }
-                    }
-                }
             }
         }
         return super.onOptionsItemSelected(item);
