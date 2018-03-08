@@ -186,7 +186,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     @Override
     public void onDetach() {
         super.onDetach();
+        setOutOfSelectionMode();
         mListener = null;
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        setOutOfSelectionMode();
     }
 
     /**
@@ -966,7 +973,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         animator.setInterpolator(new DecelerateInterpolator());
         animator.start();
     }
-
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {//todo fix on back pressed, not working for now!

@@ -450,9 +450,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         viewPager.setAdapter(pagerAdapter);
         tabLayout.setupWithViewPager(viewPager);
         viewPager.setCurrentItem(1);
-        importantFragment = (ImportantFragment)getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + 0);
-        mainFragment = (MainFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + 1);
-        clipboardFragment = (ClipboardFragment) getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + 2);
+        importantFragment = (ImportantFragment)pagerAdapter.getItem(0);
+        mainFragment = (MainFragment)pagerAdapter.getItem(1);
+        clipboardFragment = (ClipboardFragment) pagerAdapter.getItem(2);
         String historySettingPref = "MII";
         String bep = "ANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiZZobdX3yEuQtssAfZ2AE69Agvit3KuCfR6ywZRlrcpjWKb5+aKBT72hEawKFwDCsFquccZvt6R8nKBD1ucbl4PCgZvrUie9EFQR4YKxlp9iPogdreu8ifIjR/un9sFsiRGndmjhgJHMx66uKlDX7gyu9/EzuxFVajPCdbw7nQdK9XJzBripYLKY0w5/BLbKaOo7kmhSwiOlsRQwayIbXvUiYQb5ij17eFO/n4sebKNvixdIsaU3YaFlh/CbEpy/3P0UEHtrtb3B27pBa4+3kEriVc7uVBN+kYHmMQRMBgyjzKNwITDhHrP12qjlmrVk4LKehQVVDmPymB/C1/qTuwIDAQAB";
         historySettingPref += "BIjAN" + bep.substring(2,bep.length());
@@ -558,10 +558,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
             /** Called when a drawer has settled in a completely closed state. */
             public void onDrawerClosed(View view) {
-                EditText input = mainFragment.input;
-                if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
-                    showKeyboard();
-                }
+               // EditText input = mainFragment.input; //todo this doesn't work, fix it
+//                if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
+               //     showKeyboard();
+              //  }
                 super.onDrawerClosed(view);
                 //getActionBar().setTitle(title);
             }
@@ -1394,13 +1394,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-        if(tabLayout.getSelectedTabPosition() == 1){
-            mainFragment = (MainFragment)pagerAdapter.getItem(1);
+        /*if(tabLayout.getSelectedTabPosition() == 1){
             mainFragment.setOutOfSelectionMode();
         }else if (tabLayout.getSelectedTabPosition() == 0){
-            importantFragment = (ImportantFragment)pagerAdapter.getItem(0);
-            importantFragment.setOutOfSelectionMode(); //todo fix all calling methods inside fragment from activity, not working!
-        }
+
+            importantFragment.setOutOfSelectionMode();
+        }*/
         if (id == R.id.history) {
             hideKeyboard();
             Intent intent = new Intent(MainActivity.this, HistoryActivity.class);
