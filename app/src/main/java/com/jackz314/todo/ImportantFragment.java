@@ -56,6 +56,7 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -191,11 +192,26 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         @Override
         public void doBack() {//go back to main tab
             //activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-            Fragment fragment = new MainFragment();
-            FragmentManager fragmentManager = getFragmentManager();
-            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-            fragmentTransaction.replace(R.id.mainFragmentLayout,fragment);
-            fragmentTransaction.commit();
+            ViewPager viewPager = getActivity().findViewById(R.id.pager);
+            viewPager.setCurrentItem(1);
+        }
+    }
+
+    public interface OnImportantQueryListener {
+        void doQuery(String query);
+    }
+
+    public class ImportantQueryListener implements OnImportantQueryListener {
+
+        //private String query;
+
+        public ImportantQueryListener(){
+            //this.query = query;
+        }
+
+        @Override
+        public void doQuery(String query) {
+            query(query);
         }
     }
 
@@ -203,6 +219,17 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+
+        //implement onQueryListener
+        ((MainActivity)getActivity()).setOnImportantQueryListner(new ImportantQueryListener() {
+            @Override
+            public void doQuery(String query) {
+                super.doQuery(query);
+            }
+        });
+
+
+        //implement onBackPressed
         ((MainActivity)getActivity()).setOnImportantBackPressedListener(new ImportantBackPressedListener(getActivity()) {
             @Override
             public void doBack() {
@@ -220,7 +247,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     if (isInSearchMode){
                         setOutOfSearchMode();
                     }
-                }else {//todo adapt this to ImportantFragment and ClipboardFragment
+                }else {
                     //System.out.println(String.valueOf(exit));
                     DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
                     //main.requestFocus();
@@ -756,7 +783,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if(charSequence.equals("#")){
-                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo implement ontextchangecolor method
+                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo make tags into ITALIC on text change
                 }
             }
 

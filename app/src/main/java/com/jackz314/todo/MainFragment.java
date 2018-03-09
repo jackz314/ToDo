@@ -152,20 +152,38 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     }
 
     public interface OnMainBackPressedListener {
-        public void doBack();
+        void doBack();
     }
 
     public class MainBackPressedListener implements OnMainBackPressedListener {
-        private final FragmentActivity activity;
+        //private final FragmentActivity activity;
 
         public MainBackPressedListener(FragmentActivity activity) {
-            this.activity = activity;
+            //this.activity = activity;
         }
 
         @Override
         public void doBack() {
             //activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
             getActivity().finish();
+        }
+    }
+
+    public interface OnMainQueryListener {
+        void doQuery(String query);
+    }
+
+    public class MainQueryListener implements OnMainQueryListener {
+
+        //private String query;
+
+        public MainQueryListener(){
+            //this.query = query;
+        }
+
+        @Override
+        public void doQuery(String query) {
+            query(query);
         }
     }
 
@@ -181,6 +199,16 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+
+        //implement onQueryListener
+        ((MainActivity)getActivity()).setOnMainQueryListener(new MainQueryListener() {
+            @Override
+            public void doQuery(String query) {
+                super.doQuery(query);
+            }
+        });
+
+        //implement onBackPressed
         ((MainActivity)getActivity()).setOnMainBackPressedListener(new MainBackPressedListener(getActivity()) {
             @Override
             public void doBack() {
@@ -1058,15 +1086,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         animator.setDuration(ms);
         animator.setInterpolator(new DecelerateInterpolator());
         animator.start();
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {//todo fix on back pressed, not working for now!
-        switch (item.getItemId()){
-            case android.R.id.home:{
-            }
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     public void setOutOfSearchMode(){

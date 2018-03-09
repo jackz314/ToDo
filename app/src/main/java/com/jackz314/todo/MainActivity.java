@@ -169,7 +169,6 @@ import static com.jackz314.todo.dtb.TITLE;
 
 
 // the great alpaca that saves me from the bugs, hopefully...
-//todo pause ad function but preserve iap functions for good
 //todo edge effect doesn't work at first scroll, minor problem
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, ImportantFragment.OnFragmentInteractionListener, ClipboardFragment.OnFragmentInteractionListener, MainFragment.OnFragmentInteractionListener{
     //paused ad//private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
@@ -191,6 +190,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected MainFragment.OnMainBackPressedListener onMainBackPressedListener;
     protected ImportantFragment.OnImportantBackPressedListener onImportantBackPressedListener;
     protected ClipboardFragment.OnClipboardBackPressedListener onClipboardBackPressedListener;
+    protected MainFragment.OnMainQueryListener onMainQueryListener;
+    protected ImportantFragment.OnImportantQueryListener onImportantQueryListener;
 
     IabHelper mHelper;
     int exit=0;
@@ -202,21 +203,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     int themeColor,textColor,backgroundColor,textSize;
     ViewPager viewPager;
     PagerAdapter pagerAdapter;
-    int doubleClickCount = 0;
     ImportantFragment importantFragment;
     MainFragment mainFragment;
     ClipboardFragment clipboardFragment;
     CoordinatorLayout main;
-    Boolean noInterruption = true;
     DrawerLayout mDrawerLayout;
     TodoListAdapter todoListAdapter;
     ActionBarDrawerToggle mDrawerToggle;
-    TextView selectionTitle;
-    CheckBox multiSelectionBox;
     //paused ad//AdView adView;
     boolean isAdd = true;
     NavigationView navigationView;
-    Menu menuNav;
+    Menu menuNav;//todo pause ad function but preserve iap functions for good
+
     MenuItem navPurchasePremium;
     BroadcastReceiver receiver;
     IInAppBillingService mService;
@@ -225,7 +223,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     CheckBox selectAllBox;
     TabLayout tabLayout;
     ProgressDialog purchaseProgressDialog;
-    //todo FIX change fragment issue
         IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
         public void onQueryInventoryFinished(IabResult result, Inventory inv) {
             if(result.isFailure()||(!result.isSuccess())|| mHelper == null){//not premium
@@ -557,10 +554,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         // Set the drawer toggle as the DrawerListener
         mDrawerLayout.setDrawerListener(mDrawerToggle);
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        /*DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
-            /** Called when a drawer has settled in a completely closed state. */
+            Called when a drawer has settled in a completely closed state.
             public void onDrawerClosed(View view) {
                // EditText input = mainFragment.input; //todo this doesn't work, fix it
 //                if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
@@ -570,7 +567,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 //getActionBar().setTitle(title);
             }
 
-            /** Called when a drawer has settled in a completely open state. */
+            // Called when a drawer has settled in a completely open state.
             public void onDrawerOpened(View drawerView) {
                 hideKeyboard();
                 super.onDrawerOpened(drawerView);
@@ -578,8 +575,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         };
         drawer.setDrawerListener(toggle);
-        toggle.syncState();
-
+        toggle.syncState();*/
         navigationView.setNavigationItemSelectedListener(this);
 
     }//--------end of onCreate!
@@ -705,6 +701,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             return;
         }
     }*/
+
+    public void setOnMainQueryListener(MainFragment.OnMainQueryListener onMainQueryListener){
+        this.onMainQueryListener = onMainQueryListener;
+    }
+
+    public void setOnImportantQueryListner(ImportantFragment.OnImportantQueryListener onImportantQueryListener){
+        this.onImportantQueryListener = onImportantQueryListener;
+    }
 
     public void setOnMainBackPressedListener(MainFragment.OnMainBackPressedListener onBackPressedListener) {
         this.onMainBackPressedListener = onBackPressedListener;
@@ -1153,18 +1157,25 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 if(onImportantBackPressedListener != null){
                     onImportantBackPressedListener.doBack();
                 }else super.onBackPressed();
+                break;
             }case 1:{//MainFragment
                 if(onMainBackPressedListener != null){
                     onMainBackPressedListener.doBack();
                 }else super.onBackPressed();
+                break;
             }case 2:{//ClipboardFragment
                 if(onClipboardBackPressedListener != null){
                     onClipboardBackPressedListener.doBack();
                 }else super.onBackPressed();
+                break;
             }default:{
                 super.onBackPressed();
             }
         }
+    }
+
+    public void setBackToMainFragment(){
+        viewPager.setCurrentItem(1);
     }
 
     //TODO FIX THEME SELECTOR SUMMARY TEXT COLOR

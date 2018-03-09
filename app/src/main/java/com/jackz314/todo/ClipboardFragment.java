@@ -7,6 +7,9 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.view.ViewPager;
+import android.support.v4.widget.DrawerLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -64,11 +67,8 @@ public class ClipboardFragment extends Fragment {
         @Override
         public void doBack() {//go back to main tab
             //activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-            Fragment fragment = new MainFragment();
-            FragmentManager fragmentManager = getFragmentManager();
-            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-            fragmentTransaction.replace(R.id.mainFragmentLayout,fragment);
-            fragmentTransaction.commit();
+            ViewPager viewPager = getActivity().findViewById(R.id.pager);
+            viewPager.setCurrentItem(1);
         }
     }
 
@@ -87,7 +87,12 @@ public class ClipboardFragment extends Fragment {
         ((MainActivity)getActivity()).setOnClipboardBackPressedListener(new ClipboardBackPressedListener(getActivity()){
             @Override
             public void doBack() {//todo handle back press here
-                super.doBack();
+                DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                if (drawer.isDrawerOpen(GravityCompat.START)) {
+                    drawer.closeDrawer(GravityCompat.START);
+                }else {
+                    super.doBack();
+                }
             }
         });
         return inflater.inflate(R.layout.fragment_clipboard, container, false);
