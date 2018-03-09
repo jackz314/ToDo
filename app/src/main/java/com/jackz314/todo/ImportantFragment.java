@@ -4,6 +4,7 @@ import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentManager;
 import android.app.SearchManager;
@@ -176,11 +177,33 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         return fragment;
     }
 
+    public interface OnImportantBackPressedListener {
+        public void doBack();
+    }
+
+    public class ImportantBackPressedListener implements OnImportantBackPressedListener {
+        private final FragmentActivity activity;
+
+        public ImportantBackPressedListener(FragmentActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void doBack() {//go back to main tab
+            //activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            Fragment fragment = new MainFragment();
+            FragmentManager fragmentManager = getFragmentManager();
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+            fragmentTransaction.replace(R.id.mainFragmentLayout,fragment);
+            fragmentTransaction.commit();
+        }
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        ((MainActivity)getActivity()).setOnBackPressedListener(new MainFragment.BaseBackPressedListener(getActivity()) {
+        ((MainActivity)getActivity()).setOnImportantBackPressedListener(new ImportantBackPressedListener(getActivity()) {
             @Override
             public void doBack() {
                 interruptAutoSend();
@@ -225,24 +248,12 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                             hideKeyboard();
                         }
                     }
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            exit=0;
-                        }
-                    }, 1500);
-                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
-                        exit++;
-                        Toast.makeText(getContext(),R.string.press_again_to_exit,Toast.LENGTH_SHORT).show();
-                    }
                     //justex = true;
                     if (drawer.isDrawerOpen(GravityCompat.START)) {
                         drawer.closeDrawer(GravityCompat.START);
                     }
-                    else {
-                        if(exit>=2){
-                            getActivity().finish();
-                        }
+                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
+                        super.doBack();
                     }
                 }
             }
@@ -1038,69 +1049,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         animator.setDuration(ms);
         animator.setInterpolator(new DecelerateInterpolator());
         animator.start();
-    }
-
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
-            case android.R.id.home:{//on back pressed
-                interruptAutoSend();
-                if(recognitionProgressView != null && recognitionProgressView.getVisibility() == View.VISIBLE){
-                    recognitionProgressView.setVisibility(View.GONE);
-                    fab.setVisibility(View.VISIBLE);
-                    proFab.setVisibility(View.VISIBLE);
-                }
-                speechRecognizer.stopListening();
-                if(isInSelectionMode || isInSearchMode){
-                    if(isInSelectionMode){
-                        setOutOfSelectionMode();
-                    }
-                    if (isInSearchMode){
-                        setOutOfSearchMode();
-                    }
-                }else {
-                    //System.out.println(String.valueOf(exit));
-                    DrawerLayout drawer = (DrawerLayout) getView().findViewById(R.id.drawer_layout);
-                    //main.requestFocus();
-                    //input.clearFocus();
-                    hideKeyboard();
-                    displayAllNotes();
-                    if (input.getVisibility() == View.GONE){
-                        justex = true;
-                    }else {
-                        if(input.getText().toString().equals("")){
-                            if(!isAdd){
-                                AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
-                                fab.setImageDrawable(d);
-                                isAdd = true;
-                                d.start();
-                            }
-                            input.setVisibility(View.GONE);
-                            justex = false;
-                            modifyId.setText("");
-                            hideKeyboard();
-                        } else {
-                            input.setText("");
-                            modifyId.setText("");
-                            justex=false;
-                            hideKeyboard();
-                        }
-                    }
-                    if(justex&&!drawer.isDrawerOpen(GravityCompat.START)){
-                        Fragment fragment = new MainFragment();
-                        FragmentManager fragmentManager = getFragmentManager();
-                        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                        fragmentTransaction.replace(R.id.mainFragmentLayout,fragment);
-                        fragmentTransaction.commit();
-                    }
-                    if (drawer.isDrawerOpen(GravityCompat.START)) {
-                        drawer.closeDrawer(GravityCompat.START);
-                    }
-                }
-            }
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     public void setOutOfSearchMode(){

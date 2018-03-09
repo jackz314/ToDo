@@ -4,6 +4,9 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,6 +50,28 @@ public class ClipboardFragment extends Fragment {
         return fragment;
     }
 
+    public interface OnClipboardBackPressedListener {
+        public void doBack();
+    }
+
+    public class ClipboardBackPressedListener implements OnClipboardBackPressedListener {
+        private final FragmentActivity activity;
+
+        public ClipboardBackPressedListener(FragmentActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void doBack() {//go back to main tab
+            //activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            Fragment fragment = new MainFragment();
+            FragmentManager fragmentManager = getFragmentManager();
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+            fragmentTransaction.replace(R.id.mainFragmentLayout,fragment);
+            fragmentTransaction.commit();
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,6 +84,12 @@ public class ClipboardFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+        ((MainActivity)getActivity()).setOnClipboardBackPressedListener(new ClipboardBackPressedListener(getActivity()){
+            @Override
+            public void doBack() {//todo handle back press here
+                super.doBack();
+            }
+        });
         return inflater.inflate(R.layout.fragment_clipboard, container, false);
     }
 

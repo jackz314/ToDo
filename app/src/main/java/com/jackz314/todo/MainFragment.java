@@ -151,20 +151,21 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         // Required empty public constructor
     }
 
-    public interface OnBackPressedListener {
+    public interface OnMainBackPressedListener {
         public void doBack();
     }
 
-    public class BaseBackPressedListener implements OnBackPressedListener {
+    public class MainBackPressedListener implements OnMainBackPressedListener {
         private final FragmentActivity activity;
 
-        public BaseBackPressedListener(FragmentActivity activity) {
+        public MainBackPressedListener(FragmentActivity activity) {
             this.activity = activity;
         }
 
         @Override
         public void doBack() {
-            activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            //activity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            getActivity().finish();
         }
     }
 
@@ -180,7 +181,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        ((MainActivity)getActivity()).setOnBackPressedListener(new BaseBackPressedListener(getActivity()) {
+        ((MainActivity)getActivity()).setOnMainBackPressedListener(new MainBackPressedListener(getActivity()) {
             @Override
             public void doBack() {
                 interruptAutoSend();
@@ -241,7 +242,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }
                     else {
                         if(exit>=2){
-                            getActivity().finish();
+                            super.doBack();
                         }
                     }
                 }

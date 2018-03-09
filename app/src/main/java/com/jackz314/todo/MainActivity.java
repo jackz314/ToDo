@@ -188,7 +188,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean isPremium = false;
     private FirebaseAnalytics mFirebaseAnalytics;
     private String todoTableId = "HAHA! this is the real one, gotcha";
-    protected MainFragment.OnBackPressedListener onBackPressedListener;
+    protected MainFragment.OnMainBackPressedListener onMainBackPressedListener;
+    protected ImportantFragment.OnImportantBackPressedListener onImportantBackPressedListener;
+    protected ClipboardFragment.OnClipboardBackPressedListener onClipboardBackPressedListener;
+
     IabHelper mHelper;
     int exit=0;
     boolean justex = false;
@@ -703,8 +706,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }*/
 
-    public void setOnBackPressedListener(MainFragment.OnBackPressedListener onBackPressedListener) {
-        this.onBackPressedListener = onBackPressedListener;
+    public void setOnMainBackPressedListener(MainFragment.OnMainBackPressedListener onBackPressedListener) {
+        this.onMainBackPressedListener = onBackPressedListener;
+    }
+
+    public void setOnImportantBackPressedListener(ImportantFragment.OnImportantBackPressedListener onBackPressedListener) {
+        this.onImportantBackPressedListener = onBackPressedListener;
+    }
+    public void setOnClipboardBackPressedListener(ClipboardFragment.OnClipboardBackPressedListener onBackPressedListener) {
+        this.onClipboardBackPressedListener = onBackPressedListener;
     }
 
     boolean verifyDeveloperPayload(Purchase p) {
@@ -1094,6 +1104,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }else return null;
     }
 
+    public interface OnBackPressedListener {
+        public void doBack();
+    }
+
     public static String removeCharAt(String s, int pos) {
         return s.substring(0, pos) + s.substring(pos + 1);
     }
@@ -1134,12 +1148,22 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public void onBackPressed() {
-        if (onBackPressedListener != null){
-            onBackPressedListener.doBack();
-        }
-        else{
-            super.onBackPressed();
-
+        switch (tabLayout.getSelectedTabPosition()){
+            case 0:{//ImportantFragment
+                if(onImportantBackPressedListener != null){
+                    onImportantBackPressedListener.doBack();
+                }else super.onBackPressed();
+            }case 1:{//MainFragment
+                if(onMainBackPressedListener != null){
+                    onMainBackPressedListener.doBack();
+                }else super.onBackPressed();
+            }case 2:{//ClipboardFragment
+                if(onClipboardBackPressedListener != null){
+                    onClipboardBackPressedListener.doBack();
+                }else super.onBackPressed();
+            }default:{
+                super.onBackPressed();
+            }
         }
     }
 
