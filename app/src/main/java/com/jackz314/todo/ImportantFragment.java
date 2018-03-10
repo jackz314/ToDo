@@ -126,7 +126,6 @@ import static com.jackz314.todo.dtb.TITLE;
  * create an instance of this fragment.
  */
 public class ImportantFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
-    // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM = "param";
     private String mParam;
@@ -220,6 +219,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
 
+        setHasOptionsMenu(true);
+
         //implement onQueryListener
         ((MainActivity)getActivity()).setOnImportantQueryListner(new ImportantQueryListener() {
             @Override
@@ -288,7 +289,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         return inflater.inflate(R.layout.fragment_important, container, false);
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
         if (mListener != null) {
             mListener.onFragmentInteraction(uri);
@@ -313,7 +313,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     }
 
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
     }
 
@@ -1525,6 +1524,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
+        EditText searchViewTextField = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
+        MainActivity.setCursorColor(searchViewTextField,Color.WHITE);
         LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));

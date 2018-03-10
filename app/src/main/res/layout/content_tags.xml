@@ -13,9 +13,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-
         android:paddingTop="8dp"
         android:stackFromBottom="false"
         android:visibility="visible"
@@ -80,7 +78,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginLeft="8dp"
+        android:layout_marginStart="8dp"
         android:ems="10"
         android:focusable="true"
         android:focusableInTouchMode="true"
@@ -91,7 +89,7 @@
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/tag_fab_coordinator_layout"
-        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         tools:ignore="RtlHardcoded" />
 
     <TextView

@@ -213,8 +213,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     //paused ad//AdView adView;
     boolean isAdd = true;
     NavigationView navigationView;
-    Menu menuNav;//todo pause ad function but preserve iap functions for good
-
+    Menu menuNav;
     MenuItem navPurchasePremium;
     BroadcastReceiver receiver;
     IInAppBillingService mService;
@@ -554,10 +553,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         // Set the drawer toggle as the DrawerListener
         mDrawerLayout.setDrawerListener(mDrawerToggle);
-        /*DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
-            Called when a drawer has settled in a completely closed state.
+            //Called when a drawer has settled in a completely closed state.
             public void onDrawerClosed(View view) {
                // EditText input = mainFragment.input; //todo this doesn't work, fix it
 //                if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
@@ -575,7 +574,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         };
         drawer.setDrawerListener(toggle);
-        toggle.syncState();*/
+        toggle.syncState();
         navigationView.setNavigationItemSelectedListener(this);
 
     }//--------end of onCreate!
@@ -832,7 +831,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             field.setAccessible(true);
             field.set(editor, drawables);
         } catch (Exception ignored) {
-
         }
     }
 
@@ -896,6 +894,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                 uploadingDialog.setTitle(getString(R.string.reporting_feedback_title));
                                 uploadingDialog.setMessage(getString(R.string.please_wait));
                                 uploadingDialog.setCancelable(false);
+                                Drawable progressDrawable = new ProgressBar(getApplicationContext()).getIndeterminateDrawable().mutate();//set a theme colored progress drawable for the ProgressDialog
+                                progressDrawable.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+                                uploadingDialog.setIndeterminateDrawable(progressDrawable);
                                 uploadingDialog.show();
                                 String uniqueID = UUID.randomUUID().toString();
                                 String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
@@ -1056,6 +1057,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 purchaseProgressDialog.setTitle(getString(R.string.please_wait));
                 purchaseProgressDialog.setMessage(getString(R.string.purchasing));
                 purchaseProgressDialog.setCancelable(false);
+                Drawable progressDrawable = new ProgressBar(getApplicationContext()).getIndeterminateDrawable().mutate();//set a theme colored progress drawable for the ProgressDialog
+                progressDrawable.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+                purchaseProgressDialog.setIndeterminateDrawable(progressDrawable);
                 purchaseProgressDialog.show();
                 if (mHelper != null) mHelper.flagEndAsync();
                 mHelper.launchPurchaseFlow(this, PREMIUM_UPGRADE_SKU, PURCHASE_PREMIUM_REQUEST_ID, mPurchaseFinishedListener, todoTableId);
@@ -1123,12 +1127,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public static String[] combineStringArray(String[] A, String[] B) {
-        int aLen = A.length;
-        int bLen = B.length;
-        String[] C= new String[aLen+bLen];
-        System.arraycopy(A, 0, C, 0, aLen);
-        System.arraycopy(B, 0, C, aLen, bLen);
-        return C;
+        if(A != null && B != null){
+            int aLen = A.length;
+            int bLen = B.length;
+            String[] C= new String[aLen+bLen];
+            System.arraycopy(A, 0, C, 0, aLen);
+            System.arraycopy(B, 0, C, aLen, bLen);
+            return C;
+        }else if(A != null){
+            return A;
+        }else return B;
     }
 
     public static Canvas generatePDFCanvas(Canvas canvas){//not in use for now
@@ -1402,7 +1410,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             ArrayList<String> dynamicTagColors = todosql.returnTagColorsForNavMenu();
             //todo add navigationView dynamic expandable tag item
             for(int i = 0; i < dynamicTags.size(); i++){
-                menuNav.add(R.id.nav_category_main,R.id.dynamic_tag_1,4,dynamicTags.get(i));
+                menuNav.add(R.id.nav_category_main,R.id.dynamic_tag_1,3,dynamicTags.get(i));
                 Spannable spannable = new SpannableString(dynamicTags.get(i));
                 spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                         new ColorStateList(new int[][] {new int[] {}},

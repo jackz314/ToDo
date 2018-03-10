@@ -192,8 +192,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         d.start();
                     }
                     input.setVisibility(View.VISIBLE);
-                    showKeyboard();
                     input.requestFocus();
+                    showKeyboard();
                 }
                 else{
                     int successModify=-1;
@@ -847,7 +847,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             }
             ContentValues values = new ContentValues();
-            values.put(TITLE, title + " " + tagName);//add tag at the end
+            values.put(TITLE, title);//add tag at the end
             return getContentResolver().insert(AppContract.Item.TODO_URI, values);
         } else return null;
     }
@@ -1417,6 +1417,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         toolbar.setBackgroundColor(themeColor);
         input.setTextColor(textColor);
         input.setTextSize(24);
+        input.setLinkTextColor(themeColor);
+        input.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
+        input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         setCursorColor(input, themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();

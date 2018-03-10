@@ -208,6 +208,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             }
         });
 
+        setHasOptionsMenu(true);
+
         //implement onBackPressed
         ((MainActivity)getActivity()).setOnMainBackPressedListener(new MainBackPressedListener(getActivity()) {
             @Override
@@ -324,7 +326,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     //todo implement Travis CI
     //todo solve git project error (possibly caused by app.iml, remove it!)
-    //todo searchVIew is gone, fix it
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -793,7 +794,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if(charSequence.equals("#")){
-                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo implement ontextchangecolor method
+                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -1535,6 +1536,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
+        EditText searchViewTextField = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
+        MainActivity.setCursorColor(searchViewTextField,Color.WHITE);
         LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
