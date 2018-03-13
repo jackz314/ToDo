@@ -146,6 +146,7 @@ import java.util.regex.Pattern;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.dtb.DATE_FORMAT;
 import static com.jackz314.todo.dtb.ID;
+import static com.jackz314.todo.dtb.TAG;
 import static com.jackz314.todo.dtb.TITLE;
 
 //   ┏┓　　　┏┓
@@ -1405,24 +1406,24 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history)).setIcon(R.drawable.ic_history_black_24dp);
         }
         //set dynamic tag columns in the navigation menu
+        menuNav.removeGroup(R.id.dynamic_tags);
         if(todosql.returnTagsForNavMenu() != null){
             final ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
             ArrayList<String> dynamicTagColors = todosql.returnTagColorsForNavMenu();
-            //todo add navigationView dynamic expandable tag item
+            //todo fix navigationView dynamic expandable tag item
             for(int i = 0; i < dynamicTags.size(); i++){
-                menuNav.add(R.id.nav_category_main,R.id.dynamic_tag_1,3,dynamicTags.get(i));
                 Spannable spannable = new SpannableString(dynamicTags.get(i));
                 spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                         new ColorStateList(new int[][] {new int[] {}},
                                 new int[] {Color.parseColor(dynamicTagColors.get(i))})
                         ,null), 0, dynamicTags.get(i).length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//change tag title color
-                menuNav.getItem(4).setTitle(spannable);
                 final int finalI = i;
-                menuNav.getItem(4).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                menuNav.add(R.id.dynamic_tags,R.id.dynamic_tag_1,0,dynamicTags.get(i)).setTitle(spannable).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
+                        String tag = dynamicTags.get(finalI);
                         Intent tagIntent = new Intent(MainActivity.this, TagsActivity.class);
-                        tagIntent.putExtra("TAG_VALUE",dynamicTags.get(finalI));
+                        tagIntent.putExtra("TAG_VALUE",tag);
                         startActivity(tagIntent);
                         return false;
                     }

@@ -286,7 +286,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 handler.postDelayed(r,250);
                 if (doubleClickCount == 2) {//double clicked
                     doubleClickCount = 0;
-                    tagList.smoothScrollToPosition(0);//todo smooth scroll to top
+                    tagList.smoothScrollToPosition(0);//smooth scroll to top
                 }
             }
         });

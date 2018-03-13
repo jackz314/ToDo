@@ -337,7 +337,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoList = getView().findViewById(R.id.todolist);
         todoList.setHasFixedSize(true);
         toolbar = getActivity().findViewById(R.id.toolbar);
-        selectionToolBar = (Toolbar)getActivity().findViewById(R.id.selection_toolbar);
+        selectionToolBar = getActivity().findViewById(R.id.selection_toolbar);
         main = getView().findViewById(R.id.mainFragmentLayout);
         fab = getView().findViewById(R.id.fab);
         proFab = getView().findViewById(R.id.progress_fab);
@@ -1014,7 +1014,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     }
 
-    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT ) {//draw the options after swipe left
+    ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT ) {//draw the options after swipe left
 
         @Override
         public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
@@ -1031,20 +1031,24 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
-            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
-                removeSelectedId(viewHolder.getItemId());
+            //if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
+            //    removeSelectedId(viewHolder.getItemId());
+            //}
+            if(direction == ItemTouchHelper.LEFT){
+                final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
+                finishData(viewHolder.getItemId());
+                Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        insertData(finishedContent);
+                        long lastHistoryId = todosql.getIdOfLatestDataInHistory();
+                        todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                        displayAllNotes();
+                    }
+                }).show();
+            }else if(direction == ItemTouchHelper.RIGHT){
+
             }
-            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
-            finishData(viewHolder.getItemId());
-            Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    insertData(finishedContent);
-                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
-                    displayAllNotes();
-                }
-            }).show();
         }
 
         @Override

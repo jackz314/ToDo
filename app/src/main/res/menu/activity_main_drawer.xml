@@ -19,7 +19,11 @@
             android:orderInCategory="3"
             android:icon="@drawable/ic_tags_black_24dp"
             android:title="@string/nav_tags" />
+    </group>
 
+    <group android:checkableBehavior="single"
+        android:orderInCategory="2"
+        android:id="@+id/dynamic_tags">
         <item
             android:id="@+id/dynamic_tag_1"
             android:orderInCategory="4"
@@ -49,12 +53,11 @@
             android:orderInCategory="8"
             android:visible="false"
             android:title="@string/nav_tags" />
-
     </group>
 
     <group
         android:id="@+id/nav_category_more"
-        android:orderInCategory="2"
+        android:orderInCategory="3"
         android:title="@string/nav_more">
 
             <item
