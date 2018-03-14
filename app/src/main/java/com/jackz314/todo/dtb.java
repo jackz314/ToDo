@@ -411,7 +411,7 @@ public class dtb extends SQLiteOpenHelper{
 
     public ArrayList<String> returnTagsForNavMenu(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE + " LIMIT 5",null);
+        Cursor cs = db.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE + " order by _id desc LIMIT 5",null);
         ArrayList<String> allTags = new ArrayList<String>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){

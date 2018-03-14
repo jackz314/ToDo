@@ -554,9 +554,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         // Set the drawer toggle as the DrawerListener
         mDrawerLayout.setDrawerListener(mDrawerToggle);
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
+                this, mDrawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
             //Called when a drawer has settled in a completely closed state.
             public void onDrawerClosed(View view) {
                // EditText input = mainFragment.input; //todo this doesn't work, fix it
@@ -570,11 +569,35 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             // Called when a drawer has settled in a completely open state.
             public void onDrawerOpened(View drawerView) {
                 hideKeyboard();
+                menuNav.removeGroup(R.id.dynamic_tags);
+                if(todosql.returnTagsForNavMenu() != null){
+                    final ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
+                    ArrayList<String> dynamicTagColors = todosql.returnTagColorsForNavMenu();
+                    //todo fix navigationView dynamic expandable tag item
+                    for(int i = 0; i < dynamicTags.size(); i++){
+                        Spannable spannable = new SpannableString(dynamicTags.get(i));
+                        spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                new ColorStateList(new int[][] {new int[] {}},
+                                        new int[] {Color.parseColor(dynamicTagColors.get(i))})
+                                ,null), 0, dynamicTags.get(i).length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//change tag title color
+                        final int finalI = i;
+                        menuNav.add(R.id.dynamic_tags,R.id.dynamic_tag_1,2,dynamicTags.get(i)).setTitle(spannable).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                            @Override
+                            public boolean onMenuItemClick(MenuItem item) {
+                                String tag = dynamicTags.get(finalI);
+                                Intent tagIntent = new Intent(MainActivity.this, TagsActivity.class);
+                                tagIntent.putExtra("TAG_VALUE",tag);
+                                startActivity(tagIntent);
+                                return false;
+                            }
+                        });
+                    }
+                }
                 super.onDrawerOpened(drawerView);
                 //getActionBar().setTitle(title);
             }
         };
-        drawer.setDrawerListener(toggle);
+        mDrawerLayout.setDrawerListener(toggle);
         toggle.syncState();
         navigationView.setNavigationItemSelectedListener(this);
 
@@ -1406,30 +1429,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             menuNav.add(R.id.nav_category_main,R.id.history,0,getString(R.string.nav_history)).setIcon(R.drawable.ic_history_black_24dp);
         }
         //set dynamic tag columns in the navigation menu
-        menuNav.removeGroup(R.id.dynamic_tags);
-        if(todosql.returnTagsForNavMenu() != null){
-            final ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
-            ArrayList<String> dynamicTagColors = todosql.returnTagColorsForNavMenu();
-            //todo fix navigationView dynamic expandable tag item
-            for(int i = 0; i < dynamicTags.size(); i++){
-                Spannable spannable = new SpannableString(dynamicTags.get(i));
-                spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
-                        new ColorStateList(new int[][] {new int[] {}},
-                                new int[] {Color.parseColor(dynamicTagColors.get(i))})
-                        ,null), 0, dynamicTags.get(i).length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//change tag title color
-                final int finalI = i;
-                menuNav.add(R.id.dynamic_tags,R.id.dynamic_tag_1,0,dynamicTags.get(i)).setTitle(spannable).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        String tag = dynamicTags.get(finalI);
-                        Intent tagIntent = new Intent(MainActivity.this, TagsActivity.class);
-                        tagIntent.putExtra("TAG_VALUE",tag);
-                        startActivity(tagIntent);
-                        return false;
-                    }
-                });
-            }
-        }
         super.onResume();
     }
 
