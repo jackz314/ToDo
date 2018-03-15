@@ -1,9 +1,6 @@
 package com.jackz314.todo;
 
-import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Color;
-import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -43,8 +40,8 @@ import java.util.ArrayList;
 
     @Override
     public void onBindViewHolder(TodoViewHolder holder, final Cursor cursor) {
-        final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-        //String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+        final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+        //String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));
         //holder.todoText.setText(text);
         //holder.todoText.setTextColor(Color.BLACK);
         //System.out.println(text+"|cursor read");

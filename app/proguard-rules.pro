@@ -56,7 +56,7 @@
 -keepnames class com.fasterxml.jackson.** { *; }
 -keepnames class javax.servlet.** { *; }
 -keepnames class org.ietf.jgss.** { *; }
--keep class com.jackz314.todo.MyFirebaseMessagingService {
+-keep class com.jackz314.todo.firebase.MyFirebaseMessagingService {
     public <methods>;
 }
 -keep class com.jackz314.MainActivity {

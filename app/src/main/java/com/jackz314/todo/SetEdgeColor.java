@@ -20,11 +20,13 @@ import android.widget.EdgeEffect;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
+import com.jackz314.todo.BuildConfig;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Field;
 
-public final class SetEdgeColor {
+public class SetEdgeColor {
     private SetEdgeColor() {
         throw new AssertionError("No instances!");
     }

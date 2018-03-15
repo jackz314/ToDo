@@ -26,10 +26,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
-import static com.jackz314.todo.AppContract.AUTHORITY;
+import static com.jackz314.todo.DatabaseContract.AUTHORITY;
 /**
  * Content provider. The contract between this provider and applications
- * is defined in {@link AppContract}.
+ * is defined in {@link DatabaseContract}.
  */
 public class AppProvider extends ContentProvider {
 
@@ -39,17 +39,17 @@ public class AppProvider extends ContentProvider {
     private static final String ACTION_UPDATE = "UPDATE";
     private static final String ACTION_DELETE = "DELETE";
 
-    private dtb mDbHelper;
+    private DatabaseManager mDbHelper;
 
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
-        sUriMatcher.addURI(AUTHORITY, dtb.TODO_TABLE, ITEMS);
-        sUriMatcher.addURI(AUTHORITY, dtb.TODO_TABLE + "/#", ITEMS_ID);
-        sUriMatcher.addURI(AUTHORITY, dtb.HISTORY_TABLE, ITEMS);
-        sUriMatcher.addURI(AUTHORITY, dtb.HISTORY_TABLE + "/#", ITEMS_ID);
-        sUriMatcher.addURI(AUTHORITY, dtb.TAGS_TABLE, ITEMS);
-        sUriMatcher.addURI(AUTHORITY, dtb.TAGS_TABLE + "/#", ITEMS_ID);
+        sUriMatcher.addURI(AUTHORITY, DatabaseManager.TODO_TABLE, ITEMS);
+        sUriMatcher.addURI(AUTHORITY, DatabaseManager.TODO_TABLE + "/#", ITEMS_ID);
+        sUriMatcher.addURI(AUTHORITY, DatabaseManager.HISTORY_TABLE, ITEMS);
+        sUriMatcher.addURI(AUTHORITY, DatabaseManager.HISTORY_TABLE + "/#", ITEMS_ID);
+        sUriMatcher.addURI(AUTHORITY, DatabaseManager.TAGS_TABLE, ITEMS);
+        sUriMatcher.addURI(AUTHORITY, DatabaseManager.TAGS_TABLE + "/#", ITEMS_ID);
     }
 
     private ContentResolver mResolver;
@@ -75,7 +75,7 @@ public class AppProvider extends ContentProvider {
         }
 
 
-    mDbHelper = new dtb(context);
+    mDbHelper = new DatabaseManager(context);
 
         return true;
 }
@@ -91,23 +91,23 @@ public class AppProvider extends ContentProvider {
             default:
                 return null;
         }
-        if(uri.getPath().contains(dtb.TODO_TABLE)){
+        if(uri.getPath().contains(DatabaseManager.TODO_TABLE)){
             SQLiteDatabase db = mDbHelper.getReadableDatabase();
-            Cursor cursor = db.query(dtb.TODO_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
-            cursor.setNotificationUri(mResolver, AppContract.Item.TODO_URI);
+            Cursor cursor = db.query(DatabaseManager.TODO_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
+            cursor.setNotificationUri(mResolver, DatabaseContract.Item.TODO_URI);
             return cursor;
 
         }
-        if(uri.getPath().contains(dtb.HISTORY_TABLE)){
+        if(uri.getPath().contains(DatabaseManager.HISTORY_TABLE)){
             SQLiteDatabase db = mDbHelper.getReadableDatabase();
-            Cursor cursor = db.query(dtb.HISTORY_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
-            cursor.setNotificationUri(mResolver, AppContract.Item.HISTORY_URI);
+            Cursor cursor = db.query(DatabaseManager.HISTORY_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
+            cursor.setNotificationUri(mResolver, DatabaseContract.Item.HISTORY_URI);
             return cursor;
         }
-        if(uri.getPath().contains(dtb.TAGS_TABLE)){
+        if(uri.getPath().contains(DatabaseManager.TAGS_TABLE)){
             SQLiteDatabase db = mDbHelper.getReadableDatabase();
-            Cursor cursor = db.query(dtb.TAGS_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
-            cursor.setNotificationUri(mResolver, AppContract.Item.TAGS_URI);
+            Cursor cursor = db.query(DatabaseManager.TAGS_TABLE, projection, selection, selectionArgs, null, null, sortOrder);
+            cursor.setNotificationUri(mResolver, DatabaseContract.Item.TAGS_URI);
             return cursor;
         }
         return null;
@@ -122,24 +122,24 @@ public class AppProvider extends ContentProvider {
         return null;
     }
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        if(uri.getPath().contains(dtb.TODO_TABLE)){
-            long newRowId = db.insert(dtb.TODO_TABLE, null, values);
+        if(uri.getPath().contains(DatabaseManager.TODO_TABLE)){
+            long newRowId = db.insert(DatabaseManager.TODO_TABLE, null, values);
             if (newRowId != -1) {
-                Uri newUri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, newRowId);
+                Uri newUri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, newRowId);
                 mResolver.notifyChange(newUri, null);
                 return newUri;
             }
-        }else if(uri.getPath().contains(dtb.HISTORY_TABLE)){
-            long newRowId = db.insert(dtb.HISTORY_TABLE, null, values);
+        }else if(uri.getPath().contains(DatabaseManager.HISTORY_TABLE)){
+            long newRowId = db.insert(DatabaseManager.HISTORY_TABLE, null, values);
             if (newRowId != -1) {
-                Uri newUri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, newRowId);
+                Uri newUri = ContentUris.withAppendedId(DatabaseContract.Item.HISTORY_URI, newRowId);
                 mResolver.notifyChange(newUri, null);
                 return newUri;
             }
-        }else if(uri.getPath().contains(dtb.TAGS_TABLE)){
-            long newRowId = db.insert(dtb.TAGS_TABLE, null, values);
+        }else if(uri.getPath().contains(DatabaseManager.TAGS_TABLE)){
+            long newRowId = db.insert(DatabaseManager.TAGS_TABLE, null, values);
             if (newRowId != -1) {
-                Uri newUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI, newRowId);
+                Uri newUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI, newRowId);
                 mResolver.notifyChange(newUri, null);
                 return newUri;
             }
@@ -161,30 +161,30 @@ public class AppProvider extends ContentProvider {
 
     @Override
     public String getType(@NonNull Uri uri) {
-        if(uri.getPath().contains(dtb.TODO_TABLE)){
+        if(uri.getPath().contains(DatabaseManager.TODO_TABLE)){
             switch (sUriMatcher.match(uri)) {
                 case ITEMS:
-                    return AppContract.Item.DIR_MIME_TYPE;
+                    return DatabaseContract.Item.DIR_MIME_TYPE;
                 case ITEMS_ID:
-                    return AppContract.Item.ITEM_MIME_TYPE;
+                    return DatabaseContract.Item.ITEM_MIME_TYPE;
                 default:
                     return null;
             }
-        }else if (uri.getPath().contains(dtb.HISTORY_TABLE)){
+        }else if (uri.getPath().contains(DatabaseManager.HISTORY_TABLE)){
             switch (sUriMatcher.match(uri)) {
                 case ITEMS:
-                    return AppContract.Item.HISTORY_DIR_MIME_TYPE;
+                    return DatabaseContract.Item.HISTORY_DIR_MIME_TYPE;
                 case ITEMS_ID:
-                    return AppContract.Item.HISTORY_ITEM_MIME_TYPE;
+                    return DatabaseContract.Item.HISTORY_ITEM_MIME_TYPE;
                 default:
                     return null;
             }
-        }else if(uri.getPath().contains(dtb.TAGS_TABLE)){
+        }else if(uri.getPath().contains(DatabaseManager.TAGS_TABLE)){
             switch (sUriMatcher.match(uri)) {
                 case ITEMS:
-                    return AppContract.Item.TAGS_DIR_MIME_TYPE;
+                    return DatabaseContract.Item.TAGS_DIR_MIME_TYPE;
                 case ITEMS_ID:
-                    return AppContract.Item.TAGS_ITEM_MIME_TYPE;
+                    return DatabaseContract.Item.TAGS_ITEM_MIME_TYPE;
                 default:
                     return null;
             }
@@ -193,7 +193,7 @@ public class AppProvider extends ContentProvider {
     }
 
     private String appendIdToSelection(String id, String selection) {
-        return dtb.ID + "=" + id + (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : "");
+        return DatabaseManager.ID + "=" + id + (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : "");
     }
 
     private int doAction(Uri uri, ContentValues values, String selection,
@@ -214,13 +214,13 @@ public class AppProvider extends ContentProvider {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
         int count;
-        if (uri.getPath().contains(dtb.TODO_TABLE)){
+        if (uri.getPath().contains(DatabaseManager.TODO_TABLE)){
             switch (action) {
                 case ACTION_UPDATE:
-                    count = db.update(dtb.TODO_TABLE, values, selection, selectionArgs);
+                    count = db.update(DatabaseManager.TODO_TABLE, values, selection, selectionArgs);
                     break;
                 case ACTION_DELETE:
-                    count = db.delete(dtb.TODO_TABLE, selection, selectionArgs);
+                    count = db.delete(DatabaseManager.TODO_TABLE, selection, selectionArgs);
                     break;
                 default:
                     throw new IllegalArgumentException("Action not supported: " + action);
@@ -228,13 +228,13 @@ public class AppProvider extends ContentProvider {
             mResolver.notifyChange(uri, null);
             return count;
 
-        }else if (uri.getPath().contains(dtb.HISTORY_TABLE)){
+        }else if (uri.getPath().contains(DatabaseManager.HISTORY_TABLE)){
             switch (action) {
                 case ACTION_UPDATE:
-                    count = db.update(dtb.HISTORY_TABLE, values, selection, selectionArgs);
+                    count = db.update(DatabaseManager.HISTORY_TABLE, values, selection, selectionArgs);
                     break;
                 case ACTION_DELETE:
-                    count = db.delete(dtb.HISTORY_TABLE, selection, selectionArgs);
+                    count = db.delete(DatabaseManager.HISTORY_TABLE, selection, selectionArgs);
                     break;
                 default:
                     throw new IllegalArgumentException("Action not supported: " + action);
@@ -242,13 +242,13 @@ public class AppProvider extends ContentProvider {
             mResolver.notifyChange(uri, null);
             return count;
 
-        }else if (uri.getPath().contains(dtb.TAGS_TABLE)){
+        }else if (uri.getPath().contains(DatabaseManager.TAGS_TABLE)){
             switch (action) {
                 case ACTION_UPDATE:
-                    count = db.update(dtb.TAGS_TABLE, values, selection, selectionArgs);
+                    count = db.update(DatabaseManager.TAGS_TABLE, values, selection, selectionArgs);
                     break;
                 case ACTION_DELETE:
-                    count = db.delete(dtb.TAGS_TABLE, selection, selectionArgs);
+                    count = db.delete(DatabaseManager.TAGS_TABLE, selection, selectionArgs);
                     break;
                 default:
                     throw new IllegalArgumentException("Action not supported: " + action);

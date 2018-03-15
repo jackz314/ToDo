@@ -121,8 +121,8 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
                 return super.getView(position, row, parent);
             }
         };
-        Spannable spannable = new SpannableString("fuck");
-        spannable.setSpan(new ForegroundColorSpan(Color.BLUE),0,spannable.length(),0);
+        //Spannable spannable = new SpannableString("");
+        //spannable.setSpan(new ForegroundColorSpan(Color.BLUE),0,spannable.length(),0);
         builder.setAdapter(adapter, this);
         super.onPrepareDialogBuilder(builder);
     }

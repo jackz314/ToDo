@@ -1,6 +1,5 @@
 package com.jackz314.todo;
 
-import android.*;
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.app.SearchManager;
@@ -45,9 +44,7 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
-import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
-import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -69,7 +66,6 @@ import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
-import android.widget.EdgeEffect;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -80,11 +76,10 @@ import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
+import com.jackz314.todo.utils.ColorUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -95,8 +90,8 @@ import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.dtb.ID;
-import static com.jackz314.todo.dtb.TITLE;
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 
 public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
@@ -118,7 +113,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     Toolbar toolbar, selectionToolBar;
     TextView modifyId, selectionTitle;
     CoordinatorLayout main;
-    dtb todosql;
+    DatabaseManager todosql;
     String tagName = "", tagColor = "", oldResult = "", searchText = "";
     ProgressBar fabProgressBar;
     RecognitionProgressView recognitionProgressView;
@@ -132,7 +127,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         setContentView(R.layout.activity_tags);
         toolbar = findViewById(R.id.tags_toolbar);
         setSupportActionBar(toolbar);
-        todosql = new dtb(this);
+        todosql = new DatabaseManager(this);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         fab = findViewById(R.id.tags_fab);
         proFab = findViewById(R.id.tag_progress_fab);
@@ -848,7 +843,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             }
             ContentValues values = new ContentValues();
             values.put(TITLE, title);//add tag at the end
-            return getContentResolver().insert(AppContract.Item.TODO_URI, values);
+            return getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
     }
 
@@ -858,11 +853,11 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
-        getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
+        getContentResolver().insert(DatabaseContract.Item.HISTORY_URI, cv);
     }
 
     public void deleteData(long id){
-        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+        Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         String note = todosql.getOneDataInTODO(id);
         getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
@@ -870,7 +865,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             for(String tag : tags){
                 if(tag.equals(tagName)) continue;//if it's this tag, don't delete it yet
                 if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tag));
                     getContentResolver().delete(tagUri,null,null);
                 }
             }
@@ -924,7 +919,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
-            Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+            Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
             return getContentResolver().update(uri, values, null, null);
         }else return -1;
     }
@@ -939,10 +934,10 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         if (args != null) {//if contains search request
             String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%", "%" + tagName + " %", "%" + tagName + "\n%", "%" + tagName + ""};
-            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION + " OR title LIKE ?", selectionArgs, sort);
+            return new CursorLoader(this, DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION + " OR title LIKE ?", selectionArgs, sort);
         }else {
             String[] selectionArgs = new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"};
-            return new CursorLoader(this, AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+            return new CursorLoader(this, DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
     }
 
@@ -1238,7 +1233,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void determineIfDeleteTag(){
         if(tagListAdapter.getItemCount() == 0 && !todosql.determineIfTagInUse(tagName)){//if tag no longer exist
-            Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tagName));
+            Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tagName));
             getContentResolver().delete(tagUri,null,null);
         }
     }
@@ -1285,8 +1280,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));//get the text of the note
+                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);

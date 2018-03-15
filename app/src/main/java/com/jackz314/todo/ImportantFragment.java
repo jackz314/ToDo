@@ -5,8 +5,6 @@ import android.animation.ObjectAnimator;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.app.FragmentManager;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -45,7 +43,6 @@ import android.print.pdf.PrintedPdfDocument;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -93,6 +90,7 @@ import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
+import com.jackz314.todo.utils.ColorUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -109,12 +107,12 @@ import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.dtb.DATE_FORMAT;
-import static com.jackz314.todo.dtb.ID;
-import static com.jackz314.todo.dtb.PINNED;
-import static com.jackz314.todo.dtb.PINNED_TIMESTAMP;
-import static com.jackz314.todo.dtb.REMIND_TIME;
-import static com.jackz314.todo.dtb.TITLE;
+import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.PINNED;
+import static com.jackz314.todo.DatabaseManager.PINNED_TIMESTAMP;
+import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 
 
 /**
@@ -140,7 +138,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     private FirebaseAnalytics mFirebaseAnalytics;
     private OnFragmentInteractionListener mListener;
     private String todoTableId = "HAHA! this is the real one, gotcha";
-    dtb todosql;
+    DatabaseManager todosql;
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
@@ -347,7 +345,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             }
         });
         //speechRecognizer.setRecognitionListener(new speechListener());
-        todosql = new dtb(getContext());
+        todosql = new DatabaseManager(getContext());
         todoTableId = "0x397821dc97276";
         //set tabs
         input.setTextIsSelectable(true);
@@ -1247,8 +1245,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));//get the text of the note
+                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
@@ -1623,9 +1621,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         if (args != null) {
             String[] selectionArgsQuery = new String[]{"%" + args.getString("QUERY") + "%"};
             selectionArgsCombined = MainActivity.combineStringArray(selectionArgsQuery,selectionArgs);
-            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION_WITH_QUERY + selectionAddOn, selectionArgsCombined, sort);
+            return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION_WITH_QUERY + selectionAddOn, selectionArgsCombined, sort);
         }else {
-            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION + selectionAddOn, selectionArgs , sort);
+            return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION + selectionAddOn, selectionArgs , sort);
         }
     }
 
@@ -1656,7 +1654,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
-            Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+            Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
             return getActivity().getContentResolver().update(uri, values, null, null);
         }else return -1;
     }
@@ -1665,7 +1663,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
-            return getActivity().getContentResolver().insert(AppContract.Item.TODO_URI, values);
+            return getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
     }
 
@@ -1675,11 +1673,11 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
-        getActivity().getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
+        getActivity().getContentResolver().insert(DatabaseContract.Item.HISTORY_URI, cv);
     }
 
     public void deleteData(long id){
-        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+        Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
         String note = todosql.getOneDataInTODO(id);
         getActivity().getContentResolver().delete(uri, null, null);
@@ -1687,7 +1685,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
                 if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tag));
                     getActivity().getContentResolver().delete(tagUri,null,null);
                 }
             }

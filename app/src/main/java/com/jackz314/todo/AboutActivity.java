@@ -25,6 +25,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.jackz314.todo.utils.ColorUtils;
 
 import static com.jackz314.todo.MainActivity.getMacAddr;
 

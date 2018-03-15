@@ -22,7 +22,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Vibrator;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.LoaderManager;
@@ -49,24 +48,21 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.CheckBox;
-import android.widget.EdgeEffect;
 import android.widget.TextView;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.jackz314.todo.utils.ColorUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Random;
 
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.dtb.ID;
-import static com.jackz314.todo.dtb.TITLE;
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 
 public class HistoryActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
-    dtb todosql;
+    DatabaseManager todosql;
     TextView emptyHistory, selectionTitle;
     RecyclerView historyList;
     int themeColor,textColor,backgroundColor,textSize;
@@ -100,7 +96,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         super.onCreate(savedInstanceState);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setContentView(R.layout.activity_history);
-        todosql = new dtb(this);
+        todosql = new DatabaseManager(this);
         toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -362,8 +358,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));
+                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
@@ -934,7 +930,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void insertData(String title){
         ContentValues contentValues = new ContentValues();
         contentValues.put(TITLE,title);
-        getContentResolver().insert(AppContract.Item.HISTORY_URI,contentValues);
+        getContentResolver().insert(DatabaseContract.Item.HISTORY_URI,contentValues);
     }
 
     public void restoreData(long id){
@@ -947,11 +943,11 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         String data = todosql.getOneDataInHISTORY(Long.toString(id));
         cv.put(TITLE,data);
         deleteData(id);
-        getContentResolver().insert(AppContract.Item.TODO_URI, cv);
+        getContentResolver().insert(DatabaseContract.Item.TODO_URI, cv);
     }
 
     public void deleteData(long id){
-        Uri uri = ContentUris.withAppendedId(AppContract.Item.HISTORY_URI, id);
+        Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.HISTORY_URI, id);
         getContentResolver().delete(uri, null, null);
         //historyList.getAdapter().notifyDataSetChanged();
         getSupportLoaderManager().restartLoader(234,null,this);
@@ -972,9 +968,9 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         }
         if (args != null) {
             String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
-            return new CursorLoader(this, AppContract.Item.HISTORY_URI, PROJECTION, SELECTION, selectionArgs, sort);
+            return new CursorLoader(this, DatabaseContract.Item.HISTORY_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
-        return new CursorLoader(this, AppContract.Item.HISTORY_URI, PROJECTION, null, null, sort);
+        return new CursorLoader(this, DatabaseContract.Item.HISTORY_URI, PROJECTION, null, null, sort);
     }
 
     @Override

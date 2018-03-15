@@ -1,10 +1,7 @@
 package com.jackz314.todo;
 
-import android.*;
 import android.animation.LayoutTransition;
 import android.app.SearchManager;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -45,20 +42,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.EdgeEffect;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import com.jackz314.colorpicker.ColorPickerView;
+import com.jackz314.colorpicker.builder.ColorPickerClickListener;
+import com.jackz314.colorpicker.builder.ColorPickerDialogBuilder;
+import com.jackz314.todo.utils.ColorUtils;
 
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.dtb.ID;
-import static com.jackz314.todo.dtb.TAG;
-import static com.jackz314.todo.dtb.TAG_COLOR;
-import static com.jackz314.todo.dtb.TODO_TABLE;
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.TAG;
+import static com.jackz314.todo.DatabaseManager.TAG_COLOR;
 
 
 public class TagSelectionActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
@@ -174,9 +169,9 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                 public void onBindViewHolder(final TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
                     //Toast.makeText(getApplicationContext(),"SD",Toast.LENGTH_LONG).show();
-                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-                    String text = cursor.getString(cursor.getColumnIndex(dtb.TAG));//get the text of the note
-                    final String tagColor = cursor.getString(cursor.getColumnIndex(dtb.TAG_COLOR));
+                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TAG));//get the text of the note
+                    final String tagColor = cursor.getString(cursor.getColumnIndex(DatabaseManager.TAG_COLOR));
                     holder.tagText.setTextColor(textColor);
                     ColorFilter tagDotColorFilter = new PorterDuffColorFilter(Color.parseColor(tagColor), PorterDuff.Mode.MULTIPLY);
                     holder.tagDot.getBackground().setColorFilter(tagDotColorFilter);
@@ -184,40 +179,51 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                     holder.tagDot.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            ColorPickerDialog colorPickerDialog = new ColorPickerDialog(TagSelectionActivity.this, Color.parseColor(tagColor), getString(R.string.color_picker_dialog_title), new ColorPickerDialog.OnColorChangedListener() {
-                                @Override
-                                public void colorChanged(final int color) {// set color
-                                    if(ColorUtils.determineSimilarColor(color,textColor)>0.9){//if newly selected tag color is similar to text color, ask again to confirm the choice
-                                        final AlertDialog dialog = new AlertDialog.Builder(TagSelectionActivity.this).setTitle(R.string.warning_title)
-                                                .setMessage(R.string.color_conflict)
-                                                .setPositiveButton(R.string.just_do_it, new DialogInterface.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(DialogInterface dialog, int which) {
-                                                        ContentValues values = new ContentValues();
-                                                        String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
-                                                        values.put(TAG_COLOR, hexColor);
-                                                        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
-                                                        getContentResolver().update(uri, values, null, null);
-                                                    }
-                                                }).setNegativeButton(R.string.reconsider, new DialogInterface.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(DialogInterface dialog, int which) {
-                                                        //empty
-                                                    }
-                                                }).show();
-                                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
-                                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
-                                    }else{
-                                        ContentValues values = new ContentValues();
-                                        String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
-                                        values.put(TAG_COLOR, hexColor);
-                                        Uri uri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI, id);
-                                        getContentResolver().update(uri, values, null, null);
-                                    }
-                                }
-                            });
-                            colorPickerDialog.setTitle(getString(R.string.tag_color_selector));
-                            colorPickerDialog.show();
+                            ColorPickerDialogBuilder
+                                    .with(TagSelectionActivity.this)
+                                    .setTitle(getString(R.string.tag_color_selector))
+                                    .initialColor(Color.parseColor(tagColor))
+                                    .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
+                                    .density(12)
+                                    .setPositiveButton(getString(R.string.finish), new ColorPickerClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, final int color, Integer[] integers) {
+                                            if(ColorUtils.determineSimilarColor(color,textColor)>0.9){//if newly selected tag color is similar to text color, ask again to confirm the choice
+                                                final AlertDialog dialog = new AlertDialog.Builder(TagSelectionActivity.this).setTitle(R.string.warning_title)
+                                                        .setMessage(R.string.color_conflict)
+                                                        .setPositiveButton(R.string.just_do_it, new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                ContentValues values = new ContentValues();
+                                                                String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
+                                                                values.put(TAG_COLOR, hexColor);
+                                                                Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
+                                                                getContentResolver().update(uri, values, null, null);
+                                                            }
+                                                        }).setNegativeButton(R.string.reconsider, new DialogInterface.OnClickListener() {
+                                                            @Override
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                //empty
+                                                            }
+                                                        }).show();
+                                                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                                                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
+                                            }else{
+                                                ContentValues values = new ContentValues();
+                                                String hexColor = String.format("#%06x", 0xFFFFFF & color);// format it as hexadecimal string (with hashtag and leading zeros)
+                                                values.put(TAG_COLOR, hexColor);
+                                                Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI, id);
+                                                getContentResolver().update(uri, values, null, null);
+                                            }
+                                        }
+                                    })
+                                    .setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+
+                                        }
+                                    }).showColorEdit(true).showColorPreview(true).showLightnessSlider(true).setColorEditTextColor(themeColor).build().show();
+
                             holder.tagText.setTextColor(textColor);//refresh the tag selection list colors
                             ColorFilter tagDotColorFilter = new PorterDuffColorFilter(Color.parseColor(tagColor), PorterDuff.Mode.MULTIPLY);
                             holder.tagDot.getBackground().setColorFilter(tagDotColorFilter);
@@ -315,9 +321,9 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         }
         if (bundle != null) {
             String[] selectionArgs = new String[]{"%" + bundle.getString("QUERY") + "%"};
-            return new CursorLoader(this, AppContract.Item.TAGS_URI,PROJECTION, SELECTION, selectionArgs, sort);
+            return new CursorLoader(this, DatabaseContract.Item.TAGS_URI,PROJECTION, SELECTION, selectionArgs, sort);
         }
-        return new CursorLoader(this, AppContract.Item.TAGS_URI, PROJECTION, null, null, sort);    }
+        return new CursorLoader(this, DatabaseContract.Item.TAGS_URI, PROJECTION, null, null, sort);    }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {

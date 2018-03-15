@@ -2,7 +2,6 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
-import android.support.v4.app.FragmentManager;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -90,6 +89,7 @@ import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
+import com.jackz314.todo.utils.ColorUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -105,8 +105,8 @@ import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.dtb.ID;
-import static com.jackz314.todo.dtb.TITLE;
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 
 
 public class MainFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
@@ -122,7 +122,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     private OnFragmentInteractionListener mListener;
     private FirebaseAnalytics mFirebaseAnalytics;
     private String todoTableId = "HAHA! this is the real one, gotcha";
-    dtb todosql;
+    DatabaseManager todosql;
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
@@ -357,7 +357,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             }
         });
         //speechRecognizer.setRecognitionListener(new speechListener());
-        todosql = new dtb(getContext());
+        todosql = new DatabaseManager(getContext());
         todoTableId = "0x397821dc97276";
         //set tabs
         input.setTextIsSelectable(true);
@@ -1270,8 +1270,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(dtb.ID));
-                    String text = cursor.getString(cursor.getColumnIndex(dtb.TITLE));//get the text of the note
+                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
@@ -1625,9 +1625,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }
         if (args != null) {
             String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
-            return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+            return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
         }
-        return new CursorLoader(getContext(), AppContract.Item.TODO_URI, PROJECTION, null, null, sort);
+        return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, null, null, sort);
     }
 
     @Override
@@ -1657,7 +1657,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
-            Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+            Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
             return getActivity().getContentResolver().update(uri, values, null, null);
         }else return -1;
     }
@@ -1666,7 +1666,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
-            return getActivity().getContentResolver().insert(AppContract.Item.TODO_URI, values);
+            return getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
     }
 
@@ -1676,11 +1676,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
-        getActivity().getContentResolver().insert(AppContract.Item.HISTORY_URI, cv);
+        getActivity().getContentResolver().insert(DatabaseContract.Item.HISTORY_URI, cv);
     }
 
     public void deleteData(long id){
-        Uri uri = ContentUris.withAppendedId(AppContract.Item.TODO_URI, id);
+        Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
         String note = todosql.getOneDataInTODO(id);
         getActivity().getContentResolver().delete(uri, null, null);
@@ -1688,7 +1688,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
                 if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(AppContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tag));
                     getActivity().getContentResolver().delete(tagUri,null,null);
                 }
             }
