@@ -179,7 +179,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                     holder.tagDot.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            ColorPickerDialogBuilder
+                            AlertDialog colorPicker = ColorPickerDialogBuilder
                                     .with(TagSelectionActivity.this)
                                     .setTitle(getString(R.string.tag_color_selector))
                                     .initialColor(Color.parseColor(tagColor))
@@ -222,8 +222,10 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
                                         public void onClick(DialogInterface dialog, int which) {
 
                                         }
-                                    }).showColorEdit(true).showColorPreview(true).showLightnessSlider(true).setColorEditTextColor(themeColor).build().show();
-
+                                    }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(Color.parseColor(tagColor)).build();
+                            colorPicker.show();
+                            colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColor);
+                            colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColor);
                             holder.tagText.setTextColor(textColor);//refresh the tag selection list colors
                             ColorFilter tagDotColorFilter = new PorterDuffColorFilter(Color.parseColor(tagColor), PorterDuff.Mode.MULTIPLY);
                             holder.tagDot.getBackground().setColorFilter(tagDotColorFilter);

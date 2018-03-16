@@ -649,7 +649,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         themeColor.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {// change theme color
             @Override
             public boolean onPreferenceClick(Preference preference) {
-                ColorPickerDialogBuilder.with(SettingsActivity.this)
+               AlertDialog colorPicker = ColorPickerDialogBuilder.with(SettingsActivity.this)
                         .setTitle(getString(R.string.theme_color_selector))
                         .initialColor(themeColorNum)
                         .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
@@ -677,7 +677,11 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             public void onClick(DialogInterface dialog, int which) {
 
                             }
-                        }).showColorEdit(true).showColorPreview(true).showLightnessSlider(true).setColorEditTextColor(themeColorNum).build().show();
+                        }).showColorEdit(true).showColorPreview(true)
+                        .lightnessSliderOnly().setColorEditTextColor(themeColorNum).build();
+                colorPicker.show();
+                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColorNum);
+                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColorNum);
                 return false;
             }
         });
@@ -686,7 +690,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         textColor.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {// change text color
             @Override
             public boolean onPreferenceClick(Preference preference) {
-                ColorPickerDialogBuilder.with(SettingsActivity.this)
+                AlertDialog colorPicker = ColorPickerDialogBuilder.with(SettingsActivity.this)
                         .setTitle(getString(R.string.text_color_selector))
                         .initialColor(textColorNum)
                         .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
@@ -741,7 +745,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             public void onClick(DialogInterface dialog, int which) {
 
                             }
-                        }).showColorEdit(true).showColorPreview(true).showLightnessSlider(true).setColorEditTextColor(themeColorNum).build().show();
+                        }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(textColorNum).build();
+                colorPicker.show();
+                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColorNum);
+                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColorNum);
                 return false;
             }
         });
@@ -751,7 +758,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             @Override
             public boolean onPreferenceClick(Preference preference) {
 
-                ColorPickerDialogBuilder.with(SettingsActivity.this)
+               AlertDialog colorPicker = ColorPickerDialogBuilder.with(SettingsActivity.this)
                         .setTitle(getString(R.string.background_color_selector))
                         .initialColor(backgroundColorNum)
                         .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
@@ -805,7 +812,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             public void onClick(DialogInterface dialog, int which) {
 
                             }
-                        }).showColorEdit(true).showColorPreview(true).showLightnessSlider(true).setColorEditTextColor(themeColorNum).build().show();
+                        }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(backgroundColorNum).build();
+                colorPicker.show();
+                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColorNum);
+                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColorNum);
                 return false;
             }
         });

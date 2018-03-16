@@ -114,6 +114,16 @@ public class ColorPickerDialogBuilder {
 		return this;
 	}
 
+	/*public ColorPickerDialogBuilder setPositiveButtonColor(int color) {
+		builder.create().getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(color);
+		return this;
+	}
+
+	public ColorPickerDialogBuilder setNegativeButtonColor(int color) {
+		builder.create().getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(color);
+		return this;
+	}*/
+
 	public ColorPickerDialogBuilder setPositiveButton(CharSequence text, final ColorPickerClickListener onClickListener) {
 		builder.setPositiveButton(text, new DialogInterface.OnClickListener() {
 			@Override
@@ -159,6 +169,7 @@ public class ColorPickerDialogBuilder {
 	public ColorPickerDialogBuilder lightnessSliderOnly() {
 		isLightnessSliderEnabled = true;
 		isAlphaSliderEnabled = false;
+
 		return this;
 	}
 
@@ -177,8 +188,8 @@ public class ColorPickerDialogBuilder {
 		return this;
 	}
 
-	public ColorPickerDialogBuilder setColorEditTextColor(int argb) {
-		colorPickerView.setColorEditTextColor(argb);
+	public ColorPickerDialogBuilder setColorEditTextColor(int color) {
+		colorPickerView.setColorEditTextColor(color);
 		return this;
 	}
 
@@ -201,7 +212,6 @@ public class ColorPickerDialogBuilder {
 	public AlertDialog build() {
 		Context context = builder.getContext();
 		colorPickerView.setInitialColors(initialColor, getStartOffset(initialColor));
-
 		if (isLightnessSliderEnabled) {
 			LinearLayout.LayoutParams layoutParamsForLightnessBar = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, getDimensionAsPx(context, R.dimen.default_slider_height));
 			lightnessSlider = new LightnessSlider(context);

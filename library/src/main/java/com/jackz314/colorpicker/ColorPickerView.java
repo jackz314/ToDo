@@ -2,12 +2,17 @@ package com.jackz314.colorpicker;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.os.Build;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.graphics.ColorUtils;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
@@ -16,6 +21,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.jackz314.colorpicker.builder.ColorWheelRendererBuilder;
 import com.jackz314.colorpicker.builder.PaintBuilder;
@@ -24,6 +30,7 @@ import com.jackz314.colorpicker.renderer.ColorWheelRenderer;
 import com.jackz314.colorpicker.slider.AlphaSlider;
 import com.jackz314.colorpicker.slider.LightnessSlider;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 
 public class ColorPickerView extends View {
@@ -222,11 +229,12 @@ public class ColorPickerView extends View {
 				int lastSelectedColor = getSelectedColor();
 				currentColorCircle = findNearestByPosition(event.getX(), event.getY());
 				int selectedColor = getSelectedColor();
-
 				callOnColorChangedListeners(lastSelectedColor, selectedColor);
-
 				initialColor = selectedColor;
 				setColorToSliders(selectedColor);
+				setColorText(selectedColor);
+				setColorEditTextColor(selectedColor);
+				setColorPreviewColor(selectedColor);
 				invalidate();
 				break;
 			}
@@ -242,6 +250,7 @@ public class ColorPickerView extends View {
 					}
 				}
 				setColorToSliders(selectedColor);
+				setColorEditTextColor(selectedColor);
 				setColorText(selectedColor);
 				setColorPreviewColor(selectedColor);
 				invalidate();
@@ -428,8 +437,14 @@ public class ColorPickerView extends View {
 
 	public void setColorEditTextColor(int argb) {
 		this.pickerTextColor = argb;
-		if (colorEdit != null)
+		if (colorEdit != null){
 			colorEdit.setTextColor(argb);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				colorEdit.setBackgroundTintList(ColorStateList.valueOf(argb));
+			}
+			colorEdit.setHighlightColor(ColorUtils.setAlphaComponent(argb,100));
+			setCursorColor(colorEdit, argb);
+		}
 	}
 
 	public void setDensity(int density) {
@@ -546,6 +561,82 @@ public class ColorPickerView extends View {
 					return CIRCLE;
 			}
 			return FLOWER;
+		}
+	}
+
+	public static void setCursorColor(EditText view, int color) {//REFLECTION METHOD USED
+		try {
+			// Get the cursor resource id
+			Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
+			field.setAccessible(true);
+			int drawableResId = field.getInt(view);
+
+			// Get the editor
+			field = TextView.class.getDeclaredField("mEditor");
+			field.setAccessible(true);
+			Object editor = field.get(view);
+
+			// Get the drawable and set a color filter
+			Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
+			drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+			Drawable[] drawables = {drawable, drawable};
+
+			// Set the drawables
+			field = editor.getClass().getDeclaredField("mCursorDrawable");
+			field.setAccessible(true);
+			field.set(editor, drawables);
+			setEdittextHandleColor(view,color);//set the color for the handles in edittext as well
+		} catch (Exception ignored) {
+		}
+	}
+
+	/**
+	 * Set the color of the handles when you select text in a
+	 * {@link android.widget.EditText} or other view that extends {@link TextView}.
+	 *
+	 * @param view
+	 *     The {@link TextView} or a {@link View} that extends {@link TextView}.
+	 * @param color
+	 *     The color to set for the text handles
+	 */
+	public static void setEdittextHandleColor(TextView view, int color) {
+		try {
+			Field editorField = TextView.class.getDeclaredField("mEditor");
+			if (!editorField.isAccessible()) {
+				editorField.setAccessible(true);
+			}
+
+			Object editor = editorField.get(view);
+			Class<?> editorClass = editor.getClass();
+
+			String[] handleNames = {"mSelectHandleLeft", "mSelectHandleRight", "mSelectHandleCenter"};
+			String[] resNames = {"mTextSelectHandleLeftRes", "mTextSelectHandleRightRes", "mTextSelectHandleRes"};
+
+			for (int i = 0; i < handleNames.length; i++) {
+				Field handleField = editorClass.getDeclaredField(handleNames[i]);
+				if (!handleField.isAccessible()) {
+					handleField.setAccessible(true);
+				}
+
+				Drawable handleDrawable = (Drawable) handleField.get(editor);
+
+				if (handleDrawable == null) {
+					Field resField = TextView.class.getDeclaredField(resNames[i]);
+					if (!resField.isAccessible()) {
+						resField.setAccessible(true);
+					}
+					int resId = resField.getInt(view);
+					handleDrawable = view.getResources().getDrawable(resId);
+				}
+
+				if (handleDrawable != null) {
+					Drawable drawable = handleDrawable.mutate();
+					drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+					handleField.set(editor, drawable);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 }

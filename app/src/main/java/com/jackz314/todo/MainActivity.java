@@ -795,7 +795,58 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             field = editor.getClass().getDeclaredField("mCursorDrawable");
             field.setAccessible(true);
             field.set(editor, drawables);
+            setEdittextHandleColor(view, color);
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Set the color of the handles when you select text in a
+     * {@link android.widget.EditText} or other view that extends {@link TextView}.
+     *
+     * @param view
+     *     The {@link TextView} or a {@link View} that extends {@link TextView}.
+     * @param color
+     *     The color to set for the text handles
+     */
+    public static void setEdittextHandleColor(TextView view, int color) {
+        try {
+            Field editorField = TextView.class.getDeclaredField("mEditor");
+            if (!editorField.isAccessible()) {
+                editorField.setAccessible(true);
+            }
+
+            Object editor = editorField.get(view);
+            Class<?> editorClass = editor.getClass();
+
+            String[] handleNames = {"mSelectHandleLeft", "mSelectHandleRight", "mSelectHandleCenter"};
+            String[] resNames = {"mTextSelectHandleLeftRes", "mTextSelectHandleRightRes", "mTextSelectHandleRes"};
+
+            for (int i = 0; i < handleNames.length; i++) {
+                Field handleField = editorClass.getDeclaredField(handleNames[i]);
+                if (!handleField.isAccessible()) {
+                    handleField.setAccessible(true);
+                }
+
+                Drawable handleDrawable = (Drawable) handleField.get(editor);
+
+                if (handleDrawable == null) {
+                    Field resField = TextView.class.getDeclaredField(resNames[i]);
+                    if (!resField.isAccessible()) {
+                        resField.setAccessible(true);
+                    }
+                    int resId = resField.getInt(view);
+                    handleDrawable = view.getResources().getDrawable(resId);
+                }
+
+                if (handleDrawable != null) {
+                    Drawable drawable = handleDrawable.mutate();
+                    drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+                    handleField.set(editor, drawable);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

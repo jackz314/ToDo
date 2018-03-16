@@ -108,7 +108,7 @@ import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 
-
+//todo add possible side bar and date labels
 public class MainFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
     private static final String ARG_PARAM = "param";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
@@ -147,6 +147,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     Menu menuNav;
     Toolbar selectionToolBar, toolbar;
     CheckBox selectAllBox;
+    float originalDx;
+    boolean isOriginalDx;
     public MainFragment() {
         // Required empty public constructor
     }
@@ -1059,8 +1061,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 return;
             }
             View itemView = viewHolder.itemView;
-            if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE){
-                itemView.setTranslationX(dX / 5);
+            if(isOriginalDx){//reserve the original dX value to restore swipe stat
+                originalDx = dX;
+                isOriginalDx = false;
+            }
+            float translationX = dX;
+            translationX = originalDx;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
+            if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX < 0){//swipe left
                 Paint textPaint = new Paint();
                 textPaint.setStrokeWidth(2);
                 textPaint.setTextSize(80);
@@ -1071,7 +1079,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_black_24dp);//draw finish icon
                 finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
                 int finishIconMargin = 40;
-                int itemHeight = itemView.getBottom() - itemView.getTop();
                 int intrinsicWidth = finishIcon.getIntrinsicWidth();
                 int intrinsicHeight = finishIcon.getIntrinsicWidth();
                 int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width() - 8;
@@ -1085,10 +1092,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 viewHolder.itemView.setAlpha(alpha);
                 viewHolder.itemView.setTranslationX(dX);
                 c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
-            }
-            else{
                 super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+
             }
+            else if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX > 0){//swipe right
+                translationX = Math.min(dX, itemHeight * 2);
+                super.onChildDraw(c, recyclerView, viewHolder, translationX, dY, actionState, isCurrentlyActive);
+            }
+
         }
 
     };
