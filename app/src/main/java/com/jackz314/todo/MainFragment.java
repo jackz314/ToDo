@@ -1068,21 +1068,21 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             float translationX = dX;
             translationX = originalDx;
             int itemHeight = itemView.getBottom() - itemView.getTop();
+            Paint textPaint = new Paint();
+            textPaint.setStrokeWidth(2);
+            textPaint.setTextSize(80);
+            textPaint.setColor(themeColor);
+            textPaint.setTextAlign(Paint.Align.LEFT);
             if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX < 0){//swipe left
-                Paint textPaint = new Paint();
-                textPaint.setStrokeWidth(2);
-                textPaint.setTextSize(80);
-                textPaint.setColor(themeColor);
-                textPaint.setTextAlign(Paint.Align.LEFT);
-                Rect bounds = new Rect();
-                textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), bounds);
+                Rect finishBond = new Rect();
+                textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), finishBond);
                 Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_black_24dp);//draw finish icon
                 finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
                 int finishIconMargin = 40;
                 int intrinsicWidth = finishIcon.getIntrinsicWidth();
                 int intrinsicHeight = finishIcon.getIntrinsicWidth();
-                int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - bounds.width() - 8;
-                int finishIconRight = itemView.getRight() - finishIconMargin - bounds.width() - 8;
+                int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - finishBond.width() - 8;
+                int finishIconRight = itemView.getRight() - finishIconMargin - finishBond.width() - 8;
                 int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
                 int finishIconBottom = finishIconTop + intrinsicHeight;
                 finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
@@ -1090,8 +1090,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 //fade out the view
                 final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
                 viewHolder.itemView.setAlpha(alpha);
-                viewHolder.itemView.setTranslationX(dX);
-                c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+                c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - finishBond.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
             }
             else if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX > 0){//swipe right
 
