@@ -1092,13 +1092,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 viewHolder.itemView.setAlpha(alpha);
                 viewHolder.itemView.setTranslationX(dX);
                 c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - bounds.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
-                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
-
             }
             else if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX > 0){//swipe right
-                translationX = Math.min(dX, itemHeight * 2);
-                super.onChildDraw(c, recyclerView, viewHolder, translationX, dY, actionState, isCurrentlyActive);
+
             }
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
 
         }
 
