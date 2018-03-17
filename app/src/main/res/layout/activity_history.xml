@@ -7,7 +7,6 @@
     app:title="History"
     android:id="@+id/historyView"
     tools:context="com.jackz314.todo.HistoryActivity"
-    tools:showIn="@layout/app_bar_history"
     >
 
     <android.support.v7.widget.Toolbar

@@ -670,9 +670,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = todoListAdapter.getItemId(position);
-                Vibrator v = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                //Vibrator v = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                 //v.vibrate(30);
-                if(isInSelectionMode){
+                if(isInSelectionMode){//copy note to clipboard
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
                     clipboard.setPrimaryClip(clip);
@@ -769,10 +769,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     Handler handler = new Handler();
                     handler.postDelayed(new Runnable() {
                         public void run() {
-                            multiSelectionBox =(CheckBox)view.findViewById(R.id.multiSelectionBox);
+                            multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
+                            //multiSelectionBox.setChecked(true);
                             multiSelectionBox.setChecked(true);
+                            multiSelectionBox.setChecked(true);
+                            Toast.makeText(getActivity().getApplicationContext(),"fuck my life " + multiSelectionBox.toString(),Toast.LENGTH_SHORT).show();
                         }
-                    }, 1);//to solve the problem that the checkbox is not checked with no delay
+                    }, 100);//to solve the problem that the checkbox is not checked with no delay
 
                     /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
                         @Override
@@ -1061,39 +1064,54 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 return;
             }
             View itemView = viewHolder.itemView;
-            if(isOriginalDx){//reserve the original dX value to restore swipe stat
-                originalDx = dX;
-                isOriginalDx = false;
-            }
-            float translationX = dX;
-            translationX = originalDx;
+            int iconMargin = 34;
             int itemHeight = itemView.getBottom() - itemView.getTop();
+            int itemWidth = itemView.getRight() - itemView.getLeft();
             Paint textPaint = new Paint();
             textPaint.setStrokeWidth(2);
             textPaint.setTextSize(80);
             textPaint.setColor(themeColor);
             textPaint.setTextAlign(Paint.Align.LEFT);
             if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX < 0){//swipe left
-                Rect finishBond = new Rect();
-                textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), finishBond);
-                Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_black_24dp);//draw finish icon
-                finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-                int finishIconMargin = 40;
-                int intrinsicWidth = finishIcon.getIntrinsicWidth();
-                int intrinsicHeight = finishIcon.getIntrinsicWidth();
-                int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - finishBond.width() - 8;
-                int finishIconRight = itemView.getRight() - finishIconMargin - finishBond.width() - 8;
-                int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-                int finishIconBottom = finishIconTop + intrinsicHeight;
-                finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
-                finishIcon.draw(c);
-                //fade out the view
-                final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
-                viewHolder.itemView.setAlpha(alpha);
-                c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - finishBond.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+                if(dX < itemWidth * (-0.7)) {//short swipe section
+                    Rect finishBond = new Rect();
+                    textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), finishBond);
+                    Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_black_24dp);//draw finish icon
+                    finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+                    int finishIconMargin = 40;
+                    int intrinsicWidth = finishIcon.getIntrinsicWidth();
+                    int intrinsicHeight = finishIcon.getIntrinsicWidth();
+                    int finishIconLeft = itemView.getRight() - finishIconMargin - intrinsicWidth - finishBond.width() - 8;
+                    int finishIconRight = itemView.getRight() - finishIconMargin - finishBond.width() - 8;
+                    int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+                    int finishIconBottom = finishIconTop + intrinsicHeight;
+                    finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
+                    finishIcon.draw(c);
+                    //fade out the view
+                    final float alpha = 1.0f - Math.abs(dX) / (float) viewHolder.itemView.getWidth();//1.0f == ALPHA FULL
+                    viewHolder.itemView.setAlpha(alpha);
+                    c.drawText(getString(R.string.finish),(float) itemView.getRight() - 48 - finishBond.width() ,(((finishIconTop+finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+                }else{
+                    //c.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);//clear canvas to draw new content
+                }
+
             }
             else if(actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX > 0){//swipe right
-
+                if(dX < itemWidth * 0.7){//short swipe section
+                    Drawable finishIcon = ContextCompat.getDrawable(getContext(),R.drawable.ic_done_black_24dp);
+                    finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+                    int intrinsicWidthFinish = finishIcon.getIntrinsicWidth();
+                    int intrinsicHeightFinish = finishIcon.getIntrinsicHeight();
+                    int finishIconLeft = itemView.getLeft() + iconMargin;
+                    int finishIconRight = itemView.getLeft() + iconMargin + intrinsicWidthFinish;
+                    int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeightFinish)/2;
+                    int finishIconBottom = finishIconTop + intrinsicHeightFinish;
+                    finishIcon.setBounds(finishIconLeft,finishIconTop,finishIconRight,finishIconBottom);
+                    finishIcon.draw(c);
+                    c.drawText(getString(R.string.finish),itemView.getLeft() + iconMargin +finishIconRight,(((finishIconTop + finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint );
+                }else{//long swipe section
+                    //c.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);//clear canvas to draw new content
+                }
             }
             super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
 
@@ -1329,12 +1347,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                     }
 
-                    //tag section
+                    //tag section todo tag end position detection not working properly
+                    //todo onrecyclerview long click doesn't check the selectionbox, fix it
                     int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
                     if(tagStartPos >= 0){//if potentially contains tags
                         while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                             int tagEndPos = -1;//assume neither enter nor space exists
-                            if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                            if(text.indexOf(" ",tagStartPos) >= 0 && text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
                                 tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
                             }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
                                 tagEndPos = text.indexOf("\n",tagStartPos);

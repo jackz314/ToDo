@@ -24,7 +24,7 @@
         tools:listitem="@layout/todolist" />
 
     <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
-        android:id="@+id/recognition_view"
+        android:id="@+id/tags_recognition_view"
         android:layout_width="56dp"
         android:layout_height="60dp"
         android:layout_gravity="center"
@@ -42,13 +42,13 @@
         app:layout_constraintBottom_toTopOf="parent"
         android:layout_marginBottom="0dp">
         <com.dmitrymalkovich.android.ProgressFloatingActionButton
-            android:id="@+id/tag_progress_fab"
+            android:id="@+id/tags_progress_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:clickable="false">
 
             <ProgressBar
-                android:id="@+id/tag_fab_progress_bar"
+                android:id="@+id/tags_fab_progress_bar"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -93,7 +93,7 @@
         tools:ignore="RtlHardcoded" />
 
     <TextView
-        android:id="@+id/motify_tag_id"
+        android:id="@+id/modify_tag_id"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"

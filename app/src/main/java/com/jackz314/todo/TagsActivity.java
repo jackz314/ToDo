@@ -130,14 +130,15 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         todosql = new DatabaseManager(this);
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         fab = findViewById(R.id.tags_fab);
-        proFab = findViewById(R.id.tag_progress_fab);
+        proFab = findViewById(R.id.tags_progress_fab);
         input = findViewById(R.id.tags_input);
         tagList = findViewById(R.id.taglist);
         main = findViewById(R.id.tags_main);
-        modifyId = findViewById(R.id.motify_tag_id);
-        fabProgressBar = findViewById(R.id.tag_fab_progress_bar);
-        recognitionProgressView = findViewById(R.id.recognition_view);
+        modifyId = findViewById(R.id.modify_tag_id);
+        fabProgressBar = findViewById(R.id.tags_fab_progress_bar);
+        recognitionProgressView = findViewById(R.id.tags_recognition_view);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        selectionToolBar = findViewById(R.id.tags_selection_toolbar);
         emptyTextView = findViewById(R.id.emptyTag);
         tagName = determineTag();//determine activity tag name
         tagColor = determineActivityTagColor();//determine activity tag color
@@ -340,8 +341,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
                 long id = tagListAdapter.getItemId(position);
-                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                v.vibrate(30);
+              //  Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+              //  v.vibrate(30);
                 if (isInSelectionMode) {
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
@@ -356,16 +357,14 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
-                    selectionToolBar = (Toolbar) findViewById(R.id.selection_toolbar);
-                    selectionTitle = (TextView) selectionToolBar.findViewById(R.id.selection_toolbar_title);
-                    toolbar = (Toolbar) findViewById(R.id.toolbar);
+                    selectionTitle = (TextView) selectionToolBar.findViewById(R.id.tags_selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
                     //Drawable backArrow = getDrawable(R.drawable.ic_close_black_24dp);
                     //selectionToolBar.setNavigationIcon(backArrow);
                     selectionToolBar.setBackgroundColor(themeColor);
-                    selectAllBox = (CheckBox) selectionToolBar.findViewById(R.id.select_all_box);
+                    selectAllBox = selectionToolBar.findViewById(R.id.tags_select_all_box);
                     ColorStateList colorStateList = new ColorStateList(
                             new int[][]{
                                     new int[]{-android.R.attr.state_checked}, //disabled
@@ -748,7 +747,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         selectedId.add(0,id);
         String data = todosql.getOneDataInTODO(id);
         selectedContent.add(0,data);
-        selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
             selectionToolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
@@ -784,7 +782,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
             selectionToolBar.getMenu().clear();
         }else {
-            selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
             String count = Integer.toString(selectedId.size());
             selectionTitle.setText(count + getString(R.string.selection_mode_title));
         }
@@ -1247,9 +1244,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         selectAll = false;
         unSelectAll = false;
         displayAllNotes();
-        selectionToolBar = (Toolbar)findViewById(R.id.selection_toolbar);
         selectionToolBar.getMenu().clear();
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
         selectionToolBar.setVisibility(View.GONE);
         if(selectAllBox != null){
             selectAllBox.setChecked(false);
@@ -1323,7 +1318,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                             }while (startPos > 0);
                         }
                     }
-                    int tagStartPos = text.indexOf(tagName,0);//find the position of the start point of the tag
+
+                    //tag selection
+                    int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
                     while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
                         int tagEndPos = -1;//assume neither enter nor space exists
                         if(text.indexOf(" ",tagStartPos) >= 0&& text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space

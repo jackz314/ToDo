@@ -459,6 +459,10 @@ public class DatabaseManager extends SQLiteOpenHelper{
             while(cs.moveToNext()){//confirm that the tag still is in use again
                 String todoText = cs.getString(cs.getColumnIndex(TITLE));
                 if(todoText.contains(tag)){
+                    if(todoText.indexOf(tag) == 0){//starts with the tag
+                        cs.close();
+                        return true;
+                    }
                     String charBeforeTagStart = String.valueOf(todoText.charAt(todoText.indexOf(tag) - 1));//determine if the character before the tag start is a space or enter (determine if it's a legal in use tag)
                     if(charBeforeTagStart.equals(" ") || charBeforeTagStart.equals("\n")){
                         cs.close();

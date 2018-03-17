@@ -75,11 +75,11 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tag_selection);
-        toolbar = (Toolbar) findViewById(R.id.tags_selection_toolbar);
-        tagList = (RecyclerView)findViewById(R.id.tag_selection_list);
-        emptyTextView = (TextView)findViewById(R.id.emptyTagSelection);
+        toolbar = findViewById(R.id.tags_sel_toolbar);
+        tagList = findViewById(R.id.tagsel_list);
+        emptyTextView = findViewById(R.id.emptyTagSelection);
         setSupportActionBar(toolbar);
-        main = (CoordinatorLayout)findViewById(R.id.tags_selection_main);
+        main = (CoordinatorLayout)findViewById(R.id.tagsel_main);
         try{
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }catch (NullPointerException ignored){
