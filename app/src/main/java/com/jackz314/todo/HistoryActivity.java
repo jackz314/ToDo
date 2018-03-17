@@ -548,39 +548,42 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             if (viewHolder.getAdapterPosition() == -1) {
                 return;
             }
+
             View itemView = viewHolder.itemView;
+            int iconMargin = 34;
+            int itemHeight = itemView.getBottom() - itemView.getTop();
             Paint textPaint = new Paint();
             textPaint.setStrokeWidth(2);
             textPaint.setTextSize(80);
             textPaint.setColor(themeColor);
             textPaint.setTextAlign(Paint.Align.LEFT);
-            Rect bounds = new Rect();
-            textPaint.getTextBounds(getString(R.string.delete),0,getString(R.string.finish).length(), bounds);
-            Drawable deleteIcon = ContextCompat.getDrawable(HistoryActivity.this, R.drawable.ic_delete_black_24dp);//draw finish icon
-            Drawable restoreIcon = ContextCompat.getDrawable(HistoryActivity.this,R.drawable.ic_restore_black_24dp);
-            restoreIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-            deleteIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
-            int iconMargin = 34;
-            int itemHeight = itemView.getBottom() - itemView.getTop();
-            int intrinsicWidthRestore = restoreIcon.getIntrinsicWidth();
-            int intrinsicHeighthRestore = restoreIcon.getIntrinsicHeight();
-            int restoreIconLeft = itemView.getLeft() + iconMargin;
-            int restoreIconRight = itemView.getLeft() + iconMargin + intrinsicWidthRestore;
-            int restoreIconTop = itemView.getTop() + (itemHeight - intrinsicHeighthRestore)/2;
-            int restoreIconBottom = restoreIconTop + intrinsicHeighthRestore;
-            restoreIcon.setBounds(restoreIconLeft,restoreIconTop,restoreIconRight,restoreIconBottom);
-            int intrinsicWidth = deleteIcon.getIntrinsicWidth();
-            int intrinsicHeight = deleteIcon.getIntrinsicWidth();
-            int deleteIconLeft = itemView.getRight() - iconMargin - intrinsicWidth - bounds.width();
-            int deleteIconRight = itemView.getRight() - iconMargin - bounds.width();
-            int deleteIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-            int deleteIconBottom = deleteIconTop + intrinsicHeight;
-            deleteIcon.setBounds(deleteIconLeft, deleteIconTop, deleteIconRight, deleteIconBottom);
-            if(dX < 0){
+
+            if(dX < 0 && actionState == ItemTouchHelper.ACTION_STATE_SWIPE){//swiped left
+                Rect deleteTextBond = new Rect();
+                textPaint.getTextBounds(getString(R.string.delete),0,getString(R.string.delete).length(), deleteTextBond);
+                Drawable deleteIcon = ContextCompat.getDrawable(HistoryActivity.this, R.drawable.ic_delete_black_24dp);//draw finish icon
+                deleteIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+                int intrinsicWidth = deleteIcon.getIntrinsicWidth();
+                int intrinsicHeight = deleteIcon.getIntrinsicWidth();
+                int deleteIconLeft = itemView.getRight() - iconMargin - intrinsicWidth - deleteTextBond.width();
+                int deleteIconRight = itemView.getRight() - iconMargin - deleteTextBond.width();
+                int deleteIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+                int deleteIconBottom = deleteIconTop + intrinsicHeight;
+                deleteIcon.setBounds(deleteIconLeft, deleteIconTop, deleteIconRight, deleteIconBottom);
+
                 deleteIcon.draw(c);
-                c.drawText(getString(R.string.delete),(float) itemView.getRight() - iconMargin - bounds.width() ,(((deleteIconTop + deleteIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
+                c.drawText(getString(R.string.delete),(float) itemView.getRight() - iconMargin - deleteTextBond.width() ,(((deleteIconTop + deleteIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint);
             }
-            if(dX > 0){
+            if(dX > 0 && actionState == ItemTouchHelper.ACTION_STATE_SWIPE){//swiped right
+                Drawable restoreIcon = ContextCompat.getDrawable(HistoryActivity.this,R.drawable.ic_restore_black_24dp);
+                restoreIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
+                int intrinsicWidthRestore = restoreIcon.getIntrinsicWidth();
+                int intrinsicHeighthRestore = restoreIcon.getIntrinsicHeight();
+                int restoreIconLeft = itemView.getLeft() + iconMargin;
+                int restoreIconRight = itemView.getLeft() + iconMargin + intrinsicWidthRestore;
+                int restoreIconTop = itemView.getTop() + (itemHeight - intrinsicHeighthRestore)/2;
+                int restoreIconBottom = restoreIconTop + intrinsicHeighthRestore;
+                restoreIcon.setBounds(restoreIconLeft,restoreIconTop,restoreIconRight,restoreIconBottom);
                 restoreIcon.draw(c);
                 c.drawText(getString(R.string.restore),itemView.getLeft() + iconMargin +restoreIconRight,(((restoreIconTop + restoreIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint );
 
