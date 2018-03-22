@@ -62,6 +62,9 @@ import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.jackz314.dateparser.DateGroup;
+import com.jackz314.dateparser.ParseLocation;
+import com.jackz314.dateparser.Parser;
 import com.jackz314.todo.iap_utils.IabHelper;
 import com.jackz314.todo.iap_utils.IabResult;
 import com.jackz314.todo.iap_utils.Inventory;
@@ -82,6 +85,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -1136,10 +1140,46 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return s.substring(0, pos) + s.substring(pos + 1);
     }
 
+    public static String returnDateString(String str){
+        Parser parser = new Parser();
+        List groups = parser.parse(str,getCurrentDate());
+        String dateString = "";
+        for(Object groupF : groups) {
+            DateGroup group = (DateGroup)groupF;
+            List dates = group.getDates();
+            int line = group.getLine();
+            int column = group.getPosition();
+            String matchingValue = group.getText();
+            dateString += matchingValue;
+            String syntaxTree = group.getSyntaxTree().toStringTree();
+            Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
+            boolean isRecurring = group.isRecurring();
+            Date recursUntil = group.getRecursUntil();
+        }
+        return dateString;
+    }
+
+    public static int countMatches(String str, String sub) {
+        if (str.isEmpty() || sub.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        int idx = 0;
+        while ((idx = str.indexOf(sub, idx)) != -1) {
+            count++;
+            idx += sub.length();
+        }
+        return count;
+    }
+
     public static String getCurrentTimeString(){
         Date nowTime = Calendar.getInstance().getTime();
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
         return dateFormat.format(nowTime);
+    }
+
+    public static Date getCurrentDate(){
+        return Calendar.getInstance().getTime();
     }
 
     public static String[] combineStringArray(String[] A, String[] B) {

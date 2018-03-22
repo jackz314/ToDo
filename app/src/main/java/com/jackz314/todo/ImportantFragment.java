@@ -103,14 +103,14 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
+import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
 import static com.jackz314.todo.DatabaseManager.ID;
-import static com.jackz314.todo.DatabaseManager.PINNED;
-import static com.jackz314.todo.DatabaseManager.PINNED_TIMESTAMP;
+import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 
@@ -124,12 +124,12 @@ import static com.jackz314.todo.DatabaseManager.TITLE;
  * create an instance of this fragment.
  */
 public class ImportantFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
+    //todo got data from the wrong parameter, fix it
     private static final String ARG_PARAM = "param";
     private String mParam;
-    private static final String[] PROJECTION = new String[]{ID, TITLE, PINNED, PINNED_TIMESTAMP};//
-    private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + PINNED + " = 1";//ignore markdown signs whe handling displaying notes
-    private static final String SELECTION = "REPLACE (title, '*', '')" + " AND (" + PINNED + " = 1";//ignore markdown signs whe handling displaying notes //1 in sqlite means TRUE for boolean values
+    private static final String[] PROJECTION = new String[]{ID, TITLE, IMPORTANCE, IMPORTANCE_TIMESTAMP};//
+    private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + IMPORTANCE + " > 0";//ignore markdown signs whe handling displaying notes
+    private static final String SELECTION = "REPLACE (title, '*', '')" + " (" + IMPORTANCE + " > 0";//ignore markdown signs when handling displaying notes //1 in sqlite means TRUE for boolean values
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -149,6 +149,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     String oldResult = "";
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
+    long selectedItemID;
     ConstraintLayout main;
     Boolean noInterruption = true;
     TodoListAdapter todoListAdapter;
@@ -556,6 +557,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 long id = todoListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
+                if(isInSearchMode){
+                    setOutOfSearchMode();
+                }
                 if (isInSelectionMode) {
                     multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
@@ -662,13 +666,15 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
+                    if(isInSearchMode){
+                        setOutOfSearchMode();
+                    }
                     setOutOfSelectionMode();
                     proFab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
+                    selectedItemID = id;
                     getLoaderManager().restartLoader(123,null,ImportantFragment.this);
-                    //multiSelectionBox = (CheckBox)view.getView().(R.id.multiSelectionBox);
-                    //multiSelectionBox.setChecked(true);
                     displayAllNotes();
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
@@ -736,7 +742,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                 selectedContent.clear();
                                 selectAll = true;
                                 todoList.getAdapter().notifyDataSetChanged();
-                                Cursor cursor = todosql.getData();
+                                Cursor cursor = todosql.getImportantData();
                                 cursor.moveToFirst();
                                 do{
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
@@ -750,21 +756,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                         }
                     });
                     addSelectedId(id);
-                    Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        public void run() {
-                            multiSelectionBox =(CheckBox)view.findViewById(R.id.multiSelectionBox);
-                            multiSelectionBox.setChecked(true);
-                        }
-                    }, 1);//to solve the problem that the checkbox is not checked with no delay
-
-                    /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            setOutOfSelectionMode();
-                            //What to do on back clicked
-                        }
-                    });*/
                     ((AppCompatActivity)getActivity()).getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
                 return true;
@@ -989,6 +980,17 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 }
             }
         });
+
+        if(!isInSearchMode && !isInSelectionMode){//refresh important notes every minute
+            final Handler handler = new Handler();
+            final int delay = 1000 * 60; //every minute
+            handler.postDelayed(new Runnable(){
+                public void run(){
+                    getLoaderManager().restartLoader(123,null,ImportantFragment.this);
+                    handler.postDelayed(this, delay);
+                }
+            }, delay);
+        }
     }
 
     @Override
@@ -1349,6 +1351,14 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                         if(unSelectAll){
                             holder.cBox.setChecked(false);
                         }
+                        if(selectedItemID == id){//process the first long press select item
+                            holder.cBox.setChecked(true);
+                            selectedItemID = -250;
+                        }else {
+                            if(!selectAll){
+                                holder.cBox.setChecked(false);
+                            }
+                        }
                     }else {
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
@@ -1594,25 +1604,28 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         setColorPreferences();
         //determine order of the list
-        String sort = PINNED + " DESC, " + REMIND_TIME + " ASC";
-        String currentTImeString = MainActivity.getCurrentTimeString();
+        String sort = IMPORTANCE + " DESC, " + REMIND_TIME + " ASC";
         String selectionAddOn = "";
         String[] selectionArgs = null;
         String[] selectionArgsCombined = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
             sort = sort + " , _id DESC";
         }
+        String currentTimeStr = MainActivity.getCurrentTimeString();
+        Calendar recentTime = Calendar.getInstance();
+        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?)";
         if(todosql.countRecentReminder() > 0){//has recent reminder
-            Calendar recentTime = Calendar.getInstance();
-            DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-            String currentTimeStr = MainActivity.getCurrentTimeString();
+            recentTime.add(Calendar.WEEK_OF_YEAR,1);
             String recentTimeStr = dateFormat.format(recentTime.getTime());
-            selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?)";
             selectionArgs = new String[]{currentTimeStr,recentTimeStr};
         }else {
             if(todosql.countPinnedNotesNumber() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
-                selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
-                sort = sort + " LIMIT 5";
+                //selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
+                recentTime.add(Calendar.MONTH,1);
+                String recentTimeStr = dateFormat.format(recentTime.getTime());
+                selectionArgs = new String[]{currentTimeStr,recentTimeStr};
+                //sort = sort + " LIMIT 5";
             }else{
                 selectionAddOn = ")";//complete the parentheses
             }

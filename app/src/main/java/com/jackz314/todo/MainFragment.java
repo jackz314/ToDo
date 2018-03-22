@@ -87,6 +87,9 @@ import android.widget.Toast;
 
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.jackz314.dateparser.DateGroup;
+import com.jackz314.dateparser.ParseLocation;
+import com.jackz314.dateparser.Parser;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 import com.jackz314.todo.utils.ColorUtils;
@@ -96,13 +99,22 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
+import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
+import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
+import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
+import static com.jackz314.todo.MainActivity.getCurrentDate;
+import static com.jackz314.todo.MainActivity.parseDate;
 import static com.jackz314.todo.MainActivity.removeCharAt;
+import static com.jackz314.todo.MainActivity.returnDateString;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.DatabaseManager.ID;
@@ -140,6 +152,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     TextView emptyTextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
+    long selectedItemID;
     RecognitionProgressView recognitionProgressView;
     boolean isAdd = true;
     ProgressFloatingActionButton proFab;
@@ -572,8 +585,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 long id = todoListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
+                if(isInSearchMode){
+                    setOutOfSearchMode();
+                }
                 if (isInSelectionMode) {
-                    multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
+                    multiSelectionBox = view.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
@@ -634,9 +650,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }*/
                     //else if (doubleClickCout == 1) {
                     //Single click
-                    if(isInSearchMode){
-                        setOutOfSearchMode();
-                    }
+
                     modifyId.setText(String.valueOf(id));
                     if(isAdd){//if current button displays "+" sign
                         AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
@@ -672,6 +686,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 long id = todoListAdapter.getItemId(position);
                 //Vibrator v = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                 //v.vibrate(30);
+
                 if(isInSelectionMode){//copy note to clipboard
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
@@ -679,13 +694,20 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
                     setOutOfSelectionMode();
+                    if(isInSearchMode){
+                        setOutOfSearchMode();
+                    }
                     proFab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
+                    selectedItemID = id;
                     getLoaderManager().restartLoader(123,null,MainFragment.this);
                     //multiSelectionBox = (CheckBox)view.getView().(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
+                    //multiSelectionBox = view.findViewById(R.id.multiSelectionBox);
+                    //multiSelectionBox.setChecked(true);
                     displayAllNotes();
+                    //multiSelectionBox.setChecked(true);
                     selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
@@ -712,17 +734,18 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            unSelectAll = false;
-                            selectAll = false;
                             if(!selectAllBox.isChecked()){//uncheck all
+                                unSelectAll = true;
+                                selectAll = false;
                                 selectAllBox.setChecked(false);
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
-                                unSelectAll = true;
                                 todoList.getAdapter().notifyDataSetChanged();
                             }else if(selectAllBox.isChecked()){//check all
+                                unSelectAll = false;
+                                selectAll = true;
                                 selectAllBox.setChecked(true);
                                 if(selectedId.size()==0){
                                     selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
@@ -750,7 +773,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 long id;
                                 selectedId.clear();
                                 selectedContent.clear();
-                                selectAll = true;
                                 todoList.getAdapter().notifyDataSetChanged();
                                 Cursor cursor = todosql.getData();
                                 cursor.moveToFirst();
@@ -765,17 +787,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             }
                         }
                     });
-                    addSelectedId(id);
-                    Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        public void run() {
-                            multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
-                            //multiSelectionBox.setChecked(true);
-                            multiSelectionBox.setChecked(true);
-                            multiSelectionBox.setChecked(true);
-                            Toast.makeText(getActivity().getApplicationContext(),"fuck my life " + multiSelectionBox.toString(),Toast.LENGTH_SHORT).show();
-                        }
-                    }, 100);//to solve the problem that the checkbox is not checked with no delay
+                    //Toast.makeText(getActivity().getApplicationContext(),"fuck my life " + multiSelectionBox.toString(),Toast.LENGTH_SHORT).show();
+                        //to solve the problem that the checkbox is not checked with no delay
 
                     /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
                         @Override
@@ -784,6 +797,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             //What to do on back clicked
                         }
                     });*/
+                    addSelectedId(id);
                     ((AppCompatActivity)getActivity()).getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
                 return true;
@@ -1146,6 +1160,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         selectAll = false;
         unSelectAll = false;
         displayAllNotes();
+        //todoList.findViewHolderForItemId
         selectionToolBar.getMenu().clear();
         selectionToolBar.setVisibility(View.GONE);
         if(selectAllBox != null){
@@ -1178,6 +1193,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             });
         }if(selectedId.size() == todosql.getData().getCount()){
             selectAllBox.setChecked(true);
+            selectAll = true;
         }
         String count = Integer.toString(selectedId.size());
         selectionTitle.setText(count + getString(R.string.selection_mode_title));
@@ -1187,6 +1203,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         selectedId.remove(selectedId.indexOf(id));
         String data = todosql.getOneDataInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
+        selectAll = false;
         if(selectedId.size() < todosql.getData().getCount()){
             selectAllBox.setChecked(false);
         }
@@ -1392,7 +1409,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }
 
                     holder.todoText.setText(spannable);
-                    //System.out.println("null called");
+
+                    //selection mode section
                     if(isInSelectionMode){
                         holder.cBox.setVisibility(View.VISIBLE);
                         if(selectAll){
@@ -1400,6 +1418,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                         if(unSelectAll){
                             holder.cBox.setChecked(false);
+                        }
+                        if(selectedItemID == id){//process the first long press select item
+                            holder.cBox.setChecked(true);
+                            selectedItemID = -250;
+                        }else {
+                            if(!selectAll){
+                                holder.cBox.setChecked(false);
+                            }
                         }
                     }else {
                         holder.cBox.setChecked(false);
@@ -1409,8 +1435,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
-                            unSelectAll = false;
-                            selectAll = false;
+                            //unSelectAll = false;
+                            //selectAll = false;
                             if (cb.isChecked()) {
                                 addSelectedId(id);
                                 //System.out.println("checked " + id);
@@ -1693,6 +1719,58 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
+            if(title.contains("@")){//contains @ functions
+                String cleanStr = title.replace("*","");
+                int actionStartPos = cleanStr.indexOf("@") + 1;
+                int actionEndPos;
+                String actionStr = "";
+                do{
+                    if(cleanStr.indexOf(" ", actionStartPos) == -1 && cleanStr.indexOf("\n", actionStartPos) == -1){
+                        actionEndPos = cleanStr.length() - 1;
+                    }else if (cleanStr.indexOf(" ", actionStartPos) == -1){
+                        actionEndPos = cleanStr.indexOf("\n", actionStartPos);
+                    }else if(cleanStr.indexOf("\n",actionStartPos) == -1){
+                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos),returnDateString(cleanStr.substring(actionStartPos)).length() - 1);
+                    }else {
+                        actionEndPos = Math.min(cleanStr.indexOf(" ", actionStartPos), cleanStr.indexOf("\n", actionStartPos));
+                        if(actionEndPos == cleanStr.indexOf(" ", actionStartPos)){
+                            actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos),returnDateString(cleanStr.substring(actionStartPos,cleanStr.indexOf("\n",actionStartPos))).length() - 1);
+                        }
+                    }
+                    actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
+
+                    //mark as important
+                    int impLevel = MainActivity.countMatches(actionStr,"!");
+                    if(impLevel > 0){
+                        values.put(IMPORTANCE,impLevel);
+                        values.put(IMPORTANCE_TIMESTAMP,MainActivity.getCurrentTimeString());
+                    }
+
+                    //set remind time
+                    if(returnDateString(actionStr) != null){
+                        Parser parser = new Parser();
+                        List groups = parser.parse(actionStr,getCurrentDate());
+                        List<Date> remindDates = new ArrayList<>();
+
+                        for(Object groupF : groups) {
+                            DateGroup group = (DateGroup)groupF;
+                            List<Date> dates = group.getDates();
+                            remindDates.addAll(dates);
+                            int line = group.getLine();
+                            int column = group.getPosition();
+                            String matchingValue = group.getText();
+                            String syntaxTree = group.getSyntaxTree().toStringTree();
+                            Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
+                            boolean isRecurring = group.isRecurring();
+                            Date recursUntil = group.getRecursUntil();
+                        }
+
+                        values.put(REMIND_TIME,remindDates);
+                    }
+                    //todo phrase date & time
+                    actionStartPos = cleanStr.indexOf("@", actionStartPos + 1) + 1;
+                }while (cleanStr.indexOf("@",actionStartPos) >= 0);
+            }
             return getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
     }

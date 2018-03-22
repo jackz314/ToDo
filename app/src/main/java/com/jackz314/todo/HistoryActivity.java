@@ -72,6 +72,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     ColorUtils colorUtils;
     boolean isInSearchMode =false, isInSelectionMode = false;
     Toolbar toolbar;
+    long selectedItemID;
     boolean selectAll = false, unSelectAll = false;
     ArrayList<Long> selectedId = new ArrayList<>();
     ArrayList<String> selectedContent = new ArrayList<>();
@@ -129,6 +130,9 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             @Override
             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
                 long id = historyList.getAdapter().getItemId(position);
+                if(isInSearchMode){
+                    setOutOfSearchMode();
+                }
                 unSelectAll = false;
                 selectAll = false;
                 if (isInSelectionMode) {
@@ -177,6 +181,9 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(view,getString(R.string.todo_copied),Snackbar.LENGTH_SHORT).show();
                 }else {
+                    if(isInSearchMode){
+                        setOutOfSearchMode();
+                    }
                     setOutOfSelectionMode();
                     //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
@@ -195,6 +202,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     selectAllBox.setVisibility(View.VISIBLE);
                     isInSelectionMode = true;
                     ////System.out.println(isInSelectionMode + "isInselectionmode");
+                    selectedItemID = id;
                     getSupportLoaderManager().restartLoader(234,null,HistoryActivity.this);
                     displayAllNotes();
                     ColorStateList colorStateList = new ColorStateList(
@@ -220,12 +228,16 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 selectedId.clear();
                                 selectedContent.clear();
                                 unSelectAll = true;
+                                selectAll = false;
                                 //historyList.getAdapter().notifyDataSetChanged();
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 toolbar.getMenu().clear();
+                                historyList.getAdapter().notifyDataSetChanged();
                             }else if(selectAllBox.isChecked()){//check all
                                 selectAllBox.setChecked(true);
-                                toolbar = (Toolbar)findViewById(R.id.history_selection_toolbar);
+                                selectAll = true;
+                                unSelectAll = false;
+                                toolbar = findViewById(R.id.history_selection_toolbar);
                                 if(selectedId.size() == 0){
                                     toolbar.inflateMenu(R.menu.history_selection_mode_menu);
                                     toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
@@ -244,7 +256,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 long id;
                                 selectedId.clear();
                                 selectedContent.clear();
-                                selectAll = true;
                                 //historyList.getAdapter().notifyDataSetChanged();
                                 Cursor cursor = todosql.getHistory();
                                 cursor.moveToFirst();
@@ -256,6 +267,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
                                 selectionTitle.setText(count + getString(R.string.selection_mode_title));
+                                historyList.getAdapter().notifyDataSetChanged();
                             }
                         }
                     });
@@ -267,13 +279,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                         }
                     });*/
                     addSelectedId(id);
-                    Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        public void run() {
-                            multiSelectionBox =(CheckBox)view.findViewById(R.id.multiSelectionBox);
-                            multiSelectionBox.setChecked(true);
-                        }
-                    }, 1);//to solve the problem that the checkbox is not checked with no delay
                     getSupportActionBar().setDisplayShowTitleEnabled(true);
                 }
                 return true;
@@ -449,6 +454,14 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                         }
                         if (unSelectAll){
                             holder.cBox.setChecked(false);
+                        }
+                        if(selectedItemID == id){//process the first long press select item
+                            holder.cBox.setChecked(true);
+                            selectedItemID = -250;
+                        }else {
+                            if(!selectAll){
+                                holder.cBox.setChecked(false);
+                            }
                         }
                         //Toast.makeText(getApplicationContext(),"SELECTIONMODE",Toast.LENGTH_SHORT).show();
                     }else {
@@ -726,6 +739,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 }
             });
         }if(selectedId.size() == historyList.getAdapter().getItemCount()){
+            selectAll = true;
+            unSelectAll = false;
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -735,6 +750,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
         selectAllBox.setChecked(false);
+        selectAll = false;
+        unSelectAll = true;
         String data = todosql.getOneDataInHISTORY(Long.toString(id));
         selectedContent.remove(selectedContent.indexOf(data));
         if (selectedId.size() == 0) {

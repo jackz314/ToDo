@@ -1,0 +1,15 @@
+apply plugin: 'java-library'
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+// https://mvnrepository.com/artifact/org.antlr/antlr-runtime
+    compile group: 'org.antlr', name: 'antlr-runtime', version: '3.5.2'
+// https://mvnrepository.com/artifact/org.mnode.ical4j/ical4j
+    compile group: 'org.mnode.ical4j', name: 'ical4j', version: '2.2.0'
+// https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+
+}
+
+sourceCompatibility = "1.7"
+targetCompatibility = "1.7"

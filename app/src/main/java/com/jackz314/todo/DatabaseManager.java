@@ -5,7 +5,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.graphics.Canvas;
 import android.graphics.Color;
 
 import java.io.File;
@@ -33,9 +32,8 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public static String TAG_COLOR = "color";
     public static String CONTENT = "content";
     public static String IMPORTANCE = "importance";
-    public static String PINNED = "pinned";
     public static String REMIND_TIME = "remind_time";
-    public static String PINNED_TIMESTAMP = "pinned_timestamp";
+    public static String IMPORTANCE_TIMESTAMP = "pinned_timestamp";
     public static String CREATED_TIMESTAMP = "created_timestamp";
     public static String DELETED_TIMESTAMP = "deleted_timestamp";
     public static String SAVED_FOR_LATER_TIMESTAMP = "saved_for_later_timestamp";
@@ -51,8 +49,8 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + PINNED + " BOOLEAN," + PINNED_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         //db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ TAGS_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TAG + " TEXT," + TAG_COLOR + " TEXT," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
 
@@ -85,26 +83,54 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     public Cursor getData(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE ,null);
-        return cs;
+        return db.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE ,null);
+    }
+
+    public Cursor getTagData(String tagName){
+        SQLiteDatabase db = this.getWritableDatabase();
+        return db.query(TODO_TABLE,new String[]{"*"},"REPLACE (title, '*', '')" + " LIKE ? OR title LIKE ? OR title LIKE ?",new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"},null,null,null);
+    }
+
+    public Cursor getImportantData(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        String selectionAddOn = "";
+        String[] selectionArgs = null;
+        String currentTimeStr = MainActivity.getCurrentTimeString();
+        Calendar recentTime = Calendar.getInstance();
+        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?)";
+        if(countRecentReminder() > 0){//has recent reminder
+            recentTime.add(Calendar.WEEK_OF_YEAR,1);
+            String recentTimeStr = dateFormat.format(recentTime.getTime());
+            selectionArgs = new String[]{currentTimeStr,recentTimeStr};
+        }else {
+            if(countPinnedNotesNumber() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
+                //selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
+                recentTime.add(Calendar.MONTH,1);
+                String recentTimeStr = dateFormat.format(recentTime.getTime());
+                selectionArgs = new String[]{currentTimeStr,recentTimeStr};
+                //sort = sort + " LIMIT 5";
+            }else{
+                selectionAddOn = ")";//complete the parentheses
+            }
+            //" UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIME + " IS NOT NULL ORDER BY " + REMIND_TIME + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
+        }
+        return db.query(TODO_TABLE, new String[]{"*"}, "REPLACE (title, '*', '')" + " (" + IMPORTANCE + " = 1" + selectionAddOn, selectionArgs, null, null, null);
     }
 
     public  Cursor getDataDesc(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE + " order by _id desc",null);
-        return cs;
+        return db.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE + " order by _id desc",null);
     }
 
     public Cursor getSearchResults(String text){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
-        return cs;
+        return db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
     }
 
     public Cursor getHistorySearchResults(String text){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,HISTORY_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
-        return cs;
+        return db.query(false,HISTORY_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
     }
 
     public void wipeHistory(){
@@ -187,7 +213,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return data;
     }
 
-    public String mergeBackup(String fileLocation) {
+    public String mergeBackup(String fileLocation) {//todo fix later
         SQLiteDatabase currentDatabase = null;
         boolean attached = false;;
         try {
@@ -495,10 +521,10 @@ public class DatabaseManager extends SQLiteOpenHelper{
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
-        cv.put(PINNED,true);
+        cv.put(IMPORTANCE,true);
         Date nowTime = Calendar.getInstance().getTime();//get now time
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-        cv.put(PINNED_TIMESTAMP, dateFormat.format(nowTime));
+        cv.put(IMPORTANCE_TIMESTAMP, dateFormat.format(nowTime));
         db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
@@ -506,14 +532,14 @@ public class DatabaseManager extends SQLiteOpenHelper{
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
-        cv.put(PINNED,false);
-        cv.put(PINNED_TIMESTAMP,(String)null);
+        cv.put(IMPORTANCE,false);
+        cv.put(IMPORTANCE_TIMESTAMP,(String)null);
         db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
     public int countPinnedNotesNumber(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,PINNED},PINNED + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
+        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,IMPORTANCE},IMPORTANCE + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
         int count = cs.getCount();
         cs.close();
         return count;

@@ -94,7 +94,7 @@ import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 
 public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
-
+//todo selectall got data from wrong parameter, fix it.
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
@@ -105,6 +105,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     RecyclerView tagList;
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
+    long selectedItemID;
     SharedPreferences sharedPreferences;
     FloatingActionButton fab;
     ProgressFloatingActionButton proFab;
@@ -307,6 +308,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 long id = tagListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
+                if(isInSearchMode){
+                    setOutOfSearchMode();
+                }
                 if (isInSelectionMode) {
                     multiSelectionBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
                     if (multiSelectionBox.isChecked()) {//change to false
@@ -349,13 +353,15 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(main, getString(R.string.todo_copied), Snackbar.LENGTH_LONG).show();
                 } else {
+                    if(isInSearchMode){
+                        setOutOfSearchMode();
+                    }
                     setOutOfSelectionMode();
                     fab.setVisibility(View.INVISIBLE);
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
+                    selectedItemID = id;
                     getSupportLoaderManager().restartLoader(123, null, TagsActivity.this);
-                    //multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
-                    //multiSelectionBox.setChecked(true);
                     displayAllNotes();
                     selectionTitle = (TextView) selectionToolBar.findViewById(R.id.tags_selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
@@ -383,8 +389,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            unSelectAll = false;
-                            selectAll = false;
                             if (!selectAllBox.isChecked()) {//uncheck all
                                 selectAllBox.setChecked(false);
                                 selectedId.clear();
@@ -392,6 +396,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                 selectionTitle.setText(getString(R.string.selection_mode_empty_title));
                                 selectionToolBar.getMenu().clear();
                                 unSelectAll = true;
+                                selectAll = false;
                                 tagList.getAdapter().notifyDataSetChanged();
                             } else if (selectAllBox.isChecked()) {//check all
                                 selectAllBox.setChecked(true);
@@ -423,7 +428,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                 selectedContent.clear();
                                 selectAll = true;
                                 tagList.getAdapter().notifyDataSetChanged();
-                                Cursor cursor = todosql.getData();
+                                Cursor cursor = todosql.getTagData(tagName);
                                 cursor.moveToFirst();
                                 do {
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
@@ -437,14 +442,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         }
                     });
                     addSelectedId(id);
-                    Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        public void run() {
-                            multiSelectionBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
-                            multiSelectionBox.setChecked(true);
-                        }
-                    }, 1);//to solve the problem that the checkbox is not checked with no delay
-
                     /*selectionToolBar.setNavigationOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -1356,6 +1353,14 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         if(unSelectAll){
                             holder.cBox.setChecked(false);
                         }
+                        if(selectedItemID == id){//process the first long press select item
+                            holder.cBox.setChecked(true);
+                            selectedItemID = -250;
+                        }else {
+                            if(!selectAll){
+                                holder.cBox.setChecked(false);
+                            }
+                        }
                     }else {
                         holder.cBox.setChecked(false);
                         holder.cBox.setVisibility(View.GONE);
@@ -1397,7 +1402,6 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         getSupportLoaderManager().restartLoader(123,null,this);
     }
-
 
     public void setColorPreferences() {
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data", MODE_PRIVATE);
