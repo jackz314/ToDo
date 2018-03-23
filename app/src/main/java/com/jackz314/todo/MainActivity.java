@@ -1143,20 +1143,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static String returnDateString(String str){
         Parser parser = new Parser();
         List groups = parser.parse(str,getCurrentDate());
-        String dateString = "";
+        StringBuilder dateString = new StringBuilder();
         for(Object groupF : groups) {
             DateGroup group = (DateGroup)groupF;
-            List dates = group.getDates();
-            int line = group.getLine();
-            int column = group.getPosition();
             String matchingValue = group.getText();
-            dateString += matchingValue;
-            String syntaxTree = group.getSyntaxTree().toStringTree();
-            Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
-            boolean isRecurring = group.isRecurring();
-            Date recursUntil = group.getRecursUntil();
+            dateString.append(matchingValue);
         }
-        return dateString;
+        //System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
+        if(dateString.toString().contains("@")){
+            return dateString.toString().substring(0,dateString.indexOf("@"));
+        }else return dateString.toString();
     }
 
     public static int countMatches(String str, String sub) {
@@ -1480,6 +1476,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         super.onDestroy();
     }
+
+
 
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {

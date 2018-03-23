@@ -33,7 +33,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public static String CONTENT = "content";
     public static String IMPORTANCE = "importance";
     public static String REMIND_TIME = "remind_time";
-    public static String IMPORTANCE_TIMESTAMP = "pinned_timestamp";
+    public static String IMPORTANCE_TIMESTAMP = "importance_timestamp";
     public static String CREATED_TIMESTAMP = "created_timestamp";
     public static String DELETED_TIMESTAMP = "deleted_timestamp";
     public static String SAVED_FOR_LATER_TIMESTAMP = "saved_for_later_timestamp";
@@ -548,6 +548,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public int countRecentReminder(){
         SQLiteDatabase db = this.getWritableDatabase();
         Calendar recentTime = Calendar.getInstance();
+        recentTime.add(Calendar.WEEK_OF_MONTH,1);
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
         String currentTimeStr = MainActivity.getCurrentTimeString();
         String recentTimeStr = dateFormat.format(recentTime.getTime());

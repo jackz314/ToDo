@@ -4,6 +4,7 @@ import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.FragmentActivity;
 import android.app.SearchManager;
 import android.content.ClipData;
@@ -127,9 +128,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     //todo got data from the wrong parameter, fix it
     private static final String ARG_PARAM = "param";
     private String mParam;
-    private static final String[] PROJECTION = new String[]{ID, TITLE, IMPORTANCE, IMPORTANCE_TIMESTAMP};//
+    private static final String[] PROJECTION = new String[]{"*"};//
     private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + IMPORTANCE + " > 0";//ignore markdown signs whe handling displaying notes
-    private static final String SELECTION = "REPLACE (title, '*', '')" + " (" + IMPORTANCE + " > 0";//ignore markdown signs when handling displaying notes //1 in sqlite means TRUE for boolean values
+    private static final String SELECTION = IMPORTANCE + " > 0";//ignore markdown signs when handling displaying notes //1 in sqlite means TRUE for boolean values
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -987,7 +988,12 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             handler.postDelayed(new Runnable(){
                 public void run(){
                     getLoaderManager().restartLoader(123,null,ImportantFragment.this);
-                    handler.postDelayed(this, delay);
+                    if(getContext() != null && !isInSearchMode && !isInSelectionMode){
+                        TabLayout tabLayout = getActivity().findViewById(R.id.tabs_layout);
+                        if(tabLayout.getSelectedTabPosition() == 0){//continue if still displaying
+                            handler.postDelayed(this, delay);
+                        }
+                    }
                 }
             }, delay);
         }
@@ -1609,12 +1615,12 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         String[] selectionArgs = null;
         String[] selectionArgsCombined = null;
         if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
-            sort = sort + " , _id DESC";
+            sort = sort + ", _id DESC";
         }
         String currentTimeStr = MainActivity.getCurrentTimeString();
         Calendar recentTime = Calendar.getInstance();
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-        selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?)";
+        selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?";
         if(todosql.countRecentReminder() > 0){//has recent reminder
             recentTime.add(Calendar.WEEK_OF_YEAR,1);
             String recentTimeStr = dateFormat.format(recentTime.getTime());
@@ -1622,16 +1628,15 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         }else {
             if(todosql.countPinnedNotesNumber() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
                 //selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
-                recentTime.add(Calendar.MONTH,1);
+                recentTime.add(Calendar.WEEK_OF_YEAR,3);
                 String recentTimeStr = dateFormat.format(recentTime.getTime());
                 selectionArgs = new String[]{currentTimeStr,recentTimeStr};
                 //sort = sort + " LIMIT 5";
-            }else{
-                selectionAddOn = ")";//complete the parentheses
             }
             //" UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIME + " IS NOT NULL ORDER BY " + REMIND_TIME + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
         }
         if (args != null) {
+            selectionAddOn += ")";//complete the parentheses in search mode
             String[] selectionArgsQuery = new String[]{"%" + args.getString("QUERY") + "%"};
             selectionArgsCombined = MainActivity.combineStringArray(selectionArgsQuery,selectionArgs);
             return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION_WITH_QUERY + selectionAddOn, selectionArgsCombined, sort);

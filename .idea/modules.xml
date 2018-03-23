@@ -3,9 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ColorPicker/ColorPicker.iml" filepath="$PROJECT_DIR$/ColorPicker/ColorPicker.iml" />
-      <module fileurl="file://$PROJECT_DIR$/DateTimeParser/DateParser.iml" filepath="$PROJECT_DIR$/DateTimeParser/DateParser.iml" />
-      <module fileurl="file://$PROJECT_DIR$/ToDo.iml" filepath="$PROJECT_DIR$/ToDo.iml" />
+      <module fileurl="file://C:\WORKPLACE\AndroidProjects\todo\DateTimeParser\DateParser.iml" filepath="C:\WORKPLACE\AndroidProjects\todo\DateTimeParser\DateParser.iml" />
+      <module fileurl="file://$PROJECT_DIR$/DateTimeParser/DateTimeParser.iml" filepath="$PROJECT_DIR$/DateTimeParser/DateTimeParser.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/todo.iml" filepath="$PROJECT_DIR$/todo.iml" />
     </modules>
   </component>
 </project>

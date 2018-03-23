@@ -87,6 +87,8 @@ import android.widget.Toast;
 
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.jackz314.dateparser.DateGroup;
 import com.jackz314.dateparser.ParseLocation;
 import com.jackz314.dateparser.Parser;
@@ -94,8 +96,13 @@ import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 import com.jackz314.todo.utils.ColorUtils;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -107,12 +114,12 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
+import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.getCurrentDate;
-import static com.jackz314.todo.MainActivity.parseDate;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.returnDateString;
 import static com.jackz314.todo.MainActivity.setCursorColor;
@@ -1721,37 +1728,34 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             values.put(TITLE, title);
             if(title.contains("@")){//contains @ functions
                 String cleanStr = title.replace("*","");
-                int actionStartPos = cleanStr.indexOf("@") + 1;
+                int actionStartPos = cleanStr.indexOf("@");
                 int actionEndPos;
                 String actionStr = "";
-                do{
+                ArrayList<Date> remindDates = new ArrayList<>();
+                ArrayList<Boolean> isReoccuringList = new ArrayList<>();
+                int impLevel = 0;
+                while (actionStartPos >= 0){
                     if(cleanStr.indexOf(" ", actionStartPos) == -1 && cleanStr.indexOf("\n", actionStartPos) == -1){
-                        actionEndPos = cleanStr.length() - 1;
+                        actionEndPos = cleanStr.length();
                     }else if (cleanStr.indexOf(" ", actionStartPos) == -1){
                         actionEndPos = cleanStr.indexOf("\n", actionStartPos);
                     }else if(cleanStr.indexOf("\n",actionStartPos) == -1){
-                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos),returnDateString(cleanStr.substring(actionStartPos)).length() - 1);
+                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1)).length());
                     }else {
                         actionEndPos = Math.min(cleanStr.indexOf(" ", actionStartPos), cleanStr.indexOf("\n", actionStartPos));
                         if(actionEndPos == cleanStr.indexOf(" ", actionStartPos)){
-                            actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos),returnDateString(cleanStr.substring(actionStartPos,cleanStr.indexOf("\n",actionStartPos))).length() - 1);
+                            actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1, cleanStr.indexOf("\n",actionStartPos))).length());
                         }
                     }
                     actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
-
+                    System.out.println(actionStr);
                     //mark as important
-                    int impLevel = MainActivity.countMatches(actionStr,"!");
-                    if(impLevel > 0){
-                        values.put(IMPORTANCE,impLevel);
-                        values.put(IMPORTANCE_TIMESTAMP,MainActivity.getCurrentTimeString());
-                    }
-
+                    impLevel += MainActivity.countMatches(actionStr,"!");
                     //set remind time
-                    if(returnDateString(actionStr) != null){
+                    if(!returnDateString(actionStr).equals("")){
                         Parser parser = new Parser();
                         List groups = parser.parse(actionStr,getCurrentDate());
-                        List<Date> remindDates = new ArrayList<>();
-
+                        System.out.println("groups size: " + groups.size());
                         for(Object groupF : groups) {
                             DateGroup group = (DateGroup)groupF;
                             List<Date> dates = group.getDates();
@@ -1760,16 +1764,28 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             int column = group.getPosition();
                             String matchingValue = group.getText();
                             String syntaxTree = group.getSyntaxTree().toStringTree();
+                            System.out.println("SyntaxTree: " + syntaxTree);
                             Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
+                            System.out.println("Parse Locations map: " + parseMap.toString());
                             boolean isRecurring = group.isRecurring();
+                            isReoccuringList.add(isRecurring);
                             Date recursUntil = group.getRecursUntil();
                         }
-
-                        values.put(REMIND_TIME,remindDates);
                     }
                     //todo phrase date & time
-                    actionStartPos = cleanStr.indexOf("@", actionStartPos + 1) + 1;
-                }while (cleanStr.indexOf("@",actionStartPos) >= 0);
+                    actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);
+                }
+                if(impLevel > 0){
+                    values.put(IMPORTANCE,impLevel);
+                    values.put(IMPORTANCE_TIMESTAMP,MainActivity.getCurrentTimeString());
+                }
+
+                Gson remindGson = new Gson();//convert to json to store ArrayList in SQLITE
+                String remindTimeInput = remindGson.toJson(remindDates);
+                //retrieve with
+                //Type type = new TypeToken<ArrayList<Date>>() {}.getType();
+                //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
+                values.put(REMIND_TIME,remindTimeInput);
             }
             return getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
