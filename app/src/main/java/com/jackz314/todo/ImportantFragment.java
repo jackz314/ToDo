@@ -129,8 +129,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     private static final String ARG_PARAM = "param";
     private String mParam;
     private static final String[] PROJECTION = new String[]{"*"};//
-    private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + IMPORTANCE + " > 0";//ignore markdown signs whe handling displaying notes
     private static final String SELECTION = IMPORTANCE + " > 0";//ignore markdown signs when handling displaying notes //1 in sqlite means TRUE for boolean values
+    private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + SELECTION;//ignore markdown signs whe handling displaying notes
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -1620,7 +1620,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         String currentTimeStr = MainActivity.getCurrentTimeString();
         Calendar recentTime = Calendar.getInstance();
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-        selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?";
+        selectionAddOn = " OR " + "(DATETIME)IN json_extract(" + REMIND_TIME + ") BETWEEN ? AND ?";
         if(todosql.countRecentReminder() > 0){//has recent reminder
             recentTime.add(Calendar.WEEK_OF_YEAR,1);
             String recentTimeStr = dateFormat.format(recentTime.getTime());
