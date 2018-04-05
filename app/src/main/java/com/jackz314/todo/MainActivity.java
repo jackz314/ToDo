@@ -63,7 +63,6 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.jackz314.dateparser.DateGroup;
-import com.jackz314.dateparser.ParseLocation;
 import com.jackz314.dateparser.Parser;
 import com.jackz314.todo.iap_utils.IabHelper;
 import com.jackz314.todo.iap_utils.IabResult;
@@ -85,7 +84,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -515,9 +513,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             public void onDrawerOpened(View drawerView) {
                 hideKeyboard();
                 menuNav.removeGroup(R.id.dynamic_tags);
-                if(todosql.returnTagsForNavMenu() != null){
-                    final ArrayList<String> dynamicTags = todosql.returnTagsForNavMenu();
-                    ArrayList<String> dynamicTagColors = todosql.returnTagColorsForNavMenu();
+                if(todosql.getTagsForNavMenu() != null){
+                    final ArrayList<String> dynamicTags = todosql.getTagsForNavMenu();
+                    ArrayList<String> dynamicTagColors = todosql.getTagColorsForNavMenu();
                     //todo fix navigationView dynamic expandable tag item
                     for(int i = 0; i < dynamicTags.size(); i++){
                         Spannable spannable = new SpannableString(dynamicTags.get(i));
@@ -579,7 +577,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             modifyId.setText(String.valueOf(id));
             fab.setImageResource(R.drawable.ic_send_black_24dp);
             input.setVisibility(View.VISIBLE);
-            input.setText(todosql.getOneDataInTODO(String.valueOf(id)));
+            input.setText(databaseManager.getOneDataInTODO(String.valueOf(id)));
             input.requestFocus();
             (new Handler()).postDelayed(new Runnable() {
                 @Override
@@ -589,8 +587,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }, 230);
             input.performClick();
         }if(item.getItemId() == DELETE_CONTEXT_ID) {
-            final String deleteContent = todosql.getOneDataInTODO(String.valueOf(id));
-            todosql.deleteNote(id);
+            final String deleteContent = databaseManager.getOneDataInTODO(String.valueOf(id));
+            databaseManager.deleteNote(id);
             displayAllNotes();
             if(!modifyId.getText().toString().equals("")){
                 if(modifyId.getText().toString().equals(String .valueOf(id))){
@@ -1005,7 +1003,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     /*
     public void displaySearchResults(final String filter){
-        final Cursor cursor = todosql.getSearchResults(filter);
+        final Cursor cursor = databaseManager.getSearchResults(filter);
         if(cursor.getCount() == 0){
             emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(R.string.empty_search_result);
@@ -1142,14 +1140,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     public static String returnDateString(String str){
         Parser parser = new Parser();
-        List groups = parser.parse(str,getCurrentDate());
+        List groups = parser.parse(str, getCurrentTime());
         StringBuilder dateString = new StringBuilder();
         for(Object groupF : groups) {
             DateGroup group = (DateGroup)groupF;
             String matchingValue = group.getText();
             dateString.append(matchingValue);
         }
-        //System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
+        System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
         if(dateString.toString().contains("@")){
             return dateString.toString().substring(0,dateString.indexOf("@"));
         }else return dateString.toString();
@@ -1174,8 +1172,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return dateFormat.format(nowTime);
     }
 
-    public static Date getCurrentDate(){
+    public static Date getCurrentTime(){
         return Calendar.getInstance().getTime();
+    }
+
+    public static Calendar getCurrentCalendarTime(){
+        return Calendar.getInstance();
     }
 
     public static String[] combineStringArray(String[] A, String[] B) {

@@ -409,7 +409,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
                             String tag = text.toLowerCase().substring(tagStartPos,tagEndPos + 1);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
-                            String tagColor = todosql.returnTagColorIfExist(tag);
+                            String tagColor = todosql.getTagColor(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 tagColor = "#BBBBBC";//set tag color to grey in history
                             }
@@ -863,7 +863,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     /*
     public void displaySearchResults(final String filter){
-        final Cursor cursor = todosql.getHistorySearchResults(filter);
+        final Cursor cursor = databaseManager.getHistorySearchResults(filter);
         if(cursor.getCount() == 0){
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(R.string.empty_search_result);
@@ -936,7 +936,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 expireTime=sharedPreferences.getInt(getString(R.string.clear_interval_value_key),60*24);
                 while(cs.moveToNext()){
                     timestr = cs.getString(cs.getColumnIndex("datetime(deleted_timestamp,'localtime')"));
-                    //////System.out.println(String.valueOf(todosql.getTimeDifference(timestr)));
+                    //////System.out.println(String.valueOf(databaseManager.getTimeDifference(timestr)));
                     if(todosql.getTimeDifference(timestr)>=expireTime){//if bigger than set value, delete it!
                         deleteData(cs.getInt(cs.getColumnIndex(todosql.ID)));
                     }

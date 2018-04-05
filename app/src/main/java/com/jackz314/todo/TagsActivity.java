@@ -858,8 +858,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
                 if(tag.equals(tagName)) continue;//if it's this tag, don't delete it yet
-                if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                if(!todosql.isTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.getTagId(tag));
                     getContentResolver().delete(tagUri,null,null);
                 }
             }
@@ -898,7 +898,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public String determineActivityTagColor(){
-        return todosql.returnTagColorIfExist(tagName);
+        return todosql.getTagColor(tagName);
     }
 
     public void query(String text) {//launch search
@@ -1226,8 +1226,8 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public void determineIfDeleteTag(){
-        if(tagListAdapter.getItemCount() == 0 && !todosql.determineIfTagInUse(tagName)){//if tag no longer exist
-            Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tagName));
+        if(tagListAdapter.getItemCount() == 0 && !todosql.isTagInUse(tagName)){//if tag no longer exist
+            Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.getTagId(tagName));
             getContentResolver().delete(tagUri,null,null);
         }
     }
@@ -1334,7 +1334,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         }
                         //System.out.println(tagStartPos + " AND " + tagEndPos);
                         //System.out.println("TEXT: " + text + "****" + tag + "********");
-                        String tagColor = todosql.returnTagColorIfExist(tagName);
+                        String tagColor = todosql.getTagColor(tagName);
                         spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                 new ColorStateList(new int[][] {new int[] {}},
                                         new int[] {Color.parseColor(tagColor)})

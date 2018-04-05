@@ -902,9 +902,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 File databasePath = getDatabasePath(DATABASE_NAME);
                                 String backupFileName = "";
                                 if(edt.getText().toString().trim().isEmpty()){
-                                    backupFileName = "ToDo_BACKUP_ " + edt.getText().toString().trim() + "_" + timeStampName + ".db";
+                                    backupFileName = "ToDo_BACKUP_ " + edt.getText().toString().trim() + "_" + timeStampName + ".database";
                                 }else {
-                                    backupFileName = "ToDo_BACKUP_" + timeStampName + ".db";
+                                    backupFileName = "ToDo_BACKUP_" + timeStampName + ".database";
                                 }
                                 String destinationPathStr = pathSelectorPath + "/" + backupFileName;
                                 File destinationPath = new File(destinationPathStr);
@@ -1086,7 +1086,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             }else if (requestCode == FILE_SELECTOR_REQUEST_CODE) {
                 Uri uri = data.getData();
                 String processFile = uri.getPath();
-                if(!processFile.endsWith(".db")){
+                if(!processFile.endsWith(".database")){
                     Toast.makeText(getApplicationContext(),getString(R.string.not_validate_backup),Toast.LENGTH_LONG).show();
                 }else {
                     int posOfCol = 0;

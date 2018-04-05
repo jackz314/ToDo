@@ -34,5 +34,19 @@
     <orderEntry type="library" exported="" scope="PROVIDED" name="commons-lang3-3.6" level="project" />
     <orderEntry type="library" exported="" scope="PROVIDED" name="commons-collections4-4.1" level="project" />
     <orderEntry type="library" exported="" scope="PROVIDED" name="threetenbp-1.3.6" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="antlr-runtime-3.5.2" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="ical4j-2.2.0" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="slf4j-api-1.7.25" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="commons-codec-1.10" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="commons-lang3-3.6" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="commons-collections4-4.1" level="project" />
+    <orderEntry type="library" exported="" scope="RUNTIME" name="threetenbp-1.3.6" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="antlr-runtime-3.5.2" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="ical4j-2.2.0" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="slf4j-api-1.7.25" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="commons-codec-1.10" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="commons-lang3-3.6" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="commons-collections4-4.1" level="project" />
+    <orderEntry type="library" exported="" scope="TEST" name="threetenbp-1.3.6" level="project" />
   </component>
 </module>

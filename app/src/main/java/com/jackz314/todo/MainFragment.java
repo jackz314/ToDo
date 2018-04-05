@@ -88,7 +88,6 @@ import android.widget.Toast;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.jackz314.dateparser.DateGroup;
 import com.jackz314.dateparser.ParseLocation;
 import com.jackz314.dateparser.Parser;
@@ -96,16 +95,13 @@ import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 import com.jackz314.todo.utils.ColorUtils;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Type;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -117,9 +113,10 @@ import static android.content.Context.MODE_PRIVATE;
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
+import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
-import static com.jackz314.todo.MainActivity.getCurrentDate;
+import static com.jackz314.todo.MainActivity.getCurrentTime;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.returnDateString;
 import static com.jackz314.todo.MainActivity.setCursorColor;
@@ -625,7 +622,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     if (doubleClickCout == 2) {
                         //Double click
                         // Toast.makeText(getContext(,"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
-                        final String finishedContent = todosql.getOneDataInTODO(String.valueOf(id));
+                        final String finishedContent = databaseManager.getOneDataInTODO(String.valueOf(id));
                         finishData(id);
                         if(!modifyId.getText().toString().equals("")){
                             if(modifyId.getText().toString().equals(String .valueOf(id))){
@@ -647,8 +644,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             @Override
                             public void onClick(View v) {
                                 insertData(finishedContent);
-                                long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                                todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                                long lastHistoryId = databaseManager.getIdOfLatestDataInHistory();
+                                databaseManager.deleteFromHistory(String.valueOf(lastHistoryId));
                                 displayAllNotes();
                             }
                         }).show();
@@ -1327,7 +1324,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     holder.todoText.setTextSize(textSize);
                     SpannableStringBuilder spannable = new SpannableStringBuilder(text);
                     //pin section
-                    if(todosql.countPinnedNotesNumber() > 5){
+                    if(todosql.getPinnedNotesCount() > 5){
 
                     }else {
 
@@ -1392,11 +1389,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
                             String tag = text.toLowerCase().substring(tagStartPos, tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
-                            String tagColor = todosql.returnTagColorIfExist(tag);
+                            String tagColor = todosql.getTagColor(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 Random random = new Random();//generate random color
                                 int finalColor = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
-                                ArrayList<Integer> allTagColors = todosql.returnAllTagColors();
+                                ArrayList<Integer> allTagColors = todosql.getAllTagColors();
                                 for(int i = 0; i < allTagColors.size(); i++){//eliminate too similar tag colors
                                     if(ColorUtils.determineSimilarColor(finalColor,allTagColors.get(i)) > 95){//compare new color to each color in tag database
                                         finalColor = random.nextInt(256*256*256);//generate a new color
@@ -1742,10 +1739,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }else if(cleanStr.indexOf("\n",actionStartPos) == -1){
                         actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1)).length());
                     }else {
-                        actionEndPos = Math.min(cleanStr.indexOf(" ", actionStartPos), cleanStr.indexOf("\n", actionStartPos));
-                        if(actionEndPos == cleanStr.indexOf(" ", actionStartPos)){
-                            actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1, cleanStr.indexOf("\n",actionStartPos))).length());
-                        }
+                        //actionEndPos = Math.min(cleanStr.indexOf(" ", actionStartPos), cleanStr.indexOf("\n", actionStartPos));
+                        //if(actionEndPos == cleanStr.indexOf(" ", actionStartPos)){
+                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1, cleanStr.indexOf("\n",actionStartPos))).length());
+                        //}
                     }
                     actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
                     System.out.println(actionStr);
@@ -1754,7 +1751,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     //set remind time
                     if(!returnDateString(actionStr).equals("")){
                         Parser parser = new Parser();
-                        List groups = parser.parse(actionStr,getCurrentDate());
+                        List groups = parser.parse(actionStr, getCurrentTime());
                         System.out.println("groups size: " + groups.size());
                         for(Object groupF : groups) {
                             DateGroup group = (DateGroup)groupF;
@@ -1772,20 +1769,32 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             Date recursUntil = group.getRecursUntil();
                         }
                     }
-                    //todo phrase date & time
                     actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);
                 }
                 if(impLevel > 0){
                     values.put(IMPORTANCE,impLevel);
                     values.put(IMPORTANCE_TIMESTAMP,MainActivity.getCurrentTimeString());
                 }
-
-                Gson remindGson = new Gson();//convert to json to store ArrayList in SQLITE
-                String remindTimeInput = remindGson.toJson(remindDates);
+                ArrayList<Date> sortedRemindDates = remindDates;//sort the multiple reminders, treate them individually as clauses
+                Collections.sort(sortedRemindDates, new Comparator<Date>() {
+                    @Override
+                    public int compare(Date o1, Date o2) {
+                        if(o1 == null || o2 == null){
+                            return 0;
+                        }
+                        return o1.compareTo(o2);
+                    }
+                });
+                Gson sortedDatesGson = new Gson();//convert to json to store ArrayList in SQLITE
+                String sortedDatesStr = sortedDatesGson.toJson(sortedRemindDates);
+                //DEPRECIATED//String sortedRemindDatesStr = sortedRemindDates.toString().replace("[","(").replace("]",")");
                 //retrieve with
+                //Gson remindGson = new Gson();
                 //Type type = new TypeToken<ArrayList<Date>>() {}.getType();
                 //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
-                values.put(REMIND_TIME,remindTimeInput);
+                SimpleDateFormat defaultDateFormat = new SimpleDateFormat(DATE_FORMAT);
+                values.put(RECENT_REMIND_TIME,defaultDateFormat.format(sortedRemindDates.get(0)));
+                values.put(REMIND_TIME,sortedDatesStr);
             }
             return getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
@@ -1808,8 +1817,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
-                if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                if(!todosql.isTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.getTagId(tag));
                     getActivity().getContentResolver().delete(tagUri,null,null);
                 }
             }

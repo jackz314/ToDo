@@ -105,13 +105,13 @@ import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
+import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
 import static com.jackz314.todo.DatabaseManager.ID;
-import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 
@@ -139,7 +139,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     private FirebaseAnalytics mFirebaseAnalytics;
     private OnFragmentInteractionListener mListener;
     private String todoTableId = "HAHA! this is the real one, gotcha";
-    DatabaseManager todosql;
+    DatabaseManager databaseManager;
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
@@ -347,7 +347,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             }
         });
         //speechRecognizer.setRecognitionListener(new speechListener());
-        todosql = new DatabaseManager(getContext());
+        databaseManager = new DatabaseManager(getContext());
         todoTableId = "0x397821dc97276";
         //set tabs
         input.setTextIsSelectable(true);
@@ -591,7 +591,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     if (doubleClickCout == 2) {
                         //Double click
                         // Toast.makeText(getContext(,"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
-                        final String finishedContent = todosql.getOneDataInTODO(String.valueOf(id));
+                        final String finishedContent = databaseManager.getOneDataInTODO(String.valueOf(id));
                         finishData(id);
                         if(!modifyId.getText().toString().equals("")){
                             if(modifyId.getText().toString().equals(String .valueOf(id))){
@@ -613,8 +613,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                             @Override
                             public void onClick(View v) {
                                 insertData(finishedContent);
-                                long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                                todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                                long lastHistoryId = databaseManager.getIdOfLatestDataInHistory();
+                                databaseManager.deleteFromHistory(String.valueOf(lastHistoryId));
                                 displayAllNotes();
                             }
                         }).show();
@@ -634,7 +634,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                         d.start();
                     }
                     input.setVisibility(View.VISIBLE);
-                    input.setText(todosql.getOneDataInTODO(id));
+                    input.setText(databaseManager.getOneDataInTODO(id));
                     input.requestFocus();
                     input.setSelection(input.getText().length());
                     showKeyboard();
@@ -663,7 +663,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 //v.vibrate(30);
                 if(isInSelectionMode){
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
+                    ClipData clip = ClipData.newPlainText("ToDo", databaseManager.getOneDataInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
@@ -743,12 +743,12 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                 selectedContent.clear();
                                 selectAll = true;
                                 todoList.getAdapter().notifyDataSetChanged();
-                                Cursor cursor = todosql.getImportantData();
+                                Cursor cursor = databaseManager.getImportantData();
                                 cursor.moveToFirst();
                                 do{
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0,id);
-                                    String data = todosql.getOneDataInTODO(id);
+                                    String data = databaseManager.getOneDataInTODO(id);
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -1028,14 +1028,14 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
                 removeSelectedId(viewHolder.getItemId());
             }
-            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
+            final String finishedContent = databaseManager.getOneDataInTODO(viewHolder.getItemId());
             finishData(viewHolder.getItemId());
             Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     insertData(finishedContent);
-                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                    long lastHistoryId = databaseManager.getIdOfLatestDataInHistory();
+                    databaseManager.deleteFromHistory(String.valueOf(lastHistoryId));
                     displayAllNotes();
                 }
             }).show();
@@ -1114,7 +1114,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = todosql.getOneDataInTODO(id);
+        String data = databaseManager.getOneDataInTODO(id);
         selectedContent.add(0,data);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
@@ -1133,7 +1133,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     return false;
                 }
             });
-        }if(selectedId.size() == todosql.getData().getCount()){
+        }if(selectedId.size() == databaseManager.getData().getCount()){
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -1142,9 +1142,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        String data = todosql.getOneDataInTODO(id);
+        String data = databaseManager.getOneDataInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
-        if(selectedId.size() < todosql.getData().getCount()){
+        if(selectedId.size() < databaseManager.getData().getCount()){
             selectAllBox.setChecked(false);
         }
         if (selectedId.size() == 0) {
@@ -1260,7 +1260,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     holder.todoText.setTextSize(textSize);
                     SpannableStringBuilder spannable = new SpannableStringBuilder(text);
                     //pin section
-                    if(todosql.countPinnedNotesNumber() > 5){
+                    if(databaseManager.getPinnedNotesCount() > 5){
 
                     }else {
 
@@ -1324,11 +1324,11 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
                             String tag = text.toLowerCase().substring(tagStartPos, tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
-                            String tagColor = todosql.returnTagColorIfExist(tag);
+                            String tagColor = databaseManager.getTagColor(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 Random random = new Random();//generate random color
                                 int finalColor = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
-                                ArrayList<Integer> allTagColors = todosql.returnAllTagColors();
+                                ArrayList<Integer> allTagColors = databaseManager.getAllTagColors();
                                 for(int i = 0; i < allTagColors.size(); i++){//eliminate too similar tag colors
                                     if(ColorUtils.determineSimilarColor(finalColor,allTagColors.get(i)) > 95){//compare new color to each color in tag database
                                         finalColor = random.nextInt(256*256*256);//generate a new color
@@ -1336,7 +1336,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                     }
                                 }
                                 tagColor = String.format("#%06x", 0xFFFFFF & finalColor);// format it as hexadecimal string (with hashtag and leading zeros)
-                                todosql.createNewTag(tag, tagColor);//add new tag
+                                databaseManager.createNewTag(tag, tagColor);//add new tag
                             }
                             spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                     new ColorStateList(new int[][] {new int[] {}},
@@ -1429,7 +1429,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 for (String content : CLONESelectedContent){
                     insertData(content);
                 }
-                todosql.deleteTheLastCoupleOnesFromHistory(size);
+                databaseManager.deleteTheLastCoupleOnesFromHistory(size);
                 displayAllNotes();
             }
         }).show();
@@ -1479,8 +1479,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         //document.writeTo();
         return true;
     }
-
-
 
     public void shareSetOfData(){//share note function
         Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
@@ -1602,7 +1600,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         Bundle bundle = new Bundle();
         bundle.putString("QUERY", query);
         searchText = query;
-        //System.out.println("calledquery" + " " + text);
         getLoaderManager().restartLoader(123, bundle, ImportantFragment.this);
     }
 
@@ -1620,15 +1617,15 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         String currentTimeStr = MainActivity.getCurrentTimeString();
         Calendar recentTime = Calendar.getInstance();
         DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-        selectionAddOn = " OR " + "(DATETIME)IN json_extract(" + REMIND_TIME + ") BETWEEN ? AND ?";
-        if(todosql.countRecentReminder() > 0){//has recent reminder
-            recentTime.add(Calendar.WEEK_OF_YEAR,1);
+        selectionAddOn = " OR " + RECENT_REMIND_TIME + " BETWEEN ? AND ?";
+        if(databaseManager.getRecentReminderCount() > 0){//has recent reminder
+            recentTime.add(Calendar.WEEK_OF_YEAR,2);
             String recentTimeStr = dateFormat.format(recentTime.getTime());
             selectionArgs = new String[]{currentTimeStr,recentTimeStr};
         }else {
-            if(todosql.countPinnedNotesNumber() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
+            if(databaseManager.getPinnedNotesCount() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
                 //selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
-                recentTime.add(Calendar.WEEK_OF_YEAR,3);
+                recentTime.add(Calendar.WEEK_OF_YEAR,4);
                 String recentTimeStr = dateFormat.format(recentTime.getTime());
                 selectionArgs = new String[]{currentTimeStr,recentTimeStr};
                 //sort = sort + " LIMIT 5";
@@ -1647,7 +1644,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        ////System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
+        //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
         if(data.getCount() == 0 && isInSearchMode){
             emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(getString(R.string.empty_search_result));
@@ -1687,7 +1684,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void finishData(long id){
         ContentValues cv = new ContentValues();
-        String data = todosql.getOneDataInTODO(id);
+        String data = databaseManager.getOneDataInTODO(id);
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
@@ -1697,13 +1694,13 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
-        String note = todosql.getOneDataInTODO(id);
+        String note = databaseManager.getOneDataInTODO(id);
         getActivity().getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
-                if(!todosql.determineIfTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.returnTagID(tag));
+                if(!databaseManager.isTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI, databaseManager.getTagId(tag));
                     getActivity().getContentResolver().delete(tagUri,null,null);
                 }
             }
@@ -1732,7 +1729,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         displayAllNotes();
         setColorPreferences();
         if(sharedPreferences.getBoolean("first_run",true)){
-            Cursor cs = todosql.getData();
+            Cursor cs = databaseManager.getData();
             if (cs.getCount()==0){
                 //first run codes
                 insertData(getString(R.string.tutorial_6));

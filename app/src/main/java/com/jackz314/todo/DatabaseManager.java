@@ -7,7 +7,11 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import java.io.File;
+import java.lang.reflect.Type;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -20,7 +24,7 @@ import java.util.Locale;
  */
 
 public class DatabaseManager extends SQLiteOpenHelper{
-    public static String DATABASE_NAME = "todo.db";
+    public static String DATABASE_NAME = "todo.database";
     public static String TODO_TABLE = "todolist_table";
     public static String HISTORY_TABLE = "deleted_notes_table";
     public static String SAVED_FOR_LATER_TABLE = "saved_for_later";
@@ -33,78 +37,76 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public static String CONTENT = "content";
     public static String IMPORTANCE = "importance";
     public static String REMIND_TIME = "remind_time";
+    public static String RECENT_REMIND_TIME = "most_recent_remind_time";
     public static String IMPORTANCE_TIMESTAMP = "importance_timestamp";
+    public static String RECURRING_STATS = "recurring_stats";
     public static String CREATED_TIMESTAMP = "created_timestamp";
     public static String DELETED_TIMESTAMP = "deleted_timestamp";
     public static String SAVED_FOR_LATER_TIMESTAMP = "saved_for_later_timestamp";
     public static String SAVED_TIME = "saved_time";
     public static String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
-
-
     public DatabaseManager(Context context) {
-        super(context, DATABASE_NAME, null, 1);
-        SQLiteDatabase db = this.getWritableDatabase();//remove this line after debug!
+        super(context, DATABASE_NAME, null, 1);//remove this line after debug!
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIME + " DATETIME, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        //db.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIME + " TEXT, " + RECENT_REMIND_TIME + " DATETIME, " + RECURRING_STATS + " TEXT, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIME + " TEXT, " + RECENT_REMIND_TIME + " DATETIME, " + RECURRING_STATS + " TEXT, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        //database.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ TAGS_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TAG + " TEXT," + TAG_COLOR + " TEXT," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS "+TODO_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+HISTORY_TABLE);
-        //db.execSQL("DROP TABLE IF EXISTS "+SAVED_FOR_LATER_TABLE);
+        //database.execSQL("DROP TABLE IF EXISTS "+SAVED_FOR_LATER_TABLE);
         db.execSQL("DROP TABLE IF EXISTS "+TAGS_TABLE);
         onCreate(db);
     }
     /*
     public boolean insertData(String title){
-        SQLiteDatabase db = this.getWritableDatabase();
+
         ContentValues cv = new ContentValues();
         cv.put(TITLE,title);
-        long result = db.insert(TODO_TABLE,null,cv);
+        long result = database.insert(TODO_TABLE,null,cv);
         return (result != -1);
     }*/
 
     public boolean insertDataToHistory(String title){
-        SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(TITLE,title);
-        long result = db.insert(HISTORY_TABLE,null,cv);
+        SQLiteDatabase database = this.getWritableDatabase();
+        long result = database.insert(HISTORY_TABLE,null,cv);
         return (result != -1);
     }
 
     public Cursor getData(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        return db.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE ,null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE ,null);
     }
 
     public Cursor getTagData(String tagName){
-        SQLiteDatabase db = this.getWritableDatabase();
-        return db.query(TODO_TABLE,new String[]{"*"},"REPLACE (title, '*', '')" + " LIKE ? OR title LIKE ? OR title LIKE ?",new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"},null,null,null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.query(TODO_TABLE,new String[]{"*"},"REPLACE (title, '*', '')" + " LIKE ? OR title LIKE ? OR title LIKE ?",new String[]{"%" + tagName + "", "%" + tagName + " %", "%" + tagName + "\n%"},null,null,null);
     }
 
     public Cursor getImportantData(){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
         String selectionAddOn = "";
         String[] selectionArgs = null;
         String currentTimeStr = MainActivity.getCurrentTimeString();
         Calendar recentTime = Calendar.getInstance();
-        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
         selectionAddOn = " OR " + REMIND_TIME + " BETWEEN ? AND ?)";
-        if(countRecentReminder() > 0){//has recent reminder
+        if(getRecentReminderCount() > 0){//has recent reminder
             recentTime.add(Calendar.WEEK_OF_YEAR,1);
             String recentTimeStr = dateFormat.format(recentTime.getTime());
             selectionArgs = new String[]{currentTimeStr,recentTimeStr};
         }else {
-            if(countPinnedNotesNumber() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
+            if(getPinnedNotesCount() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
                 //selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
                 recentTime.add(Calendar.MONTH,1);
                 String recentTimeStr = dateFormat.format(recentTime.getTime());
@@ -115,96 +117,96 @@ public class DatabaseManager extends SQLiteOpenHelper{
             }
             //" UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIME + " IS NOT NULL ORDER BY " + REMIND_TIME + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
         }
-        return db.query(TODO_TABLE, new String[]{"*"}, "REPLACE (title, '*', '')" + " (" + IMPORTANCE + " = 1" + selectionAddOn, selectionArgs, null, null, null);
+        return database.query(TODO_TABLE, new String[]{"*"}, "REPLACE (title, '*', '')" + " (" + IMPORTANCE + " = 1" + selectionAddOn, selectionArgs, null, null, null);
     }
 
     public  Cursor getDataDesc(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        return db.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE + " order by _id desc",null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.rawQuery("SELECT rowid _id,* FROM " + TODO_TABLE + " order by _id desc",null);
     }
 
     public Cursor getSearchResults(String text){
-        SQLiteDatabase db = this.getWritableDatabase();
-        return db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
     }
 
     public Cursor getHistorySearchResults(String text){
-        SQLiteDatabase db = this.getWritableDatabase();
-        return db.query(false,HISTORY_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.query(false,HISTORY_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ?",new String[]{"%"+ text+ "%" },null,null,"_id desc",null );
     }
 
     public void wipeHistory(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(HISTORY_TABLE,null,null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        database.delete(HISTORY_TABLE,null,null);
     }
 
     public void wipeTodoList(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(TODO_TABLE,null,null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        database.delete(TODO_TABLE,null,null);
     }
 
     public Cursor getHistory(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE,null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE,null);
         return cs;
     }
 
     public  Cursor getHistoryDesc(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE + " order by _id desc",null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE + " order by _id desc",null);
         return cs;
     }
 
     public Integer finishData(Long id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
         ContentValues cv = new ContentValues();
         String data;
         while(cs.moveToNext()){
             data = cs.getString(cs.getColumnIndex(TITLE));
             cv.put(TITLE,data);
         }
-        db.insert(HISTORY_TABLE,null,cv);
-        Integer del = db.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
+        database.insert(HISTORY_TABLE,null,cv);
+        Integer del = database.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
         cs.close();
         return del;
     }
 
     public Integer deleteFromHistory(String id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Integer del = db.delete(HISTORY_TABLE,ID + " = ?",new String[] {id});
+        SQLiteDatabase database = this.getWritableDatabase();
+        Integer del = database.delete(HISTORY_TABLE,ID + " = ?",new String[] {id});
         return del;
     }
 
     public void deleteNote(Long id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
+        SQLiteDatabase database = this.getWritableDatabase();
+        database.delete(TODO_TABLE,ID + " = ?",new String[] {Long.toString(id)});
     }
 
     public void insertDataForSpecialMsgAction(String data){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(TITLE,data);
-        db.insert(TODO_TABLE,null,cv);
+        database.insert(TODO_TABLE,null,cv);
     }
 
     public void restoreDataHToM(String id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
         ContentValues cv = new ContentValues();
         String data;
         while(cs.moveToNext()){
             data = cs.getString(cs.getColumnIndex(TITLE));
             cv.put(TITLE,data);
         }
-        db.insert(TODO_TABLE,null,cv);
-        db.delete(HISTORY_TABLE,ID + " = ?",new String[] {id});
+        database.insert(TODO_TABLE,null,cv);
+        database.delete(HISTORY_TABLE,ID + " = ?",new String[] {id});
         cs.close();
     }
 
     public String getOneDataInTODO(long id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
         String data="";
         while(cs.moveToNext()){
             data = cs.getString(cs.getColumnIndex(TITLE));
@@ -302,8 +304,8 @@ public class DatabaseManager extends SQLiteOpenHelper{
     }
 
     public String getOneDataInHISTORY(String id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
         String data="";
         while(cs.moveToNext()){
             data = cs.getString(cs.getColumnIndex(TITLE));
@@ -313,30 +315,24 @@ public class DatabaseManager extends SQLiteOpenHelper{
     }
 
     public void restoreAllDataFromHistoryToTODO(){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         String cmd = "INSERT INTO " + TODO_TABLE + " SELECT * FROM " + HISTORY_TABLE;
-        db.execSQL(cmd);
+        database.execSQL(cmd);
         wipeHistory();
     }
 
     public void finishAllInTodoList(){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         String cmd = "INSERT INTO " + HISTORY_TABLE + " SELECT * FROM " + TODO_TABLE;
-        db.execSQL(cmd);
+        database.execSQL(cmd);
         wipeTodoList();
     }
 
-    public String getTime(){
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss");
-        String t=format.format(new Date());
-        return t;
-    }
-
     public long getIdOfLatestDataInTODO(){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         String cmd = "SELECT * FROM " + TODO_TABLE + " ORDER BY _id DESC LIMIT 1";
         long id = 0;
-        Cursor cs = db.rawQuery(cmd,null);
+        Cursor cs = database.rawQuery(cmd,null);
         while(cs.moveToNext()){
             id = cs.getInt(cs.getColumnIndex(ID));
         }
@@ -344,33 +340,33 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return id;
     }
 
-    public void deleteTheLastCoupleOnesFromHistory(int number){
-        SQLiteDatabase db = this.getWritableDatabase();
-        String cmd = "SELECT * FROM " + HISTORY_TABLE + " ORDER BY _id DESC LIMIT " + Integer.toString(number);
-        Cursor cs = db.rawQuery(cmd,null);
+    public void deleteTheLastCoupleOnesFromHistory(int count){
+        SQLiteDatabase database = this.getWritableDatabase();
+        String cmd = "SELECT * FROM " + HISTORY_TABLE + " ORDER BY _id DESC LIMIT " + Integer.toString(count);
+        Cursor cs = database.rawQuery(cmd,null);
         while(cs.moveToNext()){
-            db.delete(HISTORY_TABLE,ID + " = ?",new String[]{Integer.toString(cs.getInt(cs.getColumnIndex(ID)))});
+            database.delete(HISTORY_TABLE,ID + " = ?",new String[]{Integer.toString(cs.getInt(cs.getColumnIndex(ID)))});
         }
         cs.close();
-        db.close();
+        database.close();
     }
 
-    public void deleteTheLastCoupleOnesFromToDo(int number){
-        SQLiteDatabase db = this.getWritableDatabase();
-        String cmd = "SELECT * FROM " + TODO_TABLE + " ORDER BY _id DESC LIMIT " + Integer.toString(number);
-        Cursor cs = db.rawQuery(cmd,null);
+    public void deleteTheLastCoupleOnesFromToDo(int count){
+        SQLiteDatabase database = this.getWritableDatabase();
+        String cmd = "SELECT * FROM " + TODO_TABLE + " ORDER BY _id DESC LIMIT " + Integer.toString(count);
+        Cursor cs = database.rawQuery(cmd,null);
         while(cs.moveToNext()){
-            db.delete(TODO_TABLE,ID + " = ?",new String[]{Integer.toString(cs.getInt(cs.getColumnIndex(ID)))});
+            database.delete(TODO_TABLE,ID + " = ?",new String[]{Integer.toString(cs.getInt(cs.getColumnIndex(ID)))});
         }
         cs.close();
-        db.close();
+        database.close();
     }
 
     public long getIdOfLatestDataInHistory(){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         String cmd = "SELECT * FROM " + HISTORY_TABLE + " ORDER BY _id DESC LIMIT 1";
         long id = 0;
-        Cursor cs = db.rawQuery(cmd,null);
+        Cursor cs = database.rawQuery(cmd,null);
         while (cs.moveToNext()){
             id = cs.getInt(cs.getColumnIndex(ID));
         }
@@ -379,8 +375,8 @@ public class DatabaseManager extends SQLiteOpenHelper{
     }
 
     /*public String getDeletedTimeFromDB(long id){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
+
+        Cursor cs = database.rawQuery("SELECT rowid _id,* FROM "+ HISTORY_TABLE + " WHERE "+ ID + " = " + id, null);
         String time="";
         while(cs.moveToNext()){
             time = cs.getString(cs.getColumnIndex(DELETED_TIMESTAMP));
@@ -391,10 +387,10 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     long diff = 0;
     public long getTimeDifference(String timestampstr){
-        DateFormat df = new SimpleDateFormat(DATE_FORMAT,Locale.US);
         try
         {
-            Date delTime = df.parse(timestampstr);
+            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
+            Date delTime = dateFormat.parse(timestampstr);
             Date nowTime = new Date(System.currentTimeMillis());//get now time
             diff = ((nowTime.getTime() - delTime.getTime())/1000)/60;//get time difference in minutes
             //long days = diff / (1000 * 60 * 60 * 24);
@@ -409,9 +405,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         }
     }
 
-    public ArrayList<Integer> returnAllTagColors(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE ,null);
+    public ArrayList<Integer> getAllTagColors(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE ,null);
         ArrayList<Integer> allColors = new ArrayList<Integer>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){
@@ -422,9 +418,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return allColors;
     }
 
-    public ArrayList<String> returnAllTags(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE ,null);
+    public ArrayList<String> getAllTags(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE ,null);
         ArrayList<String> allTags = new ArrayList<String>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){
@@ -435,9 +431,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return allTags;
     }
 
-    public ArrayList<String> returnTagsForNavMenu(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE + " order by _id desc LIMIT 5",null);
+    public ArrayList<String> getTagsForNavMenu(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE + " order by _id desc LIMIT 5",null);
         ArrayList<String> allTags = new ArrayList<String>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){
@@ -448,9 +444,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return allTags;
     }
 
-    public ArrayList<String> returnTagColorsForNavMenu(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE + " LIMIT 5",null);
+    public ArrayList<String> getTagColorsForNavMenu(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE + " LIMIT 5",null);
         ArrayList<String> allTagColors = new ArrayList<>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){
@@ -461,9 +457,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return allTagColors;
     }
 
-    public String returnTagColorIfExist(String tag){//see if tag exists in the tag database
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{""+ tag+ ""},null,null,"_id desc",null );//search for the tag
+    public String getTagColor(String tag){//see if tag exists in the tag database
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.query(false,TAGS_TABLE, new String[]{TAG,TAG_COLOR},TAG + " LIKE ?",new String[]{""+ tag+ ""},null,null,"_id desc",null );//search for the tag
         if(cs.getCount() == 0) return "";
         else {
             try{
@@ -478,9 +474,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         }
     }
 
-    public boolean determineIfTagInUse(String tag){//see if tag is in use in the displaying, active notes
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ? OR ? OR ?",new String[]{"%"+ tag+ "", "%"+ tag+ " %", "%" + tag + "\n%"},null,null,"_id desc",null );
+    public boolean isTagInUse(String tag){//see if tag is in use in the displaying, active notes
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID,TITLE},TITLE + " LIKE ? OR ? OR ?",new String[]{"%"+ tag+ "", "%"+ tag+ " %", "%" + tag + "\n%"},null,null,"_id desc",null );
         if(!(cs.getCount() == 0)) {
             while(cs.moveToNext()){//confirm that the tag still is in use again
                 String todoText = cs.getString(cs.getColumnIndex(TITLE));
@@ -500,9 +496,9 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return false;
     }
 
-    public long returnTagID(String tag){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TAGS_TABLE, new String[]{ID,TAG},TAG + " LIKE ?",new String[]{"" + tag + ""},null,null,"_id desc",null );
+    public long getTagId(String tag){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.query(false,TAGS_TABLE, new String[]{ID,TAG},TAG + " LIKE ?",new String[]{"" + tag + ""},null,null,"_id desc",null );
         cs.moveToNext();
         long id = cs.getInt(cs.getColumnIndex(ID));
         cs.close();
@@ -510,72 +506,106 @@ public class DatabaseManager extends SQLiteOpenHelper{
     }
 
     public void createNewTag(String tag, String tagColor){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(TAG,tag);
         cv.put(TAG_COLOR,tagColor);
-        db.insert(TAGS_TABLE,null,cv);
+        database.insert(TAGS_TABLE,null,cv);
     }
 
     public void pinNote(long id){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
         cv.put(IMPORTANCE,true);
         Date nowTime = Calendar.getInstance().getTime();//get now time
-        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
         cv.put(IMPORTANCE_TIMESTAMP, dateFormat.format(nowTime));
-        db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
+        database.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
     public void unpinNote(long id){
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase database = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
         cv.put(IMPORTANCE,false);
         cv.put(IMPORTANCE_TIMESTAMP,(String)null);
-        db.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
+        database.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
-    public int countPinnedNotesNumber(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,IMPORTANCE},IMPORTANCE + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
+    public int getPinnedNotesCount(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID,IMPORTANCE},IMPORTANCE + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
         int count = cs.getCount();
         cs.close();
         return count;
     }
 
-    public int countRecentReminder(){
-        SQLiteDatabase db = this.getWritableDatabase();
+    public int getRecentReminderCount(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
         Calendar recentTime = Calendar.getInstance();
-        recentTime.add(Calendar.WEEK_OF_MONTH,1);
-        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+        recentTime.add(Calendar.WEEK_OF_YEAR,2);
         String currentTimeStr = MainActivity.getCurrentTimeString();
         String recentTimeStr = dateFormat.format(recentTime.getTime());
-        Cursor cs = db.query(false,TODO_TABLE, new String[]{ID,REMIND_TIME},REMIND_TIME + " BETWEEN ? AND ?",new String[]{currentTimeStr,recentTimeStr},null,null,"_id desc",null );//filter for recent reminders
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID, RECENT_REMIND_TIME}, RECENT_REMIND_TIME + " BETWEEN ? AND ?",new String[]{currentTimeStr,recentTimeStr},null,null,"_id desc",null );//filter for recent reminders
         int recentReminderCount = cs.getCount();
         cs.close();
         return recentReminderCount;
     }
 
+    public int getReminderCount(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID,REMIND_TIME},REMIND_TIME + " IS NOT NULL", null,null,null,null,null );//filter for recent reminders
+        int recentReminderCount = cs.getCount();
+        cs.close();
+        return recentReminderCount;
+    }
+
+    public void removeExpiredReminderDates(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID,REMIND_TIME},REMIND_TIME + " IS NOT NULL", null,null,null,null,null );//filter for recent reminders
+        Date currentTime = MainActivity.getCurrentTime();
+        String oldRemindTimeStr = "";
+        Gson remindGson = new Gson();
+        Type type = new TypeToken<ArrayList<Date>>() {}.getType();
+        int id;
+        while(cs.moveToNext()){
+            id = cs.getInt(cs.getColumnIndex(ID));
+            oldRemindTimeStr = cs.getString(cs.getColumnIndex(REMIND_TIME));
+            ArrayList<Date> remindTimeOutput = remindGson.fromJson(oldRemindTimeStr,type);
+            for(Date remindTime : remindTimeOutput){
+                if(remindTime.compareTo(currentTime) <= 0){//remind time before or equals current time
+                    remindTimeOutput.remove(remindTime);
+                }
+            }
+            String newRemindTimeStr = remindGson.toJson(remindTimeOutput);
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(ID,id);
+            contentValues.put(REMIND_TIME, newRemindTimeStr);
+            contentValues.put(RECENT_REMIND_TIME, dateFormat.format(remindTimeOutput.get(0)));
+            database.update(TODO_TABLE, contentValues, ID + " = ?", new String[] { String.valueOf(id) });
+        }
+    }
 
     /* OLD METHOD
     public boolean updateData(String id, String title){
-        SQLiteDatabase db = this.getWritableDatabase();
+
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
         cv.put(TITLE,title);
-        db.update(TODO_TABLE, cv, ID + " = ?", new String[] { id });
+        database.update(TODO_TABLE, cv, ID + " = ?", new String[] { id });
         return true;
     }*/
 
     public void stopService(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.close();
+        SQLiteDatabase database = this.getWritableDatabase();
+        database.close();
     }
 
     public boolean isOpen(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        return (db.isOpen());
+        SQLiteDatabase database = this.getWritableDatabase();
+        return (database.isOpen());
     }
 }
