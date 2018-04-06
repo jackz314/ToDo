@@ -1142,11 +1142,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         Parser parser = new Parser();
         List groups = parser.parse(str, getCurrentTime());
         StringBuilder dateString = new StringBuilder();
+        ArrayList<Boolean> isRecurringList = new ArrayList<>();
         for(Object groupF : groups) {
             DateGroup group = (DateGroup)groupF;
             String matchingValue = group.getText();
             dateString.append(matchingValue);
+            isRecurringList.add(group.isRecurring());
         }
+
+        if(isRecurringList.contains(true)){
+            dateString.append(str.substring(0,4), 0, 4);
+        }
+
         System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
         if(dateString.toString().contains("@")){
             return dateString.toString().substring(0,dateString.indexOf("@"));

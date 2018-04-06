@@ -114,6 +114,7 @@ import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
+import static com.jackz314.todo.DatabaseManager.RECURRING_STATS;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.getCurrentTime;
@@ -1658,7 +1659,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 return false;
             }
 
-
         });
         //return true;
         super.onCreateOptionsMenu(menu, inflater);
@@ -1729,7 +1729,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 int actionEndPos;
                 String actionStr = "";
                 ArrayList<Date> remindDates = new ArrayList<>();
-                ArrayList<Boolean> isReoccuringList = new ArrayList<>();
+                ArrayList<String> recurringStats = new ArrayList<>();
                 int impLevel = 0;
                 while (actionStartPos >= 0){
                     if(cleanStr.indexOf(" ", actionStartPos) == -1 && cleanStr.indexOf("\n", actionStartPos) == -1){
@@ -1737,15 +1737,15 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }else if (cleanStr.indexOf(" ", actionStartPos) == -1){
                         actionEndPos = cleanStr.indexOf("\n", actionStartPos);
                     }else if(cleanStr.indexOf("\n",actionStartPos) == -1){
-                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1)).length());
+                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1)).length() + 1);
                     }else {
                         //actionEndPos = Math.min(cleanStr.indexOf(" ", actionStartPos), cleanStr.indexOf("\n", actionStartPos));
                         //if(actionEndPos == cleanStr.indexOf(" ", actionStartPos)){
-                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1, cleanStr.indexOf("\n",actionStartPos))).length());
+                        actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + returnDateString(cleanStr.substring(actionStartPos + 1, cleanStr.indexOf("\n",actionStartPos))).length() + 1);
                         //}
                     }
                     actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
-                    System.out.println(actionStr);
+                    System.out.println("ACTION STR: [" + actionStr + "]");
                     //mark as important
                     impLevel += MainActivity.countMatches(actionStr,"!");
                     //set remind time
@@ -1753,6 +1753,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         Parser parser = new Parser();
                         List groups = parser.parse(actionStr, getCurrentTime());
                         System.out.println("groups size: " + groups.size());
+                        boolean isRecurring = false;
                         for(Object groupF : groups) {
                             DateGroup group = (DateGroup)groupF;
                             List<Date> dates = group.getDates();
@@ -1764,10 +1765,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             System.out.println("SyntaxTree: " + syntaxTree);
                             Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
                             System.out.println("Parse Locations map: " + parseMap.toString());
-                            boolean isRecurring = group.isRecurring();
-                            isReoccuringList.add(isRecurring);
+                            if(group.isRecurring()){
+                                isRecurring = true;
+                                String recuringUnit = group.getSyntaxTree().getChild(0).getChild(0).getChild(0).getText();
+                                System.out.println(recuringUnit);
+                            }
                             Date recursUntil = group.getRecursUntil();
                         }
+                        if(isRecurring) recurringStats.add(0,"TRUE");
                     }
                     actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);
                 }
@@ -1775,26 +1780,31 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     values.put(IMPORTANCE,impLevel);
                     values.put(IMPORTANCE_TIMESTAMP,MainActivity.getCurrentTimeString());
                 }
-                ArrayList<Date> sortedRemindDates = remindDates;//sort the multiple reminders, treate them individually as clauses
-                Collections.sort(sortedRemindDates, new Comparator<Date>() {
-                    @Override
-                    public int compare(Date o1, Date o2) {
-                        if(o1 == null || o2 == null){
-                            return 0;
+                if(remindDates.size() > 0){
+                    Collections.sort(remindDates, new Comparator<Date>() {
+                        @Override
+                        public int compare(Date o1, Date o2) {
+                            if(o1 == null || o2 == null){
+                                return 0;
+                            }
+                            return o1.compareTo(o2);
                         }
-                        return o1.compareTo(o2);
+                    });
+                    Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
+                    String sortedDatesStr = arrayListToStrGson.toJson(remindDates);
+                    //DEPRECIATED//String sortedRemindDatesStr = sortedRemindDates.toString().replace("[","(").replace("]",")");
+                    //retrieve with
+                    //Gson remindGson = new Gson();
+                    //Type type = new TypeToken<ArrayList<Date>>() {}.getType();
+                    //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
+                    SimpleDateFormat defaultDateFormat = new SimpleDateFormat(DATE_FORMAT);
+                    values.put(RECENT_REMIND_TIME,defaultDateFormat.format(remindDates.get(0)));
+                    values.put(REMIND_TIME,sortedDatesStr);
+                    if(!recurringStats.isEmpty()){
+                        String recurringStatStr = arrayListToStrGson.toJson(recurringStats);
+                        values.put(RECURRING_STATS,recurringStatStr);
                     }
-                });
-                Gson sortedDatesGson = new Gson();//convert to json to store ArrayList in SQLITE
-                String sortedDatesStr = sortedDatesGson.toJson(sortedRemindDates);
-                //DEPRECIATED//String sortedRemindDatesStr = sortedRemindDates.toString().replace("[","(").replace("]",")");
-                //retrieve with
-                //Gson remindGson = new Gson();
-                //Type type = new TypeToken<ArrayList<Date>>() {}.getType();
-                //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
-                SimpleDateFormat defaultDateFormat = new SimpleDateFormat(DATE_FORMAT);
-                values.put(RECENT_REMIND_TIME,defaultDateFormat.format(sortedRemindDates.get(0)));
-                values.put(REMIND_TIME,sortedDatesStr);
+                }
             }
             return getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
         } else return null;
