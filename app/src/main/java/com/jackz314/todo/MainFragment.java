@@ -111,19 +111,19 @@ import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
+import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.RECURRING_STATS;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.getCurrentTime;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.returnDateString;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.DatabaseManager.ID;
-import static com.jackz314.todo.DatabaseManager.TITLE;
 
 //todo add possible side bar and date labels
 public class MainFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
@@ -250,7 +250,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }
                 }else {
                     //System.out.println(String.valueOf(exit));
-                    DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                    DrawerLayout drawer = getActivity().findViewById(R.id.drawer_layout);
                     //main.requestFocus();
                     //input.clearFocus();
                     hideKeyboard();
@@ -713,14 +713,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     //multiSelectionBox.setChecked(true);
                     displayAllNotes();
                     //multiSelectionBox.setChecked(true);
-                    selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
+                    selectionTitle = selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
                     //Drawable backArrow = getDrawable(R.drawable.ic_close_black_24dp);
                     //selectionToolBar.setNavigationIcon(backArrow);
                     selectionToolBar.setBackgroundColor(themeColor);
-                    selectAllBox = (CheckBox)selectionToolBar.findViewById(R.id.select_all_box);
+                    selectAllBox = selectionToolBar.findViewById(R.id.select_all_box);
                     ColorStateList colorStateList = new ColorStateList(
                             new int[][]{
                                     new int[]{-android.R.attr.state_checked}, //disabled
@@ -1249,7 +1249,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
         //int[] heights = { 20, 24, 18, 23, 16 };
         int[] heights = { 30, 36, 27, 35, 24 };
-        recognitionProgressView = (RecognitionProgressView) getView().findViewById(R.id.recognition_view);
+        recognitionProgressView = getView().findViewById(R.id.recognition_view);
         recognitionProgressView.setColors(colors);
         recognitionProgressView.setBarMaxHeightsInDp(heights);
         recognitionProgressView.setCircleRadiusInDp(3);
@@ -1439,7 +1439,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     //System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
-                            CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            CheckBox cb = v.findViewById(R.id.multiSelectionBox);
                             //unSelectAll = false;
                             //selectAll = false;
                             if (cb.isChecked()) {
@@ -1607,7 +1607,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         searchView.setMaxWidth(Integer.MAX_VALUE);
         EditText searchViewTextField = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
         MainActivity.setCursorColor(searchViewTextField,Color.WHITE);
-        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
@@ -1752,6 +1752,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     if(!returnDateString(actionStr).equals("")){
                         Parser parser = new Parser();
                         List groups = parser.parse(actionStr, getCurrentTime());
+                        String recurringUnit = "";
                         System.out.println("groups size: " + groups.size());
                         boolean isRecurring = false;
                         for(Object groupF : groups) {
@@ -1767,12 +1768,15 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             System.out.println("Parse Locations map: " + parseMap.toString());
                             if(group.isRecurring()){
                                 isRecurring = true;
-                                String recuringUnit = group.getSyntaxTree().getChild(0).getChild(0).getChild(0).getText();
-                                System.out.println(recuringUnit);
+                                recurringUnit = group.getSyntaxTree().getChild(0).getChild(0).getChild(0).getText();
+                                System.out.println(recurringUnit);
+
                             }
                             Date recursUntil = group.getRecursUntil();
                         }
-                        if(isRecurring) recurringStats.add(0,"TRUE");
+                        if (isRecurring) {
+                            recurringStats.add(0, recurringUnit);
+                        }
                     }
                     actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);
                 }
