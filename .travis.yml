@@ -1,0 +1,56 @@
+sudo: required
+language: android
+jdk: oraclejdk8
+
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -rf $HOME/.gradle/caches/*/plugin-resolution/
+
+cache:
+  directories:
+  - $HOME/.gradle/caches/
+  - $HOME/.gradle/wrapper/
+  - $HOME/.android/build-cache
+
+env:
+ global:
+ - ANDROID_API=26
+ - ANDROID_BUILD_TOOLS=26.0.2
+ - ADB_INSTALL_TIMEOUT=5 # Minutes.
+ - secure: "q+IVi51Wg6fruzkUX3XFYIS4qe/GoeBHx1zyLJS45RU33Hfos505NQ/v0hinNtz1O686wMjBLqe6CbBTFHe36+0MlJVc7GW9V+1lioU8ZvkFWMq2aP7Gsy3Pf2YfSt25TQtR5nygluwQpwOuHnh4S4DksWHJwsf3GrMas30D5L9TcAL5AvjMkhfc3p23DwefeQCC+oUIsDGZ3f3tQurCtLkIgQo9xQPVm8YWa0V9VWC2jMxFzgB1IfYS9CG0Bm8zWu0mzPcdZ9eWn8dSXwEZq3xRHzLs2wRHqtcQobq8YHjHNHXB3VdCNKY8yD6EKKopTqZom4eYHyxeB9Wd4xwYAKmmWJEPy2mDf9YsVuuuRGFbI+Qa9KhfYMgH1wLTGlWwaFxGQqRU9CKwURpwa40vuqVFmkg6RKK+VnJTXgeHXZp4tx75KjUOqFfql0Aha+HlnMpl95+6uH9CJ2LMBvAeAdmEhuLE/h+I+LlXBWdJtIO0csL7KfKdtbDQ+s9FgX1NchYiq/J54rOmtp9bVzJaCO8x4i2LtPdYNVtW8aRSKqKSuIj4rXqSwpNDz7wnOiaOdI0s6vik+LxXaZGXHpAMmDywDsDi+gZe19Iz+G/8cxYSjaipSV6/SlJ5NbUBNi+uIRDbLO7M1gmv0EgjvqW0rI/puH00Js7wJrg9M8hYNOg="
+
+android:
+  components:
+  - tools
+  - tools # Running this twice get's the latest build tools (https://github.com/codepath/android_guides/wiki/Setting-up-Travis-CI)
+  - platform-tools
+  - android-${ANDROID_API}
+  - build-tools-${ANDROID_BUILD_TOOLS}
+
+  # Additional components
+  - extra
+  - extra-google-google_play_services
+  - extra-google-m2repository
+  - extra-android-m2repository
+  - addon-google_apis-google-26
+
+  # Specify at least one system image,
+  # if you need to run emulator(s) during your tests
+  - sys-img-armeabi-v7a-android-26
+
+script:
+- "./gradlew clean test build"
+
+before_deploy:
+- ./scripts/tag.sh
+
+deploy:
+  provider: releases
+  on:
+    branch: master
+  api_key:
+    secure: "gzw6YPj9BoHA/m1g0YcCI3jEiav5cEI4sBwqWhi8/aQROr6FAnrZZXvtjtze8UvYmXEWwpABVX1uTSXLD8qDVa855uuGAlghkBOXsxvol/B8uAUhEK+5vbozebCfU6bl2pSIfRAn4HU+2P+CuTKiTgqM+TT+I2ivevcjijfRfdpIstYPZp0RPyOD/RfqQr9tbQ1EJ5XfL7A1+88A2PR8i3f7BDu2bm1iLvkw4/4tM2a8GfHtB5O0OUiWiIT5rcJ64ZZ7h6dbZ6nEC5hFv/w1OwiauQeOIk2LYEB3QmP+XnN03+4FStFXJ8yB/7zqzXm0+GUfppzu7bwwrOmSmvs4CGrqbBJJKwSi+Y993x+fcJ9p8NqOOZnYHItaAFVwB+WmK3os+7C6Oev8rzlHOMrGiTmFFroDdXXqUVHIONF0bTZhjJJKUkmhU/9xIbvpu2xXxf386iWeoOLYdRMbOQ4BS6mnt9o6+9OwlGJt5/TQcBJWuuJ4db2pv0Y2d7IfLWXZ0KRy0RqcfvnGgFntl1XMDYjguEM3EJg/3wwWCORJMkuSJabsfV8xu7TJG4qiuEkXdQ9HBBqtOsb5ZncPzr7a7O8ZxBaK3Z7mCOPP5bbO/psGqW5etKpHRMOejmpBBftskkO3lAsq0ntsROfGLnrSv/JKkCnVdMLPvyrd7auLN6M="
+  file: "app/build/outputs/apk/release/TravisBuild.apk"
+  overwrite: true
+  skip_cleanup: true
+

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single"
+        android:orderInCategory="1"
+        android:id="@+id/nav_category_main">
+        <item
+            android:id="@+id/history"
+            android:icon="@drawable/ic_history_black_24dp"
+            android:title="@string/nav_history" />
+        <item
+            android:id="@+id/settings"
+            android:icon="@drawable/ic_settings_black_24dp"
+            android:title="@string/nav_settings" />
+        <item
+            android:id="@+id/tags"
+            android:icon="@drawable/ic_tags_black_24dp"
+            android:title="@string/nav_tags" />
+    </group>
+
+    <group android:checkableBehavior="single"
+        android:orderInCategory="2"
+        android:id="@+id/dynamic_tags">
+        <item
+            android:id="@+id/dynamic_tag_1"
+            android:visible="false"
+            android:title="@string/nav_tags" />
+    </group>
+
+    <group
+        android:id="@+id/nav_category_more"
+        android:orderInCategory="3"
+        android:title="@string/nav_more">
+
+            <item
+                android:id="@+id/unlock"
+
+                android:icon="@drawable/ic_vpn_key_black_24dp"
+                android:title="@string/nav_remove_ad" />
+            <item
+                android:id="@+id/feedback"
+
+                android:icon="@drawable/ic_feedback_black_24dp"
+                android:title="@string/feedback" />
+            <item
+                android:id="@+id/nav_share"
+                android:orderInCategory="5"
+
+                android:icon="@drawable/ic_menu_share"
+                android:title="@string/nav_share" />
+            <item
+                android:id="@+id/about"
+                android:icon="@drawable/ic_info_black_24dp"
+                android:title="@string/nav_about" />
+    </group>
+
+
+</menu>
