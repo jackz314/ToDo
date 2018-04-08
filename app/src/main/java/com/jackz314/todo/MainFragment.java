@@ -388,7 +388,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         displayAllNotes();
         if(!input.getText().toString().equals("")){
             input.setVisibility(View.VISIBLE);
-            showKeyboard();
+            showKeyboard();//hahahaha
         }
         recognitionProgressView.setVisibility(View.GONE);
         fab.setVisibility(View.VISIBLE);
