@@ -1138,35 +1138,66 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return s.substring(0, pos) + s.substring(pos + 1);
     }
 
-    public static String returnDateString(String str){
+    public static String returnDateString(String str){//todo finish the suffix prefix importance indicator calculation
         Parser parser = new Parser();
         List groups = parser.parse(str, getCurrentTime());
         StringBuilder dateString = new StringBuilder();
+        dateString.append("");//avoid null
         ArrayList<Boolean> isRecurringList = new ArrayList<>();
+        String prefix = "", suffix = "";
         for(Object groupF : groups) {
             DateGroup group = (DateGroup)groupF;
+            prefix = group.getPrefix(str.length());
+            suffix = group.getSuffix(str.length());
+            if(!prefix.replace("!","").replace(" ","").isEmpty()){
+                return "";//invalid dateString, return empty
+            }
             String matchingValue = group.getText();
             dateString.append(matchingValue);
             isRecurringList.add(group.isRecurring());
         }
 
+        if(dateString.toString().contains("@")){
+            dateString = new StringBuilder(dateString.substring(0,dateString.indexOf("@")));
+        }
+
         if(isRecurringList.contains(true)){
-            dateString.append(str.substring(0,4), 0, 4);
+            dateString.insert(0,str.substring(0,6));
+        }
+
+        if(str.startsWith("!") && prefix.replace("!", "").replace(" ","").isEmpty()){
+            dateString.insert(0,prefix);
+        }
+
+        if(suffix.startsWith("!") && suffix.replace("!", "").replace(" ","").isEmpty()){
+
         }
 
         System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
-        if(dateString.toString().contains("@")){
-            return dateString.toString().substring(0,dateString.indexOf("@"));
-        }else return dateString.toString();
+
+        return dateString.toString();
     }
 
-    public static int countMatches(String str, String sub) {
+    public static int countOccurrences(String str, String sub) {
         if (str.isEmpty() || sub.isEmpty()) {
             return 0;
         }
         int count = 0;
         int idx = 0;
         while ((idx = str.indexOf(sub, idx)) != -1) {
+            count++;
+            idx += sub.length();
+        }
+        return count;
+    }
+
+    public static int countContiniousOccurrences(String str, String sub){
+        if (str.isEmpty() || sub.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        int idx = 0;
+        while (str.substring(idx,idx + sub.length()).equals(sub)) {
             count++;
             idx += sub.length();
         }

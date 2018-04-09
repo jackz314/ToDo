@@ -95,6 +95,8 @@ import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
 import com.jackz314.todo.utils.ColorUtils;
 
+import org.antlr.runtime.tree.Tree;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -1413,7 +1415,17 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                     }
 
-                    holder.todoText.setText(spannable);
+                    //action string coloring part
+                    if(text.contains("@")){
+                        int actStartPos = text.indexOf("@");
+                        while (actStartPos >= 0 && actStartPos < text.length() - 1){
+                            int actEndPos = -1;
+
+                            actStartPos = text.indexOf("@",actStartPos + 1);
+                        }
+                    }
+
+                    holder.todoText.setText(spannable);//set text
 
                     //selection mode section
                     if(isInSelectionMode){
@@ -1729,7 +1741,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 int actionEndPos;
                 String actionStr = "";
                 ArrayList<Date> remindDates = new ArrayList<>();
-                ArrayList<String> recurringStats = new ArrayList<>();
+                ArrayList<ArrayList<String>> recurringStats = new ArrayList<>();
                 int impLevel = 0;
                 while (actionStartPos >= 0){
                     if(cleanStr.indexOf(" ", actionStartPos) == -1 && cleanStr.indexOf("\n", actionStartPos) == -1){
@@ -1747,14 +1759,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
                     System.out.println("ACTION STR: [" + actionStr + "]");
                     //mark as important
-                    impLevel += MainActivity.countMatches(actionStr,"!");
+                    impLevel += MainActivity.countOccurrences(actionStr,"!");
                     //set remind time
                     if(!returnDateString(actionStr).equals("")){
                         Parser parser = new Parser();
                         List groups = parser.parse(actionStr, getCurrentTime());
-                        String recurringUnit = "";
                         System.out.println("groups size: " + groups.size());
-                        boolean isRecurring = false;
                         for(Object groupF : groups) {
                             DateGroup group = (DateGroup)groupF;
                             List<Date> dates = group.getDates();
@@ -1767,15 +1777,39 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
                             System.out.println("Parse Locations map: " + parseMap.toString());
                             if(group.isRecurring()){
-                                isRecurring = true;
-                                recurringUnit = group.getSyntaxTree().getChild(0).getChild(0).getChild(0).getText();
-                                System.out.println(recurringUnit);
-
+                                String recurringUnit = "", recurringValue = "";
+                                ArrayList<String> recurringStat = new ArrayList<>();
+                                Tree tree = group.getSyntaxTree();
+                                while(true){
+                                    if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                    else {
+                                        System.out.println("Tree getText: " + tree.getText());
+                                        String unitTemp = tree.getText();
+                                        if(unitTemp != null && (unitTemp.contains("_OF_") || unitTemp.equals("SEEK"))){//find the child that has the unit indicator
+                                            recurringValue = tree.getChild(0).getText();
+                                            if(unitTemp.equals("SEEK")){
+                                                unitTemp = tree.getChild(tree.getChildCount() - 1).getText();//if tree starts with "SEEK", look for unit indicator at the last index in the same level of tree.
+                                                recurringValue = tree.getChild(tree.getChildCount() - 1).getChild(0).getText();
+                                            }
+                                            if(unitTemp.contains("_")){
+                                                recurringUnit = unitTemp.substring(0, unitTemp.indexOf("_"));
+                                            }
+                                            if(recurringUnit.equals("MONTH") && tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("DAY_OF_MONTH")){
+                                                recurringUnit = "MONTH|DAY";//special condition month and day
+                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[MONTH]|[DAY]
+                                            }
+                                        }
+                                        tree = tree.getChild(0);
+                                    }
+                                }
+                                Date recursUntil = group.getRecursUntil();
+                                recurringStat.add(0, recurringUnit);
+                                recurringStat.add(1,recurringValue);
+                                SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+                                recurringStat.add(2,dateFormat.format(remindDates.get(0)));
+                                System.out.println("Recurring Status: " + recurringStat.toString());
+                                recurringStats.add(recurringStat);
                             }
-                            Date recursUntil = group.getRecursUntil();
-                        }
-                        if (isRecurring) {
-                            recurringStats.add(0, recurringUnit);
                         }
                     }
                     actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);

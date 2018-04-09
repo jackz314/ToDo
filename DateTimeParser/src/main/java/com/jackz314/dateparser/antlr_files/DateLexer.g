@@ -56,7 +56,7 @@ UNTIL : 'until';
 
 // ********** time rules ********** 
 
-AT        : 'at' | '@';
+AT        : 'at'; //remove the '@' indicator for now
 AFTER     : 'after';
 PAST      : 'past';
 AM : 'am' | 'a.m' DOT? | 'a_m' | 'a';
