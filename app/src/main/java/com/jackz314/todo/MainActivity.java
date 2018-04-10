@@ -87,10 +87,7 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
-import static com.jackz314.todo.DatabaseManager.ID;
-import static com.jackz314.todo.DatabaseManager.TITLE;
 
 //   ┏┓　　　┏┓
 //┏┛┻━━━┛┻┓
@@ -117,10 +114,12 @@ import static com.jackz314.todo.DatabaseManager.TITLE;
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, ImportantFragment.OnFragmentInteractionListener, ClipboardFragment.OnFragmentInteractionListener, MainFragment.OnFragmentInteractionListener{
     //paused ad//private static final String REMOVE_AD_SKU = "todo_iap_remove_ad";
     private static final String PREMIUM_UPGRADE_SKU = "todo_iap_premium";
-    private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
-    private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
+    //private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
+    //private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
     //paused ad//static int REMOVE_REQUEST_ID =1022;
     static int PURCHASE_PREMIUM_REQUEST_ID = 1025;
+    public static String REMINDER_NOTIFICATION = "reminder_notification_title";
+    public static String REMINDER_NOTIFICATION_ID = "reminder_notification_id";
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -577,7 +576,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             modifyId.setText(String.valueOf(id));
             fab.setImageResource(R.drawable.ic_send_black_24dp);
             input.setVisibility(View.VISIBLE);
-            input.setText(databaseManager.getOneDataInTODO(String.valueOf(id)));
+            input.setText(databaseManager.getOneTitleInTODO(String.valueOf(id)));
             input.requestFocus();
             (new Handler()).postDelayed(new Runnable() {
                 @Override
@@ -587,7 +586,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }, 230);
             input.performClick();
         }if(item.getItemId() == DELETE_CONTEXT_ID) {
-            final String deleteContent = databaseManager.getOneDataInTODO(String.valueOf(id));
+            final String deleteContent = databaseManager.getOneTitleInTODO(String.valueOf(id));
             databaseManager.deleteNote(id);
             displayAllNotes();
             if(!modifyId.getText().toString().equals("")){
@@ -1141,32 +1140,36 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static String returnDateString(String str){//todo finish the suffix prefix importance indicator calculation
         Parser parser = new Parser();
         List groups = parser.parse(str, getCurrentTime());
+        if(groups.size() <= 0){
+            if(str.replace("!","").isEmpty()){//not a date string but a action string
+                return "";
+            }else {
+                return null;
+            }
+        }
         StringBuilder dateString = new StringBuilder();
         dateString.append("");//avoid null
-        ArrayList<Boolean> isRecurringList = new ArrayList<>();
-        String prefix = "", suffix = "";
         for(Object groupF : groups) {
             DateGroup group = (DateGroup)groupF;
-            prefix = group.getPrefix(str.length());
-            suffix = group.getSuffix(str.length());
-            if(!prefix.replace("!","").isEmpty() && !prefix.equals(" ") && !prefix.startsWith(" !")){
-                return null;//invalid dateString, return null
-            }
             String matchingValue = group.getText();
             dateString.append(matchingValue);
-            isRecurringList.add(group.isRecurring());
+        }
+        String prefix = "", suffix = "";
+        DateGroup typicalGroup = (DateGroup)groups.get(0);
+        prefix = typicalGroup.getPrefix(str.length());
+        suffix = typicalGroup.getSuffix(str.length());
+        String processedPrefix = prefix;
+        if(prefix.startsWith(" ")){
+            processedPrefix = prefix.substring(1);
+        }
+        if(!processedPrefix.replace("!","").isEmpty() && !processedPrefix.toLowerCase().replace("!","").equals("every ")){
+            return null;//invalid dateString, return null
+        }else {
+            dateString.insert(0,prefix);
         }
 
         if(dateString.toString().contains("@")){
             dateString = new StringBuilder(dateString.substring(0,dateString.indexOf("@")));
-        }
-
-        if(isRecurringList.contains(true)){
-            dateString.insert(0,str.substring(0,6));
-        }
-
-        if(str.startsWith("!") && prefix.replace("!", "").replace(" ","").isEmpty()){
-            dateString.insert(0,prefix);
         }
 
         if(suffix.startsWith("!")){
@@ -1174,7 +1177,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             dateString.append(suffix.substring(0,impIndicatorCount + 1));
         }
 
-        System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
+        //System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
 
         return dateString.toString();
     }

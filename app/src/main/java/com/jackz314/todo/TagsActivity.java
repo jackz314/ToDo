@@ -86,12 +86,12 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.DatabaseManager.ID;
-import static com.jackz314.todo.DatabaseManager.TITLE;
 
 public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 //todo selectall got data from wrong parameter, fix it.
@@ -332,7 +332,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         d.start();
                     }
                     input.setVisibility(View.VISIBLE);
-                    input.setText(todosql.getOneDataInTODO(id));
+                    input.setText(todosql.getOneTitleInTODO(id));
                     input.requestFocus();
                     input.setSelection(input.getText().length());
                     showKeyboard();
@@ -349,7 +349,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
               //  v.vibrate(30);
                 if (isInSelectionMode) {
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
+                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneTitleInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(main, getString(R.string.todo_copied), Snackbar.LENGTH_LONG).show();
                 } else {
@@ -433,7 +433,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                 do {
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0, id);
-                                    String data = todosql.getOneDataInTODO(id);
+                                    String data = todosql.getOneTitleInTODO(id);
                                     selectedContent.add(0, data);
                                 } while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -672,7 +672,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             if (isInSelectionMode && selectedId.contains(viewHolder.getItemId())) {
                 removeSelectedId(viewHolder.getItemId());
             }
-            final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
+            final String finishedContent = todosql.getOneTitleInTODO(viewHolder.getItemId());
             finishData(viewHolder.getItemId());
             Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
@@ -742,7 +742,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = todosql.getOneDataInTODO(id);
+        String data = todosql.getOneTitleInTODO(id);
         selectedContent.add(0,data);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
@@ -761,7 +761,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     return false;
                 }
             });
-        }if(selectedId.size() == todosql.getData().getCount()){
+        }if(selectedId.size() == todosql.getAllData().getCount()){
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -770,9 +770,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        String data = todosql.getOneDataInTODO(id);
+        String data = todosql.getOneTitleInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
-        if(selectedId.size() < todosql.getData().getCount()){
+        if(selectedId.size() < todosql.getAllData().getCount()){
             selectAllBox.setChecked(false);
         }
         if (selectedId.size() == 0) {
@@ -843,7 +843,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void finishData(long id){
         ContentValues cv = new ContentValues();
-        String data = todosql.getOneDataInTODO(id);
+        String data = todosql.getOneTitleInTODO(id);
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
@@ -852,7 +852,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
-        String note = todosql.getOneDataInTODO(id);
+        String note = todosql.getOneTitleInTODO(id);
         getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags

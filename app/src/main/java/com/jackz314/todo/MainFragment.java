@@ -2,6 +2,9 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -88,6 +91,7 @@ import android.widget.Toast;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.jackz314.dateparser.DateGroup;
 import com.jackz314.dateparser.ParseLocation;
 import com.jackz314.dateparser.Parser;
@@ -99,6 +103,8 @@ import org.antlr.runtime.tree.Tree;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -117,9 +123,11 @@ import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
-import static com.jackz314.todo.DatabaseManager.RECURRING_STATS;
-import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
+import static com.jackz314.todo.DatabaseManager.RECURRENCE_STATS;
+import static com.jackz314.todo.DatabaseManager.REMIND_TIMES;
 import static com.jackz314.todo.DatabaseManager.TITLE;
+import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION;
+import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION_ID;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.getCurrentTime;
 import static com.jackz314.todo.MainActivity.removeCharAt;
@@ -141,7 +149,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     private OnFragmentInteractionListener mListener;
     private FirebaseAnalytics mFirebaseAnalytics;
     private String todoTableId = "HAHA! this is the real one, gotcha";
-    DatabaseManager todosql;
+    DatabaseManager todoSql;
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
@@ -379,7 +387,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             }
         });
         //speechRecognizer.setRecognitionListener(new speechListener());
-        todosql = new DatabaseManager(getContext());
+        todoSql = new DatabaseManager(getContext());
         todoTableId = "0x397821dc97276";
         //set tabs
         input.setTextIsSelectable(true);
@@ -625,7 +633,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     if (doubleClickCout == 2) {
                         //Double click
                         // Toast.makeText(getContext(,"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
-                        final String finishedContent = databaseManager.getOneDataInTODO(String.valueOf(id));
+                        final String finishedContent = databaseManager.getOneTitleInTODO(String.valueOf(id));
                         finishData(id);
                         if(!modifyId.getText().toString().equals("")){
                             if(modifyId.getText().toString().equals(String .valueOf(id))){
@@ -666,7 +674,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         d.start();
                     }
                     input.setVisibility(View.VISIBLE);
-                    input.setText(todosql.getOneDataInTODO(id));
+                    input.setText(todoSql.getOneTitleInTODO(id));
                     input.requestFocus();
                     input.setSelection(input.getText().length());
                     showKeyboard();
@@ -696,7 +704,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
                 if(isInSelectionMode){//copy note to clipboard
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInTODO(id));
+                    ClipData clip = ClipData.newPlainText("ToDo", todoSql.getOneTitleInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
@@ -781,12 +789,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 selectedId.clear();
                                 selectedContent.clear();
                                 todoList.getAdapter().notifyDataSetChanged();
-                                Cursor cursor = todosql.getData();
+                                Cursor cursor = todoSql.getAllData();
                                 cursor.moveToFirst();
                                 do{
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0,id);
-                                    String data = todosql.getOneDataInTODO(id);
+                                    String data = todoSql.getOneTitleInTODO(id);
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -1063,14 +1071,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             //    removeSelectedId(viewHolder.getItemId());
             //}
             if(direction == ItemTouchHelper.LEFT){
-                final String finishedContent = todosql.getOneDataInTODO(viewHolder.getItemId());
+                final String finishedContent = todoSql.getOneTitleInTODO(viewHolder.getItemId());
                 finishData(viewHolder.getItemId());
                 Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         insertData(finishedContent);
-                        long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                        todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                        long lastHistoryId = todoSql.getIdOfLatestDataInHistory();
+                        todoSql.deleteFromHistory(String.valueOf(lastHistoryId));
                         displayAllNotes();
                     }
                 }).show();
@@ -1179,7 +1187,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = todosql.getOneDataInTODO(id);
+        String data = todoSql.getOneTitleInTODO(id);
         selectedContent.add(0,data);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
@@ -1198,7 +1206,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     return false;
                 }
             });
-        }if(selectedId.size() == todosql.getData().getCount()){
+        }if(selectedId.size() == todoSql.getAllData().getCount()){
             selectAllBox.setChecked(true);
             selectAll = true;
         }
@@ -1208,10 +1216,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        String data = todosql.getOneDataInTODO(id);
+        String data = todoSql.getOneTitleInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
         selectAll = false;
-        if(selectedId.size() < todosql.getData().getCount()){
+        if(selectedId.size() < todoSql.getAllData().getCount()){
             selectAllBox.setChecked(false);
         }
         if (selectedId.size() == 0) {
@@ -1345,7 +1353,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }
 
                     //pin section
-                    if(todosql.getPinnedNotesCount() > 5){
+                    if(todoSql.getPinnedNotesCount() > 5){
 
                     }else {
 
@@ -1391,11 +1399,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
                             String tag = text.toLowerCase().substring(tagStartPos, tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
-                            String tagColor = todosql.getTagColor(tag);
+                            String tagColor = todoSql.getTagColor(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 Random random = new Random();//generate random color
                                 int finalColor = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
-                                ArrayList<Integer> allTagColors = todosql.getAllTagColors();
+                                ArrayList<Integer> allTagColors = todoSql.getAllTagColors();
                                 for(int i = 0; i < allTagColors.size(); i++){//eliminate too similar tag colors
                                     if(ColorUtils.determineSimilarColor(finalColor,allTagColors.get(i)) > 95){//compare new color to each color in tag database
                                         finalColor = random.nextInt(256*256*256);//generate a new color
@@ -1403,7 +1411,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                     }
                                 }
                                 tagColor = String.format("#%06x", 0xFFFFFF & finalColor);// format it as hexadecimal string (with hashtag and leading zeros)
-                                todosql.createNewTag(tag, tagColor);//add new tag
+                                todoSql.createNewTag(tag, tagColor);//add new tag
                             }
                             spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                     new ColorStateList(new int[][] {new int[] {}},
@@ -1526,7 +1534,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 for (String content : CLONESelectedContent){
                     insertData(content);
                 }
-                todosql.deleteTheLastCoupleOnesFromHistory(size);
+                todoSql.deleteTheLastCoupleOnesFromHistory(size);
                 displayAllNotes();
             }
         }).show();
@@ -1762,6 +1770,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 ArrayList<ArrayList<String>> recurringStats = new ArrayList<>();
                 int impLevel = 0;
                 while (actionStartPos >= 0){
+                    if(returnDateString(cleanStr.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
+                        actionStartPos = cleanStr.indexOf("@",actionStartPos + 1);
+                        continue;
+                    }
                     if(cleanStr.indexOf(" ", actionStartPos) == -1 && cleanStr.indexOf("\n", actionStartPos) == -1){
                         actionEndPos = cleanStr.length();
                     }else if (cleanStr.indexOf(" ", actionStartPos) == -1){
@@ -1779,7 +1791,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     //mark as important
                     impLevel += MainActivity.countOccurrences(actionStr,"!");
                     //set remind time
-                    if(!returnDateString(actionStr).equals("")){
+                    String dateString = returnDateString(actionStr);
+                    if(!(dateString == null) && !dateString.equals("")){
                         Parser parser = new Parser();
                         List groups = parser.parse(actionStr, getCurrentTime());
                         System.out.println("groups size: " + groups.size());
@@ -1852,10 +1865,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
                     SimpleDateFormat defaultDateFormat = new SimpleDateFormat(DATE_FORMAT);
                     values.put(RECENT_REMIND_TIME,defaultDateFormat.format(remindDates.get(0)));
-                    values.put(REMIND_TIME,sortedDatesStr);
+                    values.put(REMIND_TIMES,sortedDatesStr);
+                    System.out.println("Remind Dates: " + remindDates);
                     if(!recurringStats.isEmpty()){
                         String recurringStatStr = arrayListToStrGson.toJson(recurringStats);
-                        values.put(RECURRING_STATS,recurringStatStr);
+                        values.put(RECURRENCE_STATS,recurringStatStr);
                     }
                 }
             }
@@ -1865,7 +1879,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     public void finishData(long id){
         ContentValues cv = new ContentValues();
-        String data = todosql.getOneDataInTODO(id);
+        String data = todoSql.getOneTitleInTODO(id);
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
@@ -1875,13 +1889,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
-        String note = todosql.getOneDataInTODO(id);
+        String note = todoSql.getOneTitleInTODO(id);
         getActivity().getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
-                if(!todosql.isTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
-                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI,todosql.getTagId(tag));
+                if(!todoSql.isTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
+                    Uri tagUri = ContentUris.withAppendedId(DatabaseContract.Item.TAGS_URI, todoSql.getTagId(tag));
                     getActivity().getContentResolver().delete(tagUri,null,null);
                 }
             }
@@ -1910,7 +1924,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         displayAllNotes();
         setColorPreferences();
         if(sharedPreferences.getBoolean("first_run",true)){
-            Cursor cs = todosql.getData();
+            Cursor cs = todoSql.getAllData();
             if (cs.getCount()==0){
                 //first run codes
                 insertData(getString(R.string.tutorial_6));
@@ -2103,6 +2117,48 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
             return finalPageNumber; //todo temporary, change later
             //return (int) Math.ceil(printItemCount / itemsPerPage);
+        }
+
+        private void scheduleReminder(int id) {//todo unfinished notification building
+            Cursor cursor = todoSql.getOneDataInTODO(id);
+            cursor.moveToFirst();
+            if(cursor.getString(cursor.getColumnIndex(REMIND_TIMES)) != null){
+                Intent notificationIntent = new Intent(getContext(), ReminderBroadcastReceiver.class);
+                String title = cursor.getString(cursor.getColumnIndex(TITLE));
+                String recentRemindDateStr = cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME));
+                SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+                try {
+                    Date nowRemindTime = dateFormat.parse(recentRemindDateStr);
+                } catch (ParseException ignored){}
+                String remindTimesStr = cursor.getString(cursor.getColumnIndex(REMIND_TIMES));
+                Gson remindGson = new Gson();
+                Type type = new TypeToken<ArrayList<Date>>() {}.getType();
+                ArrayList<Date> remindDates = remindGson.fromJson(remindTimesStr,type);
+                Date nextUpRemindTime = remindDates.get(1);
+                Date thenUpRemindTime = remindDates.get(2);
+                String recurrenceStatsStr = cursor.getString(cursor.getColumnIndex(RECURRENCE_STATS));
+                if(recurrenceStatsStr != null) {//has recurrences
+
+                }
+                Notification.Builder reminderNotifBuilder = new Notification.Builder(getContext());
+                reminderNotifBuilder.setSmallIcon(R.mipmap.ic_launcher);
+                reminderNotifBuilder.setContentTitle(title);
+                reminderNotifBuilder.setContentText();
+                notificationIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
+                notificationIntent.putExtra(REMINDER_NOTIFICATION, notification);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(getContext(), 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                AlarmManager alarmManager = (AlarmManager)getContext().getSystemService(Context.ALARM_SERVICE);
+                alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, futureInMillis, pendingIntent);
+            }
+
+        }
+
+        private Notification getNotification(String content) {
+            Notification.Builder builder = new Notification.Builder(this);
+            builder.setContentTitle("Scheduled Notification");
+            builder.setContentText(content);
+            builder.setSmallIcon(R.drawable.ic_launcher);
+            return builder.build();
         }
     }
 }

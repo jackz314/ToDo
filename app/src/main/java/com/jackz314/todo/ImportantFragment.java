@@ -2,10 +2,6 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
-import android.support.annotation.Nullable;
-import android.support.constraint.ConstraintLayout;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.FragmentActivity;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -44,10 +40,14 @@ import android.print.pdf.PrintedPdfDocument;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
@@ -104,16 +104,16 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
+import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
+import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
+import static com.jackz314.todo.DatabaseManager.REMIND_TIMES;
+import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
-import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
-import static com.jackz314.todo.DatabaseManager.ID;
-import static com.jackz314.todo.DatabaseManager.REMIND_TIME;
-import static com.jackz314.todo.DatabaseManager.TITLE;
 
 
 /**
@@ -591,7 +591,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     if (doubleClickCout == 2) {
                         //Double click
                         // Toast.makeText(getContext(,"sadadadadasdasdasdassdassd",Toast.LENGTH_SHORT).show();
-                        final String finishedContent = databaseManager.getOneDataInTODO(String.valueOf(id));
+                        final String finishedContent = databaseManager.getOneTitleInTODO(String.valueOf(id));
                         finishData(id);
                         if(!modifyId.getText().toString().equals("")){
                             if(modifyId.getText().toString().equals(String .valueOf(id))){
@@ -634,7 +634,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                         d.start();
                     }
                     input.setVisibility(View.VISIBLE);
-                    input.setText(databaseManager.getOneDataInTODO(id));
+                    input.setText(databaseManager.getOneTitleInTODO(id));
                     input.requestFocus();
                     input.setSelection(input.getText().length());
                     showKeyboard();
@@ -663,7 +663,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 //v.vibrate(30);
                 if(isInSelectionMode){
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", databaseManager.getOneDataInTODO(id));
+                    ClipData clip = ClipData.newPlainText("ToDo", databaseManager.getOneTitleInTODO(id));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
                 }else {
@@ -748,7 +748,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                 do{
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0,id);
-                                    String data = databaseManager.getOneDataInTODO(id);
+                                    String data = databaseManager.getOneTitleInTODO(id);
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -981,22 +981,6 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 }
             }
         });
-
-        if(!isInSearchMode && !isInSelectionMode){//refresh important notes every minute
-            final Handler handler = new Handler();
-            final int delay = 1000 * 60; //every minute
-            handler.postDelayed(new Runnable(){
-                public void run(){
-                    getLoaderManager().restartLoader(123,null,ImportantFragment.this);
-                    if(getContext() != null && !isInSearchMode && !isInSelectionMode){
-                        TabLayout tabLayout = getActivity().findViewById(R.id.tabs_layout);
-                        if(tabLayout.getSelectedTabPosition() == 0){//continue if still displaying
-                            handler.postDelayed(this, delay);
-                        }
-                    }
-                }
-            }, delay);
-        }
     }
 
     @Override
@@ -1028,7 +1012,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
                 removeSelectedId(viewHolder.getItemId());
             }
-            final String finishedContent = databaseManager.getOneDataInTODO(viewHolder.getItemId());
+            final String finishedContent = databaseManager.getOneTitleInTODO(viewHolder.getItemId());
             finishData(viewHolder.getItemId());
             Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
@@ -1114,7 +1098,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = databaseManager.getOneDataInTODO(id);
+        String data = databaseManager.getOneTitleInTODO(id);
         selectedContent.add(0,data);
         if(selectedId.size() == 1){
             selectionToolBar.inflateMenu(R.menu.selection_mode_menu);
@@ -1133,7 +1117,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     return false;
                 }
             });
-        }if(selectedId.size() == databaseManager.getData().getCount()){
+        }if(selectedId.size() == databaseManager.getAllData().getCount()){
             selectAllBox.setChecked(true);
         }
         String count = Integer.toString(selectedId.size());
@@ -1142,9 +1126,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void removeSelectedId(long id){
         selectedId.remove(selectedId.indexOf(id));
-        String data = databaseManager.getOneDataInTODO(id);
+        String data = databaseManager.getOneTitleInTODO(id);
         selectedContent.remove(selectedContent.indexOf(data));
-        if(selectedId.size() < databaseManager.getData().getCount()){
+        if(selectedId.size() < databaseManager.getAllData().getCount()){
             selectAllBox.setChecked(false);
         }
         if (selectedId.size() == 0) {
@@ -1607,7 +1591,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         //setColorPreferences();
         //determine order of the list
-        String sort = IMPORTANCE + " DESC, " + REMIND_TIME + " ASC";
+        String sort = IMPORTANCE + " DESC, " + REMIND_TIMES + " ASC";
         String selectionAddOn = "";
         String[] selectionArgs = null;
         String[] selectionArgsCombined = null;
@@ -1624,14 +1608,15 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             selectionArgs = new String[]{currentTimeStr,recentTimeStr};
         }else {
             if(databaseManager.getPinnedNotesCount() <= 0){//if there are no pinned notes, add other notes that contains reminders to important fragment
-                //selectionAddOn = " OR " + REMIND_TIME + " IS NOT NULL)";
+                //selectionAddOn = " OR " + REMIND_TIMES + " IS NOT NULL)";
                 recentTime.add(Calendar.WEEK_OF_YEAR,4);
                 String recentTimeStr = dateFormat.format(recentTime.getTime());
                 selectionArgs = new String[]{currentTimeStr,recentTimeStr};
                 //sort = sort + " LIMIT 5";
             }
-            //" UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIME + " IS NOT NULL ORDER BY " + REMIND_TIME + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
+            //" UNION SELECT * FROM " + TODO_TABLE + " WHERE " + REMIND_TIMES + " IS NOT NULL ORDER BY " + REMIND_TIMES + " ASC LIMIT 5";//add other notes with reminder in important if nothing includes recent reminders is present
         }
+        //System.out.println(recentTime.getTime().toString());
         if (args != null) {
             selectionAddOn += ")";//complete the parentheses in search mode
             String[] selectionArgsQuery = new String[]{"%" + args.getString("QUERY") + "%"};
@@ -1684,7 +1669,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void finishData(long id){
         ContentValues cv = new ContentValues();
-        String data = databaseManager.getOneDataInTODO(id);
+        String data = databaseManager.getOneTitleInTODO(id);
         cv.put(TITLE,data);
         //System.out.println("finish data" + id);
         deleteData(id);
@@ -1694,7 +1679,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     public void deleteData(long id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
-        String note = databaseManager.getOneDataInTODO(id);
+        String note = databaseManager.getOneTitleInTODO(id);
         getActivity().getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
         if(!(tags == null)){//if contains tags
@@ -1728,22 +1713,20 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         if(!(input.getText().toString().equals("")) && input.getVisibility() == View.VISIBLE) showKeyboard();
         displayAllNotes();
         setColorPreferences();
-        if(sharedPreferences.getBoolean("first_run",true)){
-            Cursor cs = databaseManager.getData();
-            if (cs.getCount()==0){
-                //first run codes
-                insertData(getString(R.string.tutorial_6));
-                insertData(getString(R.string.tutorial_5));
-                insertData(getString(R.string.tutorial_4));
-                insertData(getString(R.string.tutorial_3));
-                insertData(getString(R.string.tutorial_2));
-                insertData(getString(R.string.tutorial_1));
-                insertData(getString(R.string.welcome_note));
-                displayAllNotes();
-                sharedPreferences.edit().putBoolean("first_run",false).apply();
-            }else {
-                setOutOfSelectionMode();
-            }
+        if(!isInSearchMode && !isInSelectionMode){//refresh important notes every minute
+            final Handler handler = new Handler();
+            final int delay = 1000 * 60; //every minute
+            handler.postDelayed(new Runnable(){
+                public void run(){
+                    getLoaderManager().restartLoader(123,null,ImportantFragment.this);
+                    if(getContext() != null && !isInSearchMode && !isInSelectionMode){
+                        TabLayout tabLayout = getActivity().findViewById(R.id.tabs_layout);
+                        if(tabLayout.getSelectedTabPosition() == 0){//continue if still displaying
+                            handler.postDelayed(this, delay);
+                        }
+                    }
+                }
+            }, delay);
         }
         super.onResume();
     }
