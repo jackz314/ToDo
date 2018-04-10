@@ -1326,12 +1326,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
                     holder.todoText.setTextSize(textSize);
                     SpannableStringBuilder spannable = new SpannableStringBuilder(text);
-                    //pin section
-                    if(todosql.getPinnedNotesCount() > 5){
-
-                    }else {
-
-                    }
 
                     //bold section
                     int boldStartPos = text.indexOf("*");
@@ -1341,15 +1335,20 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             if(boldEndPos < 0){
                                 break;
                             }else {
-                                spannable.delete(boldStartPos, boldStartPos + 1);//delete "*" after marked
-                                spannable.delete(boldEndPos - 1, boldEndPos);//this doesn't work....
-                                text = removeCharAt(text, boldStartPos);
-                                text = removeCharAt(text, boldEndPos - 1);
+                                text = removeCharAt(text, boldStartPos);//delete "*" after marked
+                                text = removeCharAt(text, boldEndPos - 1);//this doesn't work....
                                 System.out.println(text);
                                 spannable.setSpan(new StyleSpan(Typeface.BOLD), boldStartPos, boldEndPos - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
                                 boldStartPos = text.indexOf("*", boldEndPos - 2);
                             }
                         }
+                    }
+
+                    //pin section
+                    if(todosql.getPinnedNotesCount() > 5){
+
+                    }else {
+
                     }
 
                     //search section
@@ -1417,11 +1416,30 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
                     //action string coloring part
                     if(text.contains("@")){
-                        int actStartPos = text.indexOf("@");
-                        while (actStartPos >= 0 && actStartPos < text.length() - 1){
-                            int actEndPos = -1;
-
-                            actStartPos = text.indexOf("@",actStartPos + 1);
+                        int actionStartPos = text.indexOf("@");
+                        while (actionStartPos >= 0 && actionStartPos < text.length() - 1){
+                            int actionEndPos = -1;
+                            if(returnDateString(text.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
+                                actionStartPos = text.indexOf("@",actionStartPos + 1);
+                                continue;
+                            }
+                            if(text.indexOf(" ", actionStartPos) == -1 && text.indexOf("\n", actionStartPos) == -1){
+                                actionEndPos = text.length();
+                            }else if (text.indexOf(" ", actionStartPos) == -1){
+                                actionEndPos = text.indexOf("\n", actionStartPos);
+                            }else if(text.indexOf("\n",actionStartPos) == -1){
+                                actionEndPos = Math.max(text.indexOf(" ", actionStartPos), actionStartPos + returnDateString(text.substring(actionStartPos + 1)).length() + 1);
+                            }else {
+                                //actionEndPos = Math.min(text.indexOf(" ", actionStartPos), text.indexOf("\n", actionStartPos));
+                                //if(actionEndPos == text.indexOf(" ", actionStartPos)){
+                                actionEndPos = Math.max(text.indexOf(" ", actionStartPos), actionStartPos + returnDateString(text.substring(actionStartPos + 1, text.indexOf("\n",actionStartPos))).length() + 1);
+                                //}
+                            }
+                            spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                    new ColorStateList(new int[][] {new int[] {}},
+                                            new int[] {themeColor})
+                                    ,null), actionStartPos, actionEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                            actionStartPos = text.indexOf("@",actionStartPos + 1);
                         }
                     }
 
@@ -1769,9 +1787,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             DateGroup group = (DateGroup)groupF;
                             List<Date> dates = group.getDates();
                             remindDates.addAll(dates);
-                            int line = group.getLine();
-                            int column = group.getPosition();
-                            String matchingValue = group.getText();
                             String syntaxTree = group.getSyntaxTree().toStringTree();
                             System.out.println("SyntaxTree: " + syntaxTree);
                             Map<String, List<ParseLocation>> parseMap = group.getParseLocations();

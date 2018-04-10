@@ -1149,8 +1149,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             DateGroup group = (DateGroup)groupF;
             prefix = group.getPrefix(str.length());
             suffix = group.getSuffix(str.length());
-            if(!prefix.replace("!","").replace(" ","").isEmpty()){
-                return "";//invalid dateString, return empty
+            if(!prefix.replace("!","").isEmpty() && !prefix.equals(" ") && !prefix.startsWith(" !")){
+                return null;//invalid dateString, return null
             }
             String matchingValue = group.getText();
             dateString.append(matchingValue);
@@ -1169,8 +1169,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             dateString.insert(0,prefix);
         }
 
-        if(suffix.startsWith("!") && suffix.replace("!", "").replace(" ","").isEmpty()){
-
+        if(suffix.startsWith("!")){
+            int impIndicatorCount = countContinuousOccurrences(suffix,"!");
+            dateString.append(suffix.substring(0,impIndicatorCount + 1));
         }
 
         System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
@@ -1191,7 +1192,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return count;
     }
 
-    public static int countContiniousOccurrences(String str, String sub){
+    public static int countContinuousOccurrences(String str, String sub){
         if (str.isEmpty() || sub.isEmpty()) {
             return 0;
         }
