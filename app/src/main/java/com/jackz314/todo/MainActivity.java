@@ -82,8 +82,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -1215,7 +1217,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public static Date getCurrentTime(){
-        return Calendar.getInstance().getTime();
+        return new Date();
     }
 
     public static Calendar getCurrentCalendarTime(){
@@ -1233,6 +1235,99 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }else if(A != null){
             return A;
         }else return B;
+    }
+
+    /** FROM APACHE WordUtils
+     * <p>Capitalizes all the delimiter separated words in a String.
+     * Only the first character of each word is changed. To convert the
+     * rest of each word to lowercase at the same time.</p>
+     *
+     * <p>The delimiters represent a set of characters understood to separate words.
+     * The first string character and the first non-delimiter character after a
+     * delimiter will be capitalized. </p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.
+     * Capitalization uses the Unicode title case, normally equivalent to
+     * upper case.</p>
+     *
+     * <pre>
+     * WordUtils.capitalize(null, *)            = null
+     * WordUtils.capitalize("", *)              = ""
+     * WordUtils.capitalize(*, new char[0])     = *
+     * WordUtils.capitalize("i am fine", null)  = "I Am Fine"
+     * WordUtils.capitalize("i aM.fine", {'.'}) = "I aM.Fine"
+     * WordUtils.capitalize("i am fine", new char[]{}) = "I am fine"
+     * </pre>
+     *
+     * @param str  the String to capitalize, may be null
+     * @param delimiters  set of characters to determine capitalization, null means whitespace
+     * @return capitalized String, <code>null</code> if null String input
+     */
+    public static String capitalize(final String str, final char... delimiters) {
+        if (str.isEmpty()) {
+            return str;
+        }
+        final Set<Integer> delimiterSet = generateDelimiterSet(delimiters);
+        final int strLen = str.length();
+        final int[] newCodePoints = new int[strLen];
+        int outOffset = 0;
+        boolean capitalizeNext = true;
+        for (int index = 0; index < strLen;) {
+            final int codePoint = str.codePointAt(index);
+            if (delimiterSet.contains(codePoint)) {
+                capitalizeNext = true;
+                newCodePoints[outOffset++] = codePoint;
+            index += Character.charCount(codePoint);
+            } else if (capitalizeNext) {
+                final int titleCaseCodePoint = Character.toTitleCase(codePoint);
+                newCodePoints[outOffset++] = titleCaseCodePoint;
+                index += Character.charCount(titleCaseCodePoint);
+                capitalizeNext = false;
+            } else {
+                newCodePoints[outOffset++] = codePoint;
+                index += Character.charCount(codePoint);
+            }
+        }
+        return new String(newCodePoints, 0, outOffset);
+    }
+
+    private static Set<Integer> generateDelimiterSet(final char[] delimiters) {
+        final Set<Integer> delimiterHashSet = new HashSet<>();
+        if (delimiters == null || delimiters.length == 0) {
+            if (delimiters == null) {
+                delimiterHashSet.add(Character.codePointAt(new char[] {' '}, 0));
+            }
+
+            return delimiterHashSet;
+        }
+
+        for (int index = 0; index < delimiters.length; index++) {
+            delimiterHashSet.add(Character.codePointAt(delimiters, index));
+        }
+        return delimiterHashSet;
+    }
+
+    public static boolean isSameDay(Date date1, Date date2) {
+        if (date1 == null || date2 == null) {
+            throw new IllegalArgumentException("The dates must not be null");
+        }
+        Calendar cal1 = Calendar.getInstance();
+        cal1.setTime(date1);
+        Calendar cal2 = Calendar.getInstance();
+        cal2.setTime(date2);
+        return (cal1.get(Calendar.ERA) == cal2.get(Calendar.ERA) &&
+                cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR));
+    }
+
+    public static boolean isToday(Date date) {
+        return isSameDay(date, new Date());
+    }
+
+    public static boolean isTomorrow(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, 1);
+        return isSameDay(date, cal.getTime());
     }
 
     public static Canvas generatePDFCanvas(Canvas canvas){//not in use for now
