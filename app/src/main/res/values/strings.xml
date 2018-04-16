@@ -242,11 +242,17 @@
     <string name="verifying">Verifying…</string>
     <string name="thanks_for_purchase">Thanks for your purchase!\nEnjoy your Ad free experience ;)</string>
     <string name="thanks_for_support">Thanks for your support! :-)</string>
-    <string name="reminder_notification_next_up">Next Up: </string>
+    <string name="reminder_notification_next_up">"Next Up: "</string>
     <string name="reminder_notification_splitter"> • </string>
-    <string name="reminder_notification_then">Then: </string>
-    <string name="reminder_notification_every">every </string>
-    <string name="tomorrow">tomorrow</string>
+    <string name="reminder_notification_then">"Then: "</string>
+    <string name="reminder_notification_every">"Every "</string>
+    <string name="next_year">Next year</string>
+    <string name="next">"Next "</string>
+    <string name="at">at</string>
+    <string name="tomorrow">Tomorrow</string>
+    <string name="past_time_warning">Hey! Why would you add a past time as a reminder? Are you a time traveler?</string>
+    <string name="failed_to_create_reminder">Failed to create reminder</string>
+    <string name="failed_to_create_reminder_detail">Failed to create the reminder for this ToDo, please reset the reminder and try again later!</string>
     <string-array name="theme_default_value" translatable="false">
         <item>1</item>
     </string-array>

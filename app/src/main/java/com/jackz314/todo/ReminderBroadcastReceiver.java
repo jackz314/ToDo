@@ -7,8 +7,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
 
-import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION;
 import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION_ID;
+import static com.jackz314.todo.MainActivity.generateReminderNotification;
 
 public class ReminderBroadcastReceiver extends BroadcastReceiver{
 
@@ -21,12 +21,20 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
             if(!isScreenOn){
                 PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"ToDoReminderWakeLock");
                 wl.acquire(5000);//wake screen for 5 seconds.
-                NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-                Notification reminderNotification = intent.getParcelableExtra(REMINDER_NOTIFICATION);
-                int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
-                if (notificationManager != null) {
-                    notificationManager.notify(id,reminderNotification);
-                }
+
+            }
+            NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+            int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
+            DatabaseManager todoSql = new DatabaseManager(context);
+            Notification reminderNotification = generateReminderNotification(context,todoSql.getOneDataInTODO(id));
+            if (notificationManager != null && reminderNotification != null) {
+                notificationManager.notify(id,reminderNotification);
+            }else if(reminderNotification == null){
+                Notification.Builder notificationBuilder = new Notification.Builder(context);
+                notificationBuilder.setSmallIcon(R.mipmap.ic_launcher);
+                notificationBuilder.setContentTitle(context.getString(R.string.failed_to_create_reminder));
+                notificationBuilder.setContentText(context.getString(R.string.failed_to_create_reminder_detail));
+                notificationManager.notify(id,notificationBuilder.build());
             }
         }
 

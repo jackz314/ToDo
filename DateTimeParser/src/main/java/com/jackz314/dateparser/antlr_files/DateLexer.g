@@ -40,13 +40,13 @@ SATURDAY  : 'saturday'  's'?  | 'sat' DOT?  | 'sats' DOT?  | 'weekend';
 HOUR   : 'hour'   | 'hours'   | 'hr' DOT?  | 'hrs' DOT?;
 MINUTE : 'minute' | 'minutes' | 'min' DOT? | 'mins' DOT?;
 DAY    : 'day'    | 'days' ;
-WEEK   : 'week'   | 'weeks'   | 'wks' DOT?;
+WEEK   : 'week'   | 'weeks'   | 'wks' DOT?| 'wk' DOT?;
 MONTH  : 'month'  | 'months';
-YEAR   : 'year'   | 'year' SINGLE_QUOTE? 's' | 'yrs' DOT?;
+YEAR   : 'year'   | 'year' SINGLE_QUOTE? 's' | 'yrs' DOT?| 'yr' DOT?;
 
-TODAY     : 'today';
-TOMORROW  : 'tomorow' | 'tomorrow' | 'tommorow' | 'tommorrow' | 'tmr';
-TONIGHT   : 'tonight'; 
+TODAY     : 'today'; | '2da' | '2day' | 'tdy' | '2d';
+TOMORROW  : 'tomorow' | 'tomorrow' | 'tommorow' | 'tommorrow' | 'tmr' DOT?| 'tmo' DOT?| 'tom' DOT? | 'tmw' DOT?;
+TONIGHT   : 'tonight' | '2nite';
 YESTERDAY : 'yesterday';
 
 // ********** recurrence rules **********
@@ -55,7 +55,7 @@ EVERY : 'every';
 UNTIL : 'until';
 
 // ********** time rules ********** 
-
+//AT        : 'at'| '@';
 AT        : 'at'; //remove the '@' indicator for now
 AFTER     : 'after';
 PAST      : 'past';
