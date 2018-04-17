@@ -2075,10 +2075,62 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                         thenUpRemindTime = recurDate2;
                                         thenUpRecurStats.add(recurrenceStats.get(levelIndex));
                                     }
-                                }else {//all the initial recur dates are before nextUpdate
-                                    final List<String> ORDER = Arrays.asList("SECOND","MINUTE","HOUR","DAY","HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE","HOURS_OF_DAY|MINUTES_OF_HOUR","WEEK","DAY_OF_WEEK","MONTH","YEAR");//todo rank this and find smallest unit, then use that initial date to find the closest one after nextUpTime (which is probably the 1st or 2nd closest depends on the comparison later) then compare that date with the genRecurDate from the begining, write on from there
-
-                                    Collections.sort(recurrenceStats, new Comparator<ArrayList<String>>() {//sort arraylist with a given customized string order
+                                }else {//all the initial recur dates are before nextUpdate todo even base dates should be considered in this sort, change it!
+                                    //todo generate nextUp dates base by base until all of the "groups" have one date that's the closest after nextUpDate, then sort the dates, get the smallest one, use that to compare with the genRecurDate (in first group)
+                                    //todo rank this and find smallest unit, then use that initial date to find the closest one after nextUpTime (which is probably the 1st or 2nd closest depends on the comparison later) then compare that date with the genRecurDate from the begining, write on from there
+                                    ArrayList<ArrayList<String>> smallestRecurIntervalStats = new ArrayList<>(recurrenceStats);
+                                    ArrayList<ArrayList<String>> recurStatsWithUnitLevel = new ArrayList<>(recurrenceStats);
+                                    if()
+                                    for (ArrayList<String> recurStat : recurStatsWithUnitLevel){
+                                        String recurUnit = recurStat.get(0);
+                                        switch (recurUnit) {
+                                            case "SECOND": {
+                                                recurStat.add("1");
+                                                break;
+                                            }
+                                            case "MINUTE": {
+                                                recurStat.add("2");
+                                                break;
+                                            }
+                                            case "HOUR": {
+                                                recurStat.add("3");
+                                                break;
+                                            }
+                                            case "DAY": {//day
+                                                recurStat.add("4");
+                                                break;
+                                            }
+                                            case "HOURS_OF_DAY|MINUTES_OF_HOUR":
+                                            case "HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE": {
+                                                recurStat.add("5");
+                                                break;
+                                            }
+                                            case "WEEK":
+                                            case "DAY_OF_WEEK": {//week
+                                                recurStat.add("6");
+                                                break;
+                                            }
+                                            case "MONTH": {//month
+                                                recurStat.add("7");
+                                                break;
+                                            }
+                                            case "YEAR"://year
+                                                case "DAY_OF_WEEK[OF]MONTH_OF_YEAR":
+                                                case "MONTH_OF_YEAR":
+                                                case "MONTH_OF_YEAR|DAY_OF_MONTH":
+                                                case "MONTH_OF_YEAR|DAY_OF_MONTH|HOURS_OF_DAY|MINUTES_OF_HOUR":
+                                                case "MONTH_OF_YEAR|DAY_OF_MONTH|HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE": {
+                                                recurStat.add("8");
+                                                break;
+                                            }
+                                            default: {
+                                                recurStat.add("9");
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    final List<String> ORDER = Arrays.asList("SECOND","MINUTE","HOUR","DAY","HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE","HOURS_OF_DAY|MINUTES_OF_HOUR","WEEK","DAY_OF_WEEK","MONTH","YEAR");
+                                    Collections.sort(smallestRecurIntervalStats, new Comparator<ArrayList<String>>() {//sort a list with a given customized string order
                                         @Override
                                         public int compare(ArrayList<String> ao1, ArrayList<String> ao2) {
                                             String o1 = ao1.get(2), o2 = ao2.get(2);
@@ -2331,6 +2383,28 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         reminderNotifBuilder.setContentTitle(title);
         reminderNotifBuilder.setContentText(notificationContent);
         return reminderNotifBuilder.build();
+    }
+
+    public static List sortListWithStringOrder(final List ORDER, List listToBeSorted){
+        Collections.sort(listToBeSorted, new Comparator<ArrayList<String>>() {//sort a list with a given customized string order
+            @Override
+            public int compare(ArrayList<String> ao1, ArrayList<String> ao2) {
+                String o1 = ao1.get(2), o2 = ao2.get(2);
+                int pos1 = 0;
+                int pos2 = 0;
+                for (int i = 0; i < Math.min(o1.length(), o2.length()) && pos1 == pos2; i++) {
+                    pos1 = ORDER.indexOf(o1.charAt(i));
+                    pos2 = ORDER.indexOf(o2.charAt(i));
+                }
+
+                if (pos1 == pos2 && o1.length() != o2.length()) {
+                    return o1.length() - o2.length();
+                }
+
+                return pos1  - pos2  ;//sort recurrence status based on initial remind date
+            }
+        });
+        return listToBeSorted;
     }
 
     public static Canvas generatePDFCanvas(Canvas canvas){//not in use for now
