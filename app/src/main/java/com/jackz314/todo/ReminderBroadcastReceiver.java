@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
+import android.widget.Toast;
 
 import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION_ID;
 import static com.jackz314.todo.MainActivity.generateReminderNotification;
@@ -34,7 +35,11 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
                 notificationBuilder.setSmallIcon(R.mipmap.ic_launcher);
                 notificationBuilder.setContentTitle(context.getString(R.string.failed_to_create_reminder));
                 notificationBuilder.setContentText(context.getString(R.string.failed_to_create_reminder_detail));
-                notificationManager.notify(id,notificationBuilder.build());
+                if (notificationManager != null) {
+                    notificationManager.notify(id,notificationBuilder.build());
+                }else {
+                    Toast.makeText(context,"FAILED TO CREATE NOTIFICATIONMANAGER",Toast.LENGTH_LONG).show();
+                }
             }
         }
 
