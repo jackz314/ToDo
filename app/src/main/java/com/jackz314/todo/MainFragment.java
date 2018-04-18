@@ -1276,7 +1276,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         input.setTextColor(textColor);
         input.setTextSize(24);
-        setCursorColor(input,themeColor);
+        setCursorColor(input,themeColor);//todo not working in Android P (seems like it), find a fix
         if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
             emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
         }else {//bright

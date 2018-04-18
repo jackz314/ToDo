@@ -1416,7 +1416,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return recurFinalStr;
     }
 
-    //todo update this and generateRecurrenceStr() method to comply with until date feature
     public static String generateSimpleRecurrenceStr(ArrayList<String> recurStat, boolean... containWeekDayIndicator){
         String recurFinalStr = "";
         if(recurStat != null && recurStat.size() == 3){
@@ -1602,6 +1601,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     break;
                 }
             }
+            if(!recurStat.get(3).isEmpty()){//the recur stats has an end (untilDate)
+                try {
+                    Date untilDate = dateFormat.parse(recurStat.get(3));
+                    if(calendar.getTime().after(untilDate)) return null;//if the next recur is past until date, return null to let other functions know
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+            }
+
             return calendar.getTime();
         }else return null;
     }
@@ -1888,6 +1896,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         StringBuilder thenUpTimeStr = new StringBuilder();
         ArrayList<ArrayList<String>> nextUpRecurStats = new ArrayList<>(), thenUpRecurStats = new ArrayList<>();
         nowUpTimeStr = timeNotificationDateFormat.format(nowRemindTime);
+        if()
         if(nowUpTimeStr.endsWith(":00") ){//if whole time then change display from XX:XX to XX AM/PM todo consider add 24/12 hr mode setting and add that decision logic here
             nowUpTimeStr = wholeTimeDateFormat.format(nowRemindTime);
         }
@@ -1932,24 +1941,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 nowUpRecurStrBuilder.append(")");//wrap up
                 nowUpTimeStr += nowUpRecurStrBuilder.toString();
             }
-            //todo add support for until dates, add int totalRemindOccurrences (-1 for infinite (no until)) to corporate that and change below code
-            //todo add determine logic after adding until time support as there can be no thenUp/nextUp dates even if there are recurring dates
             //determine nextUpDate
             for(int i = 0; i < recurrenceStats.size(); i++){
-                Date recurDate = null, untilDate = null;
+                Date recurDate = null;
                 try {
                     recurDate = dateFormat.parse(recurrenceStats.get(i).get(2));
-                    if(!recurrenceStats.get(i).get(3).isEmpty()){//the recur stats has an end (untilDate)
-                        untilDate = dateFormat.parse(recurrenceStats.get(i).get(3));
-                    }
                 } catch (ParseException e) {
                     e.printStackTrace();
                     break;
                 }
                 Date genRecurDate = generateNextRecurDate(recurrenceStats.get(i));
-                if(untilDate != null && genRecurDate.after(untilDate)){
-                    genRecurDate = null;//this recur unit would already end before a possible thenUp date, terminate the unit here
-                }
+
                 if(i < recurrenceStats.size() - 1){//if the current loop is not the last one, support nextRecurDate
                     Date recurDate2 = null;
                     try {
@@ -2013,12 +2015,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             //determine thenUpDate
             for(int i = 0; i < recurrenceStats.size(); i++){
-                Date recurDate = null, untilDate = null;
+                Date recurDate = null;
                 try {
                     recurDate = dateFormat.parse(recurrenceStats.get(i).get(2));
-                    if(!recurrenceStats.get(i).get(3).isEmpty()){//the recur stats has an end (untilDate)
-                        untilDate = dateFormat.parse(recurrenceStats.get(i).get(3));
-                    }
+
                 } catch (ParseException e) {
                     e.printStackTrace();
                     break;
@@ -2035,12 +2035,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         Date genRecurDate = recurDate;
                         while (true){//use while loop to get a closest one after nextUp
                             genRecurDate = generateNextRecurDate(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
-                            if(genRecurDate.after(nextUpRemindTime)){
+                            if(genRecurDate == null || genRecurDate.after(nextUpRemindTime)){//if detected should be terminated or met requirement, break from loop to let other parts handle
                                 break;
                             }
-                        }
-                        if(untilDate != null && genRecurDate.after(untilDate)){
-                            genRecurDate = null;//this recur unit would already end before a possible thenUp date, terminate the unit here
                         }
                         if(recurDate2.after(nextUpRemindTime)){//only compare if the next base date is after nextUp, which only then would be valid for thenUp
                             if(genRecurDate != null){
@@ -2073,13 +2070,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     Date genRecurDate = recurDate;
                     while (true){//use while loop to get a closest one after nextUp
                         genRecurDate = generateNextRecurDate(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
-                        if(genRecurDate.after(nextUpRemindTime)){
+                        if(genRecurDate == null || genRecurDate.after(nextUpRemindTime)){
                             break;
                         }
                     }
-                    if(untilDate != null && genRecurDate.after(untilDate)){
-                        genRecurDate = null;//this recur unit would already end before a possible thenUp date, terminate the unit here
-                    }
+
                     if(genRecurDate != null && genRecurDate.compareTo(thenUpRemindTime) <= 0){//at this point (last loop) if the unit has been terminated, then there's nothing else to do, just skip it
                         thenUpRemindTime = genRecurDate;
                         thenUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i), genRecurDate));
@@ -2178,9 +2173,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     notificationContent.insert(timeNotificationDateFormat.format(nowRemindTime).length() - 1, "(" + context.getString(R.string.reminder_notification_every) +
                             generateRecurrenceStr(recurrenceStat));
                 }*/
-        if(remindDates.get(3) != null || recurrenceStatsStr != null){
-            notificationContent.append("…");
-        }
+        //if(remindDates.get(3) != null || recurrenceStatsStr != null){
+        //    notificationContent.append("…");
+        //} //unnecessary
         Notification.Builder reminderNotifBuilder = new Notification.Builder(context);
         reminderNotifBuilder.setSmallIcon(R.mipmap.ic_launcher);
         reminderNotifBuilder.setContentTitle(title);

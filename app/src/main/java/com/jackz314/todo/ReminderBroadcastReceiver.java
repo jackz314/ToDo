@@ -22,7 +22,6 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
             if(!isScreenOn){
                 PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"ToDoReminderWakeLock");
                 wl.acquire(5000);//wake screen for 5 seconds.
-
             }
             NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
             int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
@@ -38,7 +37,7 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
                 if (notificationManager != null) {
                     notificationManager.notify(id,notificationBuilder.build());
                 }else {
-                    Toast.makeText(context,"FAILED TO CREATE NOTIFICATIONMANAGER",Toast.LENGTH_LONG).show();
+                    Toast.makeText(context,"FAILED TO CREATE NotificationManager",Toast.LENGTH_LONG).show();
                 }
             }
         }
