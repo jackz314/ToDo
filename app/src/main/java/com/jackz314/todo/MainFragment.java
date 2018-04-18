@@ -1754,6 +1754,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }else return -1;
     }
 
+    //todo fix insertData return value problem
     public void insertData(final String title) {
         new Thread(new Runnable() {
             volatile boolean running = true;
