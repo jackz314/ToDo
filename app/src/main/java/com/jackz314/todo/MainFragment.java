@@ -1812,9 +1812,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                         String recurringUnit = "", recurringValue = "";
                                         Tree tree = group.getSyntaxTree();
                                         if(tree.getChild(0).getText().equals("DATE_TIME")) {
-                                            for (int i = 0; i <= tree.getChildCount(); i++) {
+                                            for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
                                                 tree = tree.getChild(i);
-                                                while(true){
+                                                while(true){//loop through a tree longitudinal (parent to child, units)
                                                     if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
                                                     System.out.println("Tree getText: " + tree.getText());
                                                     StringBuilder unitTemp = new StringBuilder(tree.getText());
@@ -1868,9 +1868,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                             }
                                                         }
                                                     }
-                                                    tree = tree.getChild(0);
+                                                    tree = tree.getChild(0);//continue to next loop
                                                 }
-                                                //todo check if all dates are covered and stored properly
+                                                //todo check if all dates are covered and stored properly with debug
                                                 ArrayList<String> recurringStat = new ArrayList<>();
                                                 if(dates.get(i).before(new Date())){
                                                     //if explicitly indicated a past time, warn that stupid person/troll :)
@@ -1890,7 +1890,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                         Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
                                                     }//otherwise deal with them by adding time to it
                                                     if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
-                                                        Date recursUntil = group.getRecursUntil();
                                                         recurringStat.add(0, recurringUnit);
                                                         recurringStat.add(1, recurringValue);
                                                         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
@@ -1900,21 +1899,25 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                         recurringStat.add(2, dateFormat.format(calendar));
                                                     }
                                                 }else {
-                                                    Date recursUntil = group.getRecursUntil();
                                                     recurringStat.add(0, recurringUnit);
                                                     recurringStat.add(1, recurringValue);
                                                     SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
                                                     recurringStat.add(2, dateFormat.format(dates.get(i)));
                                                     System.out.println("Recurring Status: " + recurringStat.toString());
-                                                    recurringStats.add(recurringStat);
                                                 }
+                                                Date untilDate = group.getRecursUntil();//add until date
+                                                if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
+                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
+                                                    recurringStat.add(3,dateFormat.format(untilDate));
+                                                }
+                                                recurringStats.add(recurringStat);
                                             }
                                         }
                                     }
-                                    for(int i = 0; i < dates.size(); i++){
+                                    for(int i = 0; i < dates.size(); i++){//eliminate past dates that are intentional, and correct the past dates to a future date if unintentional judging by input provided date units
                                         if(dates.get(i).before(new Date())){
                                             Tree tree = group.getSyntaxTree().getChild(i);//gets each DATE_TIME subtree
-                                            if(tree.getChild(0).getText().equals("EXPLICIT_DATE") && tree.getChild(0).getChild(0).getText().equals("MONTH_OF_YEAR")){
+                                            if(tree.getChild(0).getText().equals("EXPLICIT_DATE") && tree.getChild(0).getChild(0).getText().equals("MONTH_OF_YEAR") && !(tree.getChildCount() > 2 && tree.getChild(0).getChild(2).getText().equals("YEAR_OF"))){
                                                 remindDates.add(dates.get(i));
                                             }//filter out other past times
                                         }else {

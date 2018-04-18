@@ -85,10 +85,8 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -1418,6 +1416,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return recurFinalStr;
     }
 
+    //todo update this and generateRecurrenceStr() method to comply with until date feature
     public static String generateSimpleRecurrenceStr(ArrayList<String> recurStat, boolean... containWeekDayIndicator){
         String recurFinalStr = "";
         if(recurStat != null && recurStat.size() == 3){
@@ -1855,7 +1854,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         return false;
     }
-
+//todo handle past/invalid/finished/overdue reminders, update dates in comply with untilDate and stuff like that.
     /**
      * Generates the notification for the reminder
      *
@@ -1885,7 +1884,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         SimpleDateFormat dateNotificationDateFormat = new SimpleDateFormat("MMM d",Locale.getDefault());
         SimpleDateFormat wholeTimeDateFormat = new SimpleDateFormat("hh aa",Locale.getDefault());
         StringBuilder notificationContent = new StringBuilder();
-        String nowUpTimeStr = "", nextUpTimeStr = "", thenUpTimeStr = "";
+        String nowUpTimeStr = "";StringBuilder nextUpTimeStr = new StringBuilder();
+        StringBuilder thenUpTimeStr = new StringBuilder();
         ArrayList<ArrayList<String>> nextUpRecurStats = new ArrayList<>(), thenUpRecurStats = new ArrayList<>();
         nowUpTimeStr = timeNotificationDateFormat.format(nowRemindTime);
         if(nowUpTimeStr.endsWith(":00") ){//if whole time then change display from XX:XX to XX AM/PM todo consider add 24/12 hr mode setting and add that decision logic here
@@ -1895,15 +1895,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if(recurrenceStatsStr != null) {//has recurrences
             Type recurStatType = new TypeToken<ArrayList<ArrayList<String>>>() {}.getType();
             ArrayList<ArrayList<String>> recurrenceStats = remindGson.fromJson(recurrenceStatsStr,recurStatType);
-            Date firstRecurDate = null, firstDateGenByFirst = null, secondRecurDate = null;
-            ArrayList<String> firstRecurStat = recurrenceStats.get(0);
-
-            try {
-                firstRecurDate = dateFormat.parse(recurrenceStats.get(0).get(2));
-            } catch (ParseException e) {
-                e.printStackTrace();
-                return null;
-            }
             if(nextUpRemindTime == null){
                 nextUpRemindTime = new Date(Long.MAX_VALUE);
             }
@@ -1911,7 +1902,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 thenUpRemindTime = new Date(Long.MAX_VALUE);
             }
 
-            //add recur stat to now up str
+            //add recur stat to now up str (all nowUp equal units' recur stats are added in here
             int coincideCount = 0;
             StringBuilder nowUpRecurStrBuilder = new StringBuilder();
             for(ArrayList<String> recurStat : recurrenceStats){
@@ -1943,16 +1934,22 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
             //todo add support for until dates, add int totalRemindOccurrences (-1 for infinite (no until)) to corporate that and change below code
             //todo add determine logic after adding until time support as there can be no thenUp/nextUp dates even if there are recurring dates
-            //calculate nextUp and thenUp
+            //determine nextUpDate
             for(int i = 0; i < recurrenceStats.size(); i++){
-                Date recurDate = null;
+                Date recurDate = null, untilDate = null;
                 try {
                     recurDate = dateFormat.parse(recurrenceStats.get(i).get(2));
+                    if(!recurrenceStats.get(i).get(3).isEmpty()){//the recur stats has an end (untilDate)
+                        untilDate = dateFormat.parse(recurrenceStats.get(i).get(3));
+                    }
                 } catch (ParseException e) {
                     e.printStackTrace();
                     break;
                 }
                 Date genRecurDate = generateNextRecurDate(recurrenceStats.get(i));
+                if(untilDate != null && genRecurDate.after(untilDate)){
+                    genRecurDate = null;//this recur unit would already end before a possible thenUp date, terminate the unit here
+                }
                 if(i < recurrenceStats.size() - 1){//if the current loop is not the last one, support nextRecurDate
                     Date recurDate2 = null;
                     try {
@@ -1964,19 +1961,33 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     if(recurDate.compareTo(nextUpRemindTime) <= 0){
                         if(recurDate.equals(nowRemindTime)){
                             //since recurDate is nowRemindTime, so it can't be nextUpRemindTime, therefore compare genRecurDate with recurDate2 to determine nextUpRemindTime
-                            if(genRecurDate.compareTo(recurDate2) <= 0){
-                                if(genRecurDate.compareTo(nextUpRemindTime) <= 0){
+                            if(recurDate2.after(nowRemindTime)){//only compare if the next base date is after nowUp, which only then would be valid for nextUp
+                                if(genRecurDate != null){
+                                    if(genRecurDate.compareTo(recurDate2) <= 0 ){
+                                        if(genRecurDate.compareTo(nextUpRemindTime) <= 0){
+                                            //nextUp must be this one
+                                            nextUpRemindTime = genRecurDate;
+                                            nextUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
+                                            if(genRecurDate.equals(recurDate2)){//add the other one's information
+                                                nextUpRecurStats.add(recurrenceStats.get(i + 1));
+                                            }
+                                        }
+                                    }else if(recurDate2.compareTo(nextUpRemindTime) <= 0){//recurDate2 < genRecurDate && (the if statement here) recurDate2 < nextUpRemindTime
+                                        //nextUp must be this one
+                                        nextUpRemindTime = recurDate2;
+                                        nextUpRecurStats.add(recurrenceStats.get(i + 1));
+                                    }
+                                }else if(recurDate2.compareTo(nextUpRemindTime) <= 0){//deal with the situation where the current unit has been terminated and the next recur base date could be the nextUp Date
+                                    nextUpRemindTime = recurDate2;
+                                    nextUpRecurStats.add(recurrenceStats.get(i + 1));
+                                }
+
+                            }else {//otherwise thenUp is probably this generated date, store it in nextUp, and if in next loop other generated dates are found to be before this one and after nowUp (which is possible in this situation (when next base date equals nowUp date)), nextUp would be updated by the new date, and the loop goes on like this
+                                if(genRecurDate != null && genRecurDate.compareTo(nextUpRemindTime) <= 0){
                                     //nextUp must be this one
                                     nextUpRemindTime = genRecurDate;
                                     nextUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
-                                    if(genRecurDate.equals(recurDate2)){//add the other one's information
-                                        nextUpRecurStats.add(recurrenceStats.get(i + 1));
-                                    }
                                 }
-                            }else if(recurDate2.compareTo(nextUpRemindTime) <= 0){//recurDate2 < genRecurDate && (the if statement here) recurDate2 < nextUpRemindTime
-                                //nextUp must be this one
-                                nextUpRemindTime = recurDate2;
-                                nextUpRecurStats.add(recurrenceStats.get(i + 1));
                             }
                         }else {//nextUpRemindTime is recurDate
                             //nextUp must be this one
@@ -1984,33 +1995,30 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             nextUpRecurStats.add(recurrenceStats.get(i));
                         }
 
-                    }else if(recurDate.compareTo(thenUpRemindTime) <= 0){
-
-                    }else {//if the dates are after existing nextUp&thenUp dates, break
-                        break;
-                    }
-                }else {//only one date left, no need to compare with other dates
-                    if(recurDate.compareTo(nextUpRemindTime) <= 0){//recurDate is nowRemindTime, so only genRecurDate can be nextRemindTime
-                        if(recurDate.equals(nowRemindTime)){
-                            if(genRecurDate.compareTo(nextUpRemindTime) <= 0){
-                               //nextUp must be this one
-                                nextUpRemindTime = genRecurDate;
-                                nextUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
-                            }
-                        }else {//otherwise recurDate is nextRemindTime
+                    }else break;//if the dates are after existing nextUp&thenUp dates, break
+                }else if(recurDate.compareTo(nextUpRemindTime) <= 0){//only one date left, no need to compare with other dates
+                    if(recurDate.equals(nowRemindTime)){//recurDate is nowRemindTime, so only genRecurDate can be nextRemindTime
+                        if(genRecurDate != null && genRecurDate.compareTo(nextUpRemindTime) <= 0){
                             //nextUp must be this one
-                            nextUpRemindTime = recurDate;
-                            nextUpRecurStats.add(recurrenceStats.get(i));
+                            nextUpRemindTime = genRecurDate;
+                            nextUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
                         }
+                    }else {//otherwise recurDate is nextRemindTime
+                        //nextUp must be this one
+                        nextUpRemindTime = recurDate;
+                        nextUpRecurStats.add(recurrenceStats.get(i));
                     }
                 }
             }
 
             //determine thenUpDate
             for(int i = 0; i < recurrenceStats.size(); i++){
-                Date recurDate = null;
+                Date recurDate = null, untilDate = null;
                 try {
                     recurDate = dateFormat.parse(recurrenceStats.get(i).get(2));
+                    if(!recurrenceStats.get(i).get(3).isEmpty()){//the recur stats has an end (untilDate)
+                        untilDate = dateFormat.parse(recurrenceStats.get(i).get(3));
+                    }
                 } catch (ParseException e) {
                     e.printStackTrace();
                     break;
@@ -2031,128 +2039,35 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                 break;
                             }
                         }
-                        if(genRecurDate.compareTo(recurDate2) <= 0){
-                            if(genRecurDate.compareTo(thenUpRemindTime) <= 0){
-                                //thenUp must be this one
-                                thenUpRemindTime = genRecurDate;
-                                thenUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i), genRecurDate));
-                                if(genRecurDate.equals(recurDate2)){//add the other one's information
-                                    thenUpRecurStats.add(recurrenceStats.get(i + 1));
-                                }
-                            }
-                        }else{
-                            if(recurDate2.after(nextUpRemindTime)){//if that's after nextUp, then add it in
-                                if(recurDate2.compareTo(thenUpRemindTime) <= 0) {//recurDate2 < genRecurDate && (the if statement here) recurDate2 < thenUpRemindTime
-                                    //thenUp must be this one
+                        if(untilDate != null && genRecurDate.after(untilDate)){
+                            genRecurDate = null;//this recur unit would already end before a possible thenUp date, terminate the unit here
+                        }
+                        if(recurDate2.after(nextUpRemindTime)){//only compare if the next base date is after nextUp, which only then would be valid for thenUp
+                            if(genRecurDate != null){
+                                if(genRecurDate.compareTo(recurDate2) <= 0){
+                                    if(genRecurDate.compareTo(thenUpRemindTime) <= 0){
+                                        //thenUp must be this one
+                                        thenUpRemindTime = genRecurDate;
+                                        thenUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i), genRecurDate));
+                                        if(genRecurDate.equals(recurDate2)){//add the other one's information
+                                            thenUpRecurStats.add(recurrenceStats.get(i + 1));
+                                        }
+                                    }
+                                }else if(recurDate2.compareTo(thenUpRemindTime) <= 0){
                                     thenUpRemindTime = recurDate2;
                                     thenUpRecurStats.add(recurrenceStats.get(i + 1));
                                 }
-                            }else {//otherwise find the next initial recur date that's the closest after nextUp, then compare it to genRecurDate again to make the final decision
-                                //use for loop to get a closest one after nextUp
-                                recurDate2 = null;
-                                int levelIndex = i;
-                                for(int j = i; i < recurrenceStats.size(); j ++){
-                                    try {
-                                        recurDate2 = dateFormat.parse(recurrenceStats.get(j).get(2));
-                                    } catch (ParseException e) {
-                                        e.printStackTrace();
-                                        return null;
-                                    }
-                                    if(recurDate2.after(nextUpRemindTime)){
-                                        levelIndex = i;
-                                        break;//found!
-                                    }
-                                    recurDate2 = null;
-                                }
-                                if(recurDate2 != null){
-                                    if(genRecurDate.compareTo(recurDate2) <= 0){
-                                        thenUpRemindTime = genRecurDate;
-                                        thenUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
-                                        if(genRecurDate.equals(recurDate2)){//add the other one's information
-                                            thenUpRecurStats.add(recurrenceStats.get(levelIndex));
-                                        }
-                                    }else {
-                                        thenUpRemindTime = recurDate2;
-                                        thenUpRecurStats.add(recurrenceStats.get(levelIndex));
-                                    }
-                                }else {//all the initial recur dates are before nextUpdate todo even base dates should be considered in this sort, change it!
-                                    //todo generate nextUp dates base by base until all of the "groups" have one date that's the closest after nextUpDate, then sort the dates, get the smallest one, use that to compare with the genRecurDate (in first group)
-                                    //todo rank this and find smallest unit, then use that initial date to find the closest one after nextUpTime (which is probably the 1st or 2nd closest depends on the comparison later) then compare that date with the genRecurDate from the begining, write on from there
-                                    ArrayList<ArrayList<String>> smallestRecurIntervalStats = new ArrayList<>(recurrenceStats);
-                                    ArrayList<ArrayList<String>> recurStatsWithUnitLevel = new ArrayList<>(recurrenceStats);
-                                    if()
-                                    for (ArrayList<String> recurStat : recurStatsWithUnitLevel){
-                                        String recurUnit = recurStat.get(0);
-                                        switch (recurUnit) {
-                                            case "SECOND": {
-                                                recurStat.add("1");
-                                                break;
-                                            }
-                                            case "MINUTE": {
-                                                recurStat.add("2");
-                                                break;
-                                            }
-                                            case "HOUR": {
-                                                recurStat.add("3");
-                                                break;
-                                            }
-                                            case "DAY": {//day
-                                                recurStat.add("4");
-                                                break;
-                                            }
-                                            case "HOURS_OF_DAY|MINUTES_OF_HOUR":
-                                            case "HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE": {
-                                                recurStat.add("5");
-                                                break;
-                                            }
-                                            case "WEEK":
-                                            case "DAY_OF_WEEK": {//week
-                                                recurStat.add("6");
-                                                break;
-                                            }
-                                            case "MONTH": {//month
-                                                recurStat.add("7");
-                                                break;
-                                            }
-                                            case "YEAR"://year
-                                                case "DAY_OF_WEEK[OF]MONTH_OF_YEAR":
-                                                case "MONTH_OF_YEAR":
-                                                case "MONTH_OF_YEAR|DAY_OF_MONTH":
-                                                case "MONTH_OF_YEAR|DAY_OF_MONTH|HOURS_OF_DAY|MINUTES_OF_HOUR":
-                                                case "MONTH_OF_YEAR|DAY_OF_MONTH|HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE": {
-                                                recurStat.add("8");
-                                                break;
-                                            }
-                                            default: {
-                                                recurStat.add("9");
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    final List<String> ORDER = Arrays.asList("SECOND","MINUTE","HOUR","DAY","HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE","HOURS_OF_DAY|MINUTES_OF_HOUR","WEEK","DAY_OF_WEEK","MONTH","YEAR");
-                                    Collections.sort(smallestRecurIntervalStats, new Comparator<ArrayList<String>>() {//sort a list with a given customized string order
-                                        @Override
-                                        public int compare(ArrayList<String> ao1, ArrayList<String> ao2) {
-                                            String o1 = ao1.get(2), o2 = ao2.get(2);
-                                            int pos1 = 0;
-                                            int pos2 = 0;
-                                            for (int i = 0; i < Math.min(o1.length(), o2.length()) && pos1 == pos2; i++) {
-                                                pos1 = ORDER.indexOf(o1.charAt(i));
-                                                pos2 = ORDER.indexOf(o2.charAt(i));
-                                            }
-
-                                            if (pos1 == pos2 && o1.length() != o2.length()) {
-                                                return o1.length() - o2.length();
-                                            }
-
-                                            return pos1  - pos2  ;//sort recurrence status based on initial remind date
-                                        }
-                                    });
-                                }
+                            }else if(recurDate2.compareTo(thenUpRemindTime) <= 0){//deal with the situation where the current unit has been terminated and the next recur base date could be the thenUp Date
+                                thenUpRemindTime = recurDate2;
+                                thenUpRecurStats.add(recurrenceStats.get(i + 1));
                             }
-
+                        }else {//otherwise thenUp is probably this generated date, store it in thenUp, and if in next loop other generated dates are found to be before this one and after nextUp (which is possible in this situation (when next base date equals nextUp date)), thenUp would be updated by the new date, and the loop goes on like this. If this unit is terminated, just leave it and see if future loops have matching results
+                            if(genRecurDate != null && genRecurDate.compareTo(thenUpRemindTime) <= 0){
+                                //thenUp must be this one
+                                thenUpRemindTime = genRecurDate;
+                                thenUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i), genRecurDate));
+                            }
                         }
-
                     }else break;
                 }else {
                     Date genRecurDate = recurDate;
@@ -2162,149 +2077,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             break;
                         }
                     }
-                    if(genRecurDate.compareTo(thenUpRemindTime) <= 0){
+                    if(untilDate != null && genRecurDate.after(untilDate)){
+                        genRecurDate = null;//this recur unit would already end before a possible thenUp date, terminate the unit here
+                    }
+                    if(genRecurDate != null && genRecurDate.compareTo(thenUpRemindTime) <= 0){//at this point (last loop) if the unit has been terminated, then there's nothing else to do, just skip it
                         thenUpRemindTime = genRecurDate;
                         thenUpRecurStats.add(updateRecurStatWithNewDate(recurrenceStats.get(i), genRecurDate));
-                    }
-                }
-            }
-
-            if(firstRecurDate.equals(nowRemindTime)){//the most recent remind time is recurring (the first in the arraylist of recurrenceStats)
-                nowUpTimeStr += " (" + context.getString(R.string.reminder_notification_every) + generateSimpleRecurrenceStr(recurrenceStats.get(0)) + ")";//add recurrence indicator
-                firstDateGenByFirst = generateNextRecurDate(firstRecurStat);
-                if(recurrenceStats.size() > 1){
-                    try {
-                        secondRecurDate = dateFormat.parse(recurrenceStats.get(1).get(2));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                        return null;
-                    }
-                    ArrayList<String> secondRecurStat = recurrenceStats.get(1);
-                    if(firstDateGenByFirst.compareTo(secondRecurDate) <= 0){
-                        //if(nextUpRemindTime == null) nextUpRemindTime = firstDateGenByFirst;
-                        if(firstDateGenByFirst.compareTo(nextUpRemindTime) <= 0){//closer than existing "nextUp"
-                            nextUpRemindTime = firstDateGenByFirst;
-                            nextUpRecurStats = updateRecurStatWithNewDate(firstRecurStat,nextUpRemindTime);
-                            Date secondDateGenByFirst = generateNextRecurDate(nextUpRecurStats);
-                            if(secondDateGenByFirst != null){
-                                if(secondDateGenByFirst.compareTo(secondRecurDate) <= 0){
-                                    //if(thenUpRemindTime == null) thenUpRemindTime = secondDateGenByFirst;
-                                    if(secondDateGenByFirst.compareTo(thenUpRemindTime) <= 0){
-                                        //NOW=firstRecur, NEXT=firstGenByFirst, THEN=secondGenByFirst
-                                        thenUpRemindTime = secondDateGenByFirst;
-                                        thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat,thenUpRemindTime);
-                                    }
-                                }else {//NOW=firstRecur, NEXT=firstGenByFirst, THEN=secondRecur
-                                    //if(thenUpRemindTime == null) thenUpRemindTime = secondRecurDate;
-                                    if(secondRecurDate.compareTo(thenUpRemindTime) <= 0){
-                                        thenUpRemindTime = secondRecurDate;
-                                        thenUpRecurStats = secondRecurStat;
-                                    }
-                                }
-                            }else if(secondRecurDate.compareTo(thenUpRemindTime) <= 0){//if for some reason parsing date failed, then just assign thenUp to secondRecur if it meets requirements
-                                // NOW=firstRecur, NEXT=firstGenByFirst, THEN=secondRecur
-                                thenUpRemindTime = secondRecurDate;
-                                thenUpRecurStats = secondRecurStat;
-                            }
-                        }else {
-                            //if(thenUpRemindTime == null) thenUpRemindTime = firstDateGenByFirst;
-                            if(firstDateGenByFirst.compareTo(thenUpRemindTime) <= 0){//closer than existing "thenUp"
-                                // NOW=firstRecur, NEXT=ORIGINAL, THEN=firstGenByFirst
-                                thenUpRemindTime = firstDateGenByFirst;
-                                thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat,thenUpRemindTime);
-                            }
-                        }
-                    }else{//secondRecur before firstGenByFirst
-                        //if(nextUpRemindTime == null) nextUpRemindTime = secondRecurDate;
-                        if(secondRecurDate.compareTo(nextUpRemindTime) <= 0){//closer than existing "nextUp"
-                            nextUpRemindTime = secondRecurDate;
-                            nextUpRecurStats = secondRecurStat;
-                            Date firstDateGenBySecond = generateNextRecurDate(nextUpRecurStats);
-                            if(firstDateGenBySecond != null){
-                                if(firstDateGenBySecond.compareTo(firstDateGenByFirst) <= 0){
-                                    //if(thenUpRemindTime == null) thenUpRemindTime = firstDateGenBySecond;
-                                    if(firstDateGenBySecond.compareTo(thenUpRemindTime) <= 0){
-                                        thenUpRemindTime = firstDateGenBySecond;
-                                        thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat,thenUpRemindTime);
-                                    }
-                                    //NOW=firstRecur, NEXT=secondRecur, THEN=secondGenBySecond
-                                }else {//NOW=firstRecur, NEXT=secondRecur, THEN=firstGenByFirst
-                                    //if(thenUpRemindTime == null) thenUpRemindTime = firstDateGenByFirst;
-                                    if(firstDateGenByFirst.compareTo(thenUpRemindTime) <= 0){
-                                        thenUpRemindTime = firstDateGenByFirst;
-                                        thenUpRecurStats = secondRecurStat;
-                                    }
-                                }
-                            }else {
-                                //if(thenUpRemindTime == null) thenUpRemindTime = secondRecurDate;
-                                if(secondRecurDate.compareTo(thenUpRemindTime) <= 0){//if for some reason parsing date failed, then just assign thenUp to secondRecur if it meets requirements
-                                    // NOW=firstRecur, NEXT=secondRecur, THEN=firstGenByFirst
-                                    thenUpRemindTime = firstDateGenByFirst;
-                                    thenUpRecurStats = secondRecurStat;
-                                }
-                            }
-                        }else {
-                            //if(thenUpRemindTime == null) thenUpRemindTime = secondRecurDate;
-                            if(secondRecurDate.compareTo(thenUpRemindTime) <= 0){//closer than existing "thenUp"
-                                // NOW=firstRecur, NEXT=ORIGINAL, THEN=secondRecur
-                                thenUpRemindTime = secondRecurDate;
-                                thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat,thenUpRemindTime);
-                            }
-                        }
-                    }
-                }else{//only one recurDate indicator exist, has to generate nextUp and thenUp all from the only one if they exist
-                    //if(nextUpRemindTime == null) nextUpRemindTime = firstDateGenByFirst;
-                    if(firstDateGenByFirst.compareTo(nextUpRemindTime) <= 0){
-                        nextUpRemindTime = firstDateGenByFirst;
-                        nextUpRecurStats = updateRecurStatWithNewDate(firstRecurStat,nextUpRemindTime);
-                        Date secondDateGenByFirst = generateNextRecurDate(nextUpRecurStats);
-                        //if(thenUpRemindTime == null) thenUpRemindTime = secondDateGenByFirst;
-                        if(secondDateGenByFirst != null && secondDateGenByFirst.compareTo(thenUpRemindTime) <= 0){//secondGenBySecond closer than existing "thenUp"
-                            //NOW=firstRecur, NEXT=firstGenByFirst, THEN=secondGenByFirst
-                            thenUpRemindTime = secondDateGenByFirst;
-                            thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat, thenUpRemindTime);
-                        }
-                    }
-                }
-            }else {//first recur date is not current remind time
-                //if(nextUpRemindTime == null) nextUpRemindTime = firstRecurDate;
-                firstDateGenByFirst = generateNextRecurDate(firstRecurStat);
-                if(firstRecurDate.compareTo(nextUpRemindTime) <= 0){
-                    nextUpRemindTime = firstRecurDate;
-                    nextUpRecurStats = firstRecurStat;
-                    if(recurrenceStats.size() > 1) {
-                        try {
-                            secondRecurDate = dateFormat.parse(recurrenceStats.get(1).get(2));
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                            return null;
-                        }
-                        if(firstDateGenByFirst.compareTo(secondRecurDate) <= 0){
-                            //if(thenUpRemindTime == null) thenUpRemindTime = firstDateGenByFirst;
-                            if(firstDateGenByFirst.compareTo(thenUpRemindTime) <= 0){
-                                thenUpRemindTime = firstDateGenByFirst;
-                                thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat, thenUpRemindTime);
-                            }
-                        }else {
-                            //if(thenUpRemindTime == null) thenUpRemindTime = secondRecurDate;
-                            if(secondRecurDate.compareTo(thenUpRemindTime) <= 0){
-                                thenUpRemindTime = secondRecurDate;
-                                thenUpRecurStats = recurrenceStats.get(1);
-                            }
-                        }
-                    }else {//only this one recur date indicator exist, then just use its next generated date to see if it's then up
-                        //if(thenUpRemindTime == null) thenUpRemindTime = firstDateGenByFirst;
-                        if(firstDateGenByFirst.compareTo(thenUpRemindTime) <=0){
-                            thenUpRemindTime = firstDateGenByFirst;
-                            thenUpRecurStats = updateRecurStatWithNewDate(firstRecurStat, thenUpRemindTime);
-                        }
-                    }
-                }else{
-                    //if(thenUpRemindTime == null) thenUpRemindTime = firstRecurDate;
-                    if(firstRecurDate.before(thenUpRemindTime)){//no need to find new, closer recurrence dates, because they don't exist
-                        //NOW=ORIGINAL, NEXT=ORIGINAL, THEN=firstRecur
-                        thenUpRemindTime = firstRecurDate;
-                        thenUpRecurStats = recurrenceStats.get(0);//store its recur status, add to final notification string later
                     }
                 }
             }
@@ -2314,32 +2092,40 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             notificationContent.append(context.getString(R.string.reminder_notification_splitter));
             notificationContent.append(context.getString(R.string.reminder_notification_next_up));
             if(isToday(nextUpRemindTime)){
-                nextUpTimeStr = timeNotificationDateFormat.format(nextUpRemindTime);
+                nextUpTimeStr = new StringBuilder(timeNotificationDateFormat.format(nextUpRemindTime));
             }else if(isTomorrow(nextUpRemindTime)){
-                nextUpTimeStr = context.getString(R.string.tomorrow) + " " + timeNotificationDateFormat.format(nextUpRemindTime);//tomorrow + time
+                nextUpTimeStr = new StringBuilder(context.getString(R.string.tomorrow) + " " + timeNotificationDateFormat.format(nextUpRemindTime));//tomorrow + time
             }else if(isInThisWeek(nextUpRemindTime) || isInNextWeek(nextUpRemindTime)){
                 SimpleDateFormat weekDayFormat = new SimpleDateFormat("EEEEE '('MMM d')' HH:mm",Locale.getDefault());
-                nextUpTimeStr = weekDayFormat.format(nextUpRemindTime);
+                nextUpTimeStr = new StringBuilder(weekDayFormat.format(nextUpRemindTime));
                 if(isInNextWeek(nextUpRemindTime)){
-                    nextUpTimeStr = context.getString(R.string.next) + nextUpTimeStr;
+                    nextUpTimeStr.insert(0, context.getString(R.string.next));
                 }
             }else {
-                nextUpTimeStr = dateNotificationDateFormat.format(nextUpRemindTime) + ", " + timeNotificationDateFormat.format(nextUpRemindTime);//date + time
+                nextUpTimeStr = new StringBuilder(dateNotificationDateFormat.format(nextUpRemindTime) + ", " + timeNotificationDateFormat.format(nextUpRemindTime));//date + time
             }
             if(nextUpRecurStats.size() > 0){//has recurrence status
+                boolean containsWeekDayIndicator = true;
                 if (!isToday(nextUpRemindTime) && !isTomorrow(nextUpRemindTime) && (isInThisWeek(nextUpRemindTime) || isInNextWeek(nextUpRemindTime))) {
                     //already added weekday indicator above, skip it here by setting parameter containWeekdayIndicator to false
-                    nextUpTimeStr += " (" + context.getString(R.string.reminder_notification_every) + generateSimpleRecurrenceStr(nextUpRecurStats, false) + ")";
-                }else {
-                    nextUpTimeStr += " (" + context.getString(R.string.reminder_notification_every) + generateSimpleRecurrenceStr(nextUpRecurStats) + ")";
+                    containsWeekDayIndicator = false;
                 }
+                nextUpTimeStr.append(" (").append(context.getString(R.string.reminder_notification_every));
+                for(int i = 0; i < Math.min(3,nextUpRecurStats.size()); i++){//less than or equals to 3
+                    ArrayList<String>nextUpRecurStat = nextUpRecurStats.get(i);
+                    if(i > 0 && i < nextUpRecurStats.size()){//add " & " in between
+                        nextUpTimeStr.append(" & ");
+                    }
+                    nextUpTimeStr.append(generateSimpleRecurrenceStr(nextUpRecurStat, containsWeekDayIndicator));
+                }
+                nextUpTimeStr.append(")");
             }
-            if(!isInThisYear(nextUpRemindTime)){
+            if(!isInThisYear(nextUpRemindTime)){//add year indicator if the date is not this year by "next year" or exact year
                 if(isInNextYear(nextUpRemindTime)){
-                    nextUpTimeStr += " (" + context.getString(R.string.next_year) + ")";
+                    nextUpTimeStr.append(" (").append(context.getString(R.string.next_year)).append(")");
                 }else {
                     SimpleDateFormat yearFormat = new SimpleDateFormat("yyyy",Locale.getDefault());
-                    nextUpTimeStr += " (" + yearFormat.format(nextUpRemindTime) + ")";
+                    nextUpTimeStr.append(" (").append(yearFormat.format(nextUpRemindTime)).append(")");
                 }
             }
             notificationContent.append(nextUpTimeStr);
@@ -2348,24 +2134,41 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             notificationContent.append(context.getString(R.string.reminder_notification_splitter));
             notificationContent.append(context.getString(R.string.reminder_notification_then));
             if(isToday(thenUpRemindTime)){
-                thenUpTimeStr = timeNotificationDateFormat.format(thenUpRemindTime);
+                thenUpTimeStr = new StringBuilder(timeNotificationDateFormat.format(thenUpRemindTime));
             }else if(isTomorrow(thenUpRemindTime)){
-                thenUpTimeStr = context.getString(R.string.tomorrow) + " " + timeNotificationDateFormat.format(thenUpRemindTime);//tomorrow + time
+                thenUpTimeStr = new StringBuilder(context.getString(R.string.tomorrow) + " " + timeNotificationDateFormat.format(thenUpRemindTime));//tomorrow + time
             }else if(isInThisWeek(thenUpRemindTime) || isInNextWeek(thenUpRemindTime)){
                 SimpleDateFormat weekDayFormat = new SimpleDateFormat("EEEEE '('MMM d')' HH:mm",Locale.getDefault());
-                thenUpTimeStr = weekDayFormat.format(thenUpRemindTime);
+                thenUpTimeStr = new StringBuilder(weekDayFormat.format(thenUpRemindTime));
                 if(isInNextWeek(thenUpRemindTime)){
-                    thenUpTimeStr = context.getString(R.string.next) + thenUpTimeStr;
+                    thenUpTimeStr.insert(0, context.getString(R.string.next));
                 }
             }else {
-                thenUpTimeStr = dateNotificationDateFormat.format(thenUpRemindTime) + " " + timeNotificationDateFormat.format(thenUpRemindTime);//date + time
+
+                thenUpTimeStr = new StringBuilder(dateNotificationDateFormat.format(thenUpRemindTime) + " " + timeNotificationDateFormat.format(thenUpRemindTime));//date + time
             }
             if(thenUpRecurStats.size() > 0){//has recurrence status
+                boolean containsWeekDayIndicator = true;
                 if (!isToday(thenUpRemindTime) && !isTomorrow(thenUpRemindTime) && (isInThisWeek(thenUpRemindTime) || isInNextWeek(thenUpRemindTime))) {
                     //already added weekday indicator above, skip it here by setting parameter containWeekdayIndicator to false
-                    thenUpTimeStr += " (" + context.getString(R.string.reminder_notification_every) + generateSimpleRecurrenceStr(thenUpRecurStats, false) + ")";
+                    containsWeekDayIndicator = false;
+                }
+                thenUpTimeStr.append(" (").append(context.getString(R.string.reminder_notification_every));
+                for(int i = 0; i < Math.min(3,nextUpRecurStats.size()); i++){//less than or equals to 3
+                    ArrayList<String>thenUpRecurStat = nextUpRecurStats.get(i);
+                    if(i > 0 && i < nextUpRecurStats.size()){//add " & " in between
+                        thenUpTimeStr.append(" & ");
+                    }
+                    thenUpTimeStr.append(generateSimpleRecurrenceStr(thenUpRecurStat, containsWeekDayIndicator));
+                }
+                thenUpTimeStr.append(")");
+            }
+            if(!isInThisYear(nextUpRemindTime)){//add year indicator if the date is not this year by "next year" or exact year
+                if(isInNextYear(nextUpRemindTime)){
+                    thenUpTimeStr.append(" (").append(context.getString(R.string.next_year)).append(")");
                 }else {
-                    thenUpTimeStr += " (" + context.getString(R.string.reminder_notification_every) + generateSimpleRecurrenceStr(thenUpRecurStats) + ")";
+                    SimpleDateFormat yearFormat = new SimpleDateFormat("yyyy",Locale.getDefault());
+                    thenUpTimeStr.append(" (").append(yearFormat.format(nextUpRemindTime)).append(")");
                 }
             }
             notificationContent.append(thenUpTimeStr);
@@ -2383,28 +2186,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         reminderNotifBuilder.setContentTitle(title);
         reminderNotifBuilder.setContentText(notificationContent);
         return reminderNotifBuilder.build();
-    }
-
-    public static List sortListWithStringOrder(final List ORDER, List listToBeSorted){
-        Collections.sort(listToBeSorted, new Comparator<ArrayList<String>>() {//sort a list with a given customized string order
-            @Override
-            public int compare(ArrayList<String> ao1, ArrayList<String> ao2) {
-                String o1 = ao1.get(2), o2 = ao2.get(2);
-                int pos1 = 0;
-                int pos2 = 0;
-                for (int i = 0; i < Math.min(o1.length(), o2.length()) && pos1 == pos2; i++) {
-                    pos1 = ORDER.indexOf(o1.charAt(i));
-                    pos2 = ORDER.indexOf(o2.charAt(i));
-                }
-
-                if (pos1 == pos2 && o1.length() != o2.length()) {
-                    return o1.length() - o2.length();
-                }
-
-                return pos1  - pos2  ;//sort recurrence status based on initial remind date
-            }
-        });
-        return listToBeSorted;
     }
 
     public static Canvas generatePDFCanvas(Canvas canvas){//not in use for now
