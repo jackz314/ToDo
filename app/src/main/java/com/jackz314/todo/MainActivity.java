@@ -1886,6 +1886,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         Gson remindGson = new Gson();
         Type type = new TypeToken<ArrayList<Date>>() {}.getType();
         ArrayList<Date> remindDates = remindGson.fromJson(remindTimesStr,type);
+        if(nowRemindTime.before(new Date())){
+            remindDates =
+        }
         Date nextUpRemindTime = remindDates.get(1);
         Date thenUpRemindTime = remindDates.get(2);
         SimpleDateFormat timeNotificationDateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -1896,7 +1899,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         StringBuilder thenUpTimeStr = new StringBuilder();
         ArrayList<ArrayList<String>> nextUpRecurStats = new ArrayList<>(), thenUpRecurStats = new ArrayList<>();
         nowUpTimeStr = timeNotificationDateFormat.format(nowRemindTime);
-        if()
         if(nowUpTimeStr.endsWith(":00") ){//if whole time then change display from XX:XX to XX AM/PM todo consider add 24/12 hr mode setting and add that decision logic here
             nowUpTimeStr = wholeTimeDateFormat.format(nowRemindTime);
         }

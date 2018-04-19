@@ -889,7 +889,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 }
                 else{
                     int successModify=-1;
-                    Uri success = null;
                     if (!modifyId.getText().toString().equals("")){
                         Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "update_notes");
@@ -898,7 +897,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                         successModify = updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
-                        success = insertData(input.getText().toString());
+                        insertData(input.getText().toString());
                         int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
                         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
                         //todoList.setDividerHeight(2);
@@ -908,7 +907,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "new notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                    }if(success != null || successModify != -1){
+                    }
+                    if(successModify != -1){
                         hideKeyboard();
                         displayAllNotes();
                         if(!isAdd){
