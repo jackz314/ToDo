@@ -3,7 +3,6 @@
 
     <string name="navigation_drawer_open" translatable="false">Open navigation drawer</string>
     <string name="navigation_drawer_close" translatable="false">Close navigation drawer</string>
-
     <string name="action_settings">Settings</string>
     <string name="title_activity_settings">Settings</string>
     <string name="warning_title">Warning!</string>
@@ -11,11 +10,13 @@
     <string name="yes">Yes!</string>
     <string name="no">No</string>
     <string name="save">Save</string>
+    <string name="confirm">Confirm</string>
 
     <!-- Strings related to Settings -->
-    <string name="confirm">Confirm</string>
     <string name="history_category">History</string>
     <string name="appearance_category">Appearance</string>
+    <string name="data_category">Data</string>
+    <string name="reminder_category">Reminder</string>
     <string name="others_category">Others</string>
 
 
@@ -125,11 +126,30 @@
     <string name="delete_all_notes">Delete All Notes</string>
     <string name="note_deleted_snack_text">Note Deleted</string>
     <string name="main_history_switch" translatable="false">main_history_switch</string>
+    <string name="main_overdue_switch" translatable="false">main_overdue_switch</string>
+    <string name="normal_overdue_switch" translatable="false">normal_overdue_switch</string>
     <string name="history_switch_title">History Records</string>
     <string name="search_title">Search</string>
     <string name="search_hint">Search…</string>
     <string name="empty_search_result">No matching results</string>
     <string name="history_switch_content">Keep history records</string>
+    <string name="main_overdue_switch_title">Remind me of overdue tasks</string>
+    <string name="main_overdue_switch_content_on">ToDo will actively remind you of overdue reminders/tasks</string>
+    <string name="main_overdue_switch_content_off">ToDo won\'t actively remind you of overdue reminders/tasks</string>
+    <string name="normal_overdue_switch_title">Remind me of all overdue tasks</string>
+    <string name="normal_overdue_switch_content_on">ToDo will remind you of all overdue reminders/tasks</string>
+    <string name="normal_overdue_switch_content_off">ToDo will only remind you of important overdue reminders/tasks</string>
+    <string name="notification_settings" translatable="false">notification_settings</string>
+    <string name="notification_settings_title">Notification Settings</string>
+    <string name="notification_settings_content">Set notification behaviors for reminders.</string>
+    <string name="notification_light">notification_light</string>
+    <string name="notification_light_title">Enable Reminder Blink Light</string>
+    <string name="notification_light_content_on">Blink the device\'s LED when receives a reminder</string>
+    <string name="notification_light_content_off">LED indicator turned off for reminder notifications</string>
+    <string name="twenty_four_hour_mode">twenty_four_hour_mode</string>
+    <string name="twenty_four_hour_mode_title">Use 24-hour format</string>
+    <string name="twenty_four_hour_mode_content_on">13:00</string>
+    <string name="twenty_four_hour_mode_content_off">1:00 PM</string>
     <string name="note_finished_snack_text">Note Finished</string>
     <string name="notes_finished_snack_text">notes finished</string>
     <string name="notes_restored_snack_text">notes restored</string>
@@ -137,7 +157,7 @@
     <string name="note_restored_snack_text">Note Restored</string>
     <string name="snack_undo_text">Undo</string>
     <string name="all_note_deleted_snack_text">All notes deleted!</string>
-    <string name="all_note_finished_snack_text">All notes finshed!</string>
+    <string name="all_note_finished_snack_text">All notes finished!</string>
     <string name="restore_all_notes">Restore all notes</string>
     <string name="finish_all_notes">Finish All Notes</string>
     <string name="banner_ad_unit_id" translatable="false">ca-app-pub-7337506680436750/2602834629</string>
@@ -250,6 +270,22 @@
     <string name="next">"Next "</string>
     <string name="at">at</string>
     <string name="tomorrow">Tomorrow</string>
+    <string name="overdue">"Overdue "</string>
+    <string name="snooze">Snooze</string>
+    <string name="later">Later</string>
+    <string name="hour_caps">Hour</string>
+    <string name="day">Day</string>
+    <string name="yesterday">yesterday</string>
+    <string name="hour">hour</string>
+    <string name="hours">hours</string>
+    <string name="ago">ago</string>
+    <string name="in">in</string>
+    <string name="normal_channel_name">Normal</string>
+    <string name="important_channel_name">Important</string>
+    <string name="urgent_channel_name">Urgent</string>
+    <string name="normal_channel_description">Manage notifications for all normal reminders</string>
+    <string name="important_channel_description">Manage notifications for all important reminders</string>
+    <string name="urgent_channel_description">Manage notifications for all super important reminders</string>
     <string name="past_time_warning">Hey! Why would you add a past time as a reminder? Are you a time traveler?</string>
     <string name="failed_to_create_reminder">Failed to create reminder</string>
     <string name="failed_to_create_reminder_detail">Failed to create the reminder for this ToDo, please reset the reminder and try again later!</string>

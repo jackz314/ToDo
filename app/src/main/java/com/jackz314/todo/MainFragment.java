@@ -2,8 +2,6 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -92,6 +90,7 @@ import android.widget.Toast;
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.jackz314.dateparser.DateGroup;
 import com.jackz314.dateparser.ParseLocation;
 import com.jackz314.dateparser.Parser;
@@ -103,9 +102,11 @@ import org.antlr.runtime.tree.Tree;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -117,7 +118,9 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 import static android.content.Context.MODE_PRIVATE;
+import static com.jackz314.todo.DatabaseManager.CREATED_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
+import static com.jackz314.todo.DatabaseManager.DATE_STRING_REFERENCES;
 import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
@@ -125,7 +128,7 @@ import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.RECURRENCE_STATS;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIMES;
 import static com.jackz314.todo.DatabaseManager.TITLE;
-import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION_ID;
+import static com.jackz314.todo.MainActivity.countOccurrences;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.getDateString;
 import static com.jackz314.todo.MainActivity.getProperDateString;
@@ -135,6 +138,7 @@ import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 //todo add possible side bar and date labels
+//todo add active reminder to add ToDo note function (at certain times pops up notification asking the user to add a note about possibly a recurring event)
 public class MainFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
     private static final String ARG_PARAM = "param";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
@@ -143,7 +147,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
-    public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     public String searchText;
     private OnFragmentInteractionListener mListener;
     private FirebaseAnalytics mFirebaseAnalytics;
@@ -354,7 +357,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     }
 
     //todo implement Travis CI
-    //todo solve git project error (possibly caused by app.iml, remove it!)
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -705,7 +707,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todoSql.getOneTitleInTODO(id));
                     clipboard.setPrimaryClip(clip);
-                    Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_SHORT).show();
                 }else {
                     setOutOfSelectionMode();
                     if(isInSearchMode){
@@ -876,7 +878,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 //setOutOfSelectionMode();
                 String inputText=input.getText().toString().trim();
                 interruptAutoSend();
-                if(inputText.isEmpty()||inputText.equals("")||input.getText()==null){
+                if(inputText.isEmpty() && !input.getText().toString().isEmpty()){
                     if(isAdd){
                         AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
@@ -886,16 +888,14 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     input.setVisibility(View.VISIBLE);
                     showKeyboard();
                     input.requestFocus();
-                }
-                else{
-                    int successModify=-1;
+                }else{
                     if (!modifyId.getText().toString().equals("")){
                         Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "update_notes");
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "updated notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                        successModify = updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
+                        updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
                         insertData(input.getText().toString());
                         int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
@@ -908,23 +908,18 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                     }
-                    if(successModify != -1){
-                        hideKeyboard();
-                        displayAllNotes();
-                        if(!isAdd){
-                            AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
-                            fab.setImageDrawable(d);
-                            isAdd = true;
-                            d.start();
-                        }
-                        //input.clearFocus();
-                        input.setVisibility(View.GONE);
-                        input.setText("");
-                        modifyId.setText("");
-                    } else{
-                        Toast.makeText(getContext(),getString(R.string.error_message),Toast.LENGTH_SHORT).show();
-                        input.requestFocus();
+                    hideKeyboard();
+                    displayAllNotes();
+                    if(!isAdd){
+                        AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_send_to_plus); // Insert your AnimatedVectorDrawable resource identifier
+                        fab.setImageDrawable(d);
+                        isAdd = true;
+                        d.start();
                     }
+                    //input.clearFocus();
+                    input.setVisibility(View.GONE);
+                    input.setText("");
+                    modifyId.setText("");
                 }
             }
         });
@@ -1062,7 +1057,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }
 
         @Override
-        public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+        public void onSwiped(final RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
             //if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
@@ -1070,11 +1065,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             //}
             if(direction == ItemTouchHelper.LEFT){
                 final String finishedContent = todoSql.getOneTitleInTODO(viewHolder.getItemId());
+                final long id = viewHolder.getItemId();
                 finishData(viewHolder.getItemId());
                 Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        insertData(finishedContent);
+                        insertData(finishedContent, id);
                         long lastHistoryId = todoSql.getIdOfLatestDataInHistory();
                         todoSql.deleteFromHistory(String.valueOf(lastHistoryId));
                         displayAllNotes();
@@ -1350,22 +1346,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                     }
 
-                    //pin section
-                    if(todoSql.getPinnedNotesCount() > 5){
-
-                    }else {
-
-                    }
-
                     //search section
                     if(isInSearchMode){
                         //ColorStateList highlightColor = new ColorStateList(new int[][] { new int[] {}}, new int[] { Color.parseColor("#ef5350") });
                         String textLow = text.toLowerCase();
                         String searchTextLow = searchText.toLowerCase();
                         int startPos = textLow.indexOf(searchTextLow);
-                        if(startPos <0){
-                            return;
-                        }
                         if(!(startPos <0)){
                             do{
                                 int start = Math.min(startPos, textLow.length());
@@ -1402,7 +1388,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 int finalColor = random.nextInt(256*256*256);//set random limit to ffffff (HEX)
                                 ArrayList<Integer> allTagColors = todoSql.getAllTagColors();
                                 for(int i = 0; i < allTagColors.size(); i++){//eliminate too similar tag colors
-                                    if(ColorUtils.determineSimilarColor(finalColor,allTagColors.get(i)) > 95){//compare new color to each color in tag database
+                                    if(ColorUtils.determineSimilarColor(finalColor,allTagColors.get(i)) > 90){//compare new color to each color in tag database
                                         finalColor = random.nextInt(256*256*256);//generate a new color
                                         i = 0;//restart loop
                                     }
@@ -1447,7 +1433,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             actionStartPos = text.indexOf("@",actionStartPos + 1);
                         }
                     }
-
                     holder.todoText.setText(spannable);//set text
 
                     //selection mode section
@@ -1515,21 +1500,20 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     }
 
     public void finishSetOfData(){
-
-        CLONESelectedContent.clear();
-
+        final ArrayList<String> cloneSelectedContent = new ArrayList<>(selectedContent);
+        final ArrayList<Long> cloneSelectedId = new ArrayList<>(selectedId);
         for(long id : selectedId){
             finishData(id);
         }
         final int size = selectedId.size();
-        CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
-        displayAllNotes();
-        Snackbar.make(getView(), String.valueOf(CLONESelectedContent.size()) + " "  + getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(getView(), String.valueOf(cloneSelectedContent.size()) + " "  + getString(R.string.notes_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (String content : CLONESelectedContent){
-                    insertData(content);
+                for (int i = 0; i < cloneSelectedId.size(); i++){
+                    String content = cloneSelectedContent.get(i);
+                    long id = cloneSelectedId.get(i);
+                    insertData(content, id);
                 }
                 todoSql.deleteTheLastCoupleOnesFromHistory(size);
                 displayAllNotes();
@@ -1538,18 +1522,20 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     }
 
     public void deleteSetOfData(){
-        CLONESelectedContent.clear();
+        final ArrayList<String> cloneSelectedContent = new ArrayList<>(selectedContent);
+        final ArrayList<Long> cloneSelectedId = new ArrayList<>(selectedId);
         for(long id : selectedId){
             deleteData(id);
         }
-        CLONESelectedContent = new ArrayList<>(selectedContent);
         setOutOfSelectionMode();
         displayAllNotes();
-        Snackbar.make(getView(), String.valueOf(CLONESelectedContent.size()) + " " + getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+        Snackbar.make(getView(), String.valueOf(cloneSelectedId.size()) + " " + getString(R.string.notes_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (String content : CLONESelectedContent){
-                    insertData(content);
+                for (int i = 0; i < cloneSelectedId.size(); i++){
+                    String content = cloneSelectedContent.get(i);
+                    long id = cloneSelectedId.get(i);
+                    insertData(content, id);
                 }
                 displayAllNotes();
             }
@@ -1744,35 +1730,44 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoListAdapter.changeCursor(null);
     }
 
-    //database handling
-    public int updateData(long id, String title){
-        if (!title.isEmpty()) {
-            ContentValues values = new ContentValues();
-            values.put(TITLE, title);
-            Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
-            return getActivity().getContentResolver().update(uri, values, null, null);
-        }else return -1;
-    }
-
-    //todo fix insertData return value problem
-    public void insertData(final String title) {
+    @SafeVarargs
+    public final void updateData(final long id, final String text, ArrayList<ArrayList<Object>>... explicitDateReferences){
         new Thread(new Runnable() {
-            volatile boolean running = true;
 
             @Override
             public void run() {
-                if (!title.isEmpty()) {
+                if (!text.isEmpty()) {
                     ContentValues values = new ContentValues();
-                    values.put(TITLE, title);
-                    if(title.contains("@")){//contains @ functions
+                    values.put(TITLE, text);
+                    values.put(ID, id);
+                    //store action string orders
+                    if(text.contains("@")){//contains @ functions
                         Date currentTime = new Date();//record current time asap
-                        String cleanStr = title.replace("*","");
+
+                        //get previous data if t
+                        Cursor prevCursor = todoSql.getOneDataInTODO(id);
+                        prevCursor.moveToFirst();
+                        String dateStringReferencesStr = prevCursor.getString(prevCursor.getColumnIndex(DATE_STRING_REFERENCES));
+                        ArrayList<ArrayList<Object>> dateStringReferences = new ArrayList<>();
+                        ArrayList<String> dateStrRefStrs = null;
+                        ArrayList<Date> dateStrRefDates = null;
+                        if(dateStringReferencesStr != null && !dateStringReferencesStr.isEmpty()){//have references (have dates)
+                            Gson strToArrayListGson = new Gson();
+                            Type type = new TypeToken<ArrayList<ArrayList<Object>>>() {}.getType();
+                            dateStringReferences = strToArrayListGson.fromJson(dateStringReferencesStr,type);
+                            for(ArrayList<Object> strArr : dateStringReferences){
+                                dateStrRefStrs.add((String) strArr.get(0));
+                                dateStrRefDates.add((Date) strArr.get(1));
+                            }
+                        }
+                        String cleanStr = text.replace("*","");
                         int actionStartPos = cleanStr.indexOf("@");
                         int actionEndPos;
                         String actionStr = "";
                         ArrayList<Date> remindDates = new ArrayList<>();
                         ArrayList<ArrayList<String>> recurringStats = new ArrayList<>();
                         int impLevel = 0;
+                        boolean doNotDisturb = false;//todo maybe implement do not disturb feature in the future
                         while (actionStartPos >= 0){
                             if(getDateString(cleanStr.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
                                 actionStartPos = cleanStr.indexOf("@",actionStartPos + 1);
@@ -1793,11 +1788,269 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
                             System.out.println("ACTION STR: [" + actionStr + "]");
                             //mark as important
-                            impLevel += MainActivity.countOccurrences(actionStr,"!");
+                            impLevel += countOccurrences(actionStr,"!");
+                            if(actionStr.toLowerCase().contains("dnd")){
+                                doNotDisturb = true;
+                            }
                             //set remind time
                             String dateString = getProperDateString(actionStr);
                             if(!(dateString == null) && !dateString.equals("")){
-                                if(dateString.endsWith(" ")) dateString = dateString.substring(dateString.length() - 2);//remove if there's a space at the end
+                                //if(dateString.endsWith(" ")) dateString = dateString.substring(0, dateString.length() - 1);//remove if there's a space at the end
+                                Parser parser = new Parser();
+                                //determine the reference time when parsing the datetime, if current date string matched previous date string completely, that means this date string (action string) is untouched, so we should still parse it in reference with the old created date
+                                List groups;
+                                if(dateStrRefStrs != null && dateStrRefDates != null){
+                                    int indexOfDateStr = dateStrRefStrs.indexOf(dateString);
+                                    if(indexOfDateStr >= 0){//if the datestring exist in the previous note, parse it in reference to the according reference dates
+                                        groups = parser.parse(dateString, dateStrRefDates.get(indexOfDateStr));
+                                    }else {//if not, add the date str and the reference time (current time) to the reference list, so that next time updating the data, it would parse the dates according to this time's reference values
+                                        groups = parser.parse(dateString, currentTime);
+                                        dateStringReferences.add(new ArrayList<Object>(Arrays.asList(dateString,currentTime)));
+                                    }
+                                }else {//if not, add the date str and the reference time (current time) to the reference list, so that next time updating the data, it would parse the dates according to this time's reference values
+                                    groups = parser.parse(dateString, currentTime);
+                                    dateStringReferences.add(new ArrayList<Object>(Arrays.asList(dateString,currentTime)));
+                                }
+                                System.out.println("groups size: " + groups.size());
+                                for(Object groupF : groups) {
+                                    DateGroup group = (DateGroup)groupF;
+                                    List<Date> dates = group.getDates();
+                                    //remindDates.addAll(dates);
+                                    String syntaxTree = group.getSyntaxTree().toStringTree();
+                                    System.out.println("SyntaxTree: " + syntaxTree);
+                                    Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
+                                    System.out.println("Parse Locations map: " + parseMap.toString());
+                                    if(group.isRecurring()){
+                                        String recurringUnit = "", recurringValue = "";
+                                        Tree tree = group.getSyntaxTree();
+                                        if(tree.getChild(0).getText().equals("DATE_TIME")) {
+                                            for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
+                                                tree = tree.getChild(i);
+                                                while(true){//loop through a tree longitudinal (parent to child, units)
+                                                    if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                                    System.out.println("Tree getText: " + tree.getText());
+                                                    StringBuilder unitTemp = new StringBuilder(tree.getText());
+                                                    if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
+                                                        recurringValue = tree.getChild(0).getText();
+                                                        if (unitTemp.toString().equals("SEEK")) {
+                                                            unitTemp = new StringBuilder(tree.getChild(tree.getChildCount() - 1).getText());//if tree starts with "SEEK", look for unit indicator at the last index in the same level of tree.
+                                                            recurringValue = tree.getChild(tree.getChildCount() - 2).getText();
+
+                                                            if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("EXPLICIT_SEEK")) {
+                                                                if (tree.getParent().getChild(1).getChildCount() > 1) {//day_of_week, Xth WEEKDAY of MONTH
+                                                                    unitTemp.insert(0, tree.getParent().getChild(1).getChild(1).getText() + "[OF]");//DAY_OF_WEEK[OF]MONTH_OF_YEAR
+                                                                    recurringValue = tree.getParent().getChild(1).getChild(0).getText();//1st,2nd,3rd,... WEEKDAY of MONTH
+                                                                } else {//day_of_month, Xth of MONTH
+                                                                    unitTemp.append("|").append(tree.getParent().getChild(1).getChild(0).getText());//MONTH_OF_YEAR|DAY_OF_MONTH
+                                                                    recurringValue = tree.getChild(tree.getChildCount() - 1).getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getChild(0).getText();//[MONTH]|[DAY]
+                                                                }
+                                                            }
+
+                                                            //the EXPLICIT_DATE one is supposed to be grammatically wrong and not parsed at all, but we'll try to parse it by ignoring the explicit date (change from month+day to just month)
+                                                            if (tree.getChildCount() > 4 && (tree.getChild(4).getText().equals("RELATIVE_DATE") || tree.getChild(4).getText().equals("EXPLICIT_DATE"))) {
+                                                                unitTemp.append("[OF]MONTH_OF_YEAR");
+                                                                //recurringValue already set properly previously, so no need to set here
+                                                            }
+                                                        }
+
+                                                        recurringUnit = unitTemp.toString().toUpperCase();
+                                                        //todo carefully evaluate if recurringValue is useful
+                                                        if (recurringUnit.equals("MONTH_OF_YEAR")) {
+                                                            if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("DAY_OF_MONTH")) {
+                                                                recurringUnit += "|DAY_OF_MONTH";//special condition month and day
+                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[MONTH]|[DAY]
+                                                            }
+                                                            if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("YEAR_OF")) {
+                                                                recurringUnit += "|YEAR_OF";//special condition month and day
+                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText() + tree.getParent().getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[YEAR]
+                                                            }
+                                                            if (tree.getParent().getParent().getChildCount() > 1 && tree.getParent().getParent().getChild(1).getChild(0).getText().equals("HOURS_OF_DAY")) {//also deals with weird situations like 13 on jun(TIME on MONTH (1st))
+                                                                recurringUnit += "|HOURS_OF_DAY";
+                                                                recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(0).getChild(0).getText() + "|" + tree.getParent().getParent().getChild(1).getChild(1).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]
+                                                                if (tree.getParent().getParent().getChild(1).getChildCount() > 2 && tree.getParent().getParent().getChild(1).getChild(3).getText().equals("SECONDS_OF_MINUTE")) {
+                                                                    recurringUnit += "|SECONDS_OF_MINUTE";
+                                                                    recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
+                                                                }
+                                                            }
+                                                        }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
+                                                            recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
+                                                            if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
+                                                                recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
+                                                                recurringValue += tree.getParent().getChild(2).getChild(0).getText(); //[HOUR]|[MINUTE]|[SECOND]
+                                                            }
+                                                        }
+                                                    }
+                                                    tree = tree.getChild(0);//continue to next loop
+                                                }
+                                                //todo check if all dates are covered and stored properly with debug
+                                                ArrayList<String> recurringStat = new ArrayList<>();
+                                                if(dates.get(i).before(new Date())){
+                                                    //if explicitly indicated a past time, warn that stupid person/troll :)
+                                                    String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
+                                                    if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                        //BZZZZZZZZZZZZZZZZZZZZZZZ!!
+                                                        Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                            if (vibrator != null) {
+                                                                vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                            }
+                                                        }else {
+                                                            if (vibrator != null) {
+                                                                vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                            }
+                                                        }
+                                                        Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                    }//otherwise deal with them by adding time to it
+                                                    if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                        recurringStat.add(0, recurringUnit);
+                                                        recurringStat.add(1, recurringValue);
+                                                        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                        Calendar calendar = Calendar.getInstance();
+                                                        calendar.setTime(dates.get(i));
+                                                        calendar.add(Calendar.YEAR,1);
+                                                        recurringStat.add(2, dateFormat.format(calendar));
+                                                    }
+                                                    if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                        recurringStat.add(0, recurringUnit);
+                                                        recurringStat.add(1, recurringValue);
+                                                        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                        Calendar calendar = Calendar.getInstance();
+                                                        calendar.setTime(dates.get(i));
+                                                        calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                        recurringStat.add(2, dateFormat.format(calendar));
+                                                    }
+                                                }else {
+                                                    recurringStat.add(0, recurringUnit);
+                                                    recurringStat.add(1, recurringValue);
+                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                    recurringStat.add(2, dateFormat.format(dates.get(i)));
+                                                    System.out.println("Recurring Status: " + recurringStat.toString());
+                                                }
+                                                Date untilDate = group.getRecursUntil();//add until date
+                                                if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
+                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                    recurringStat.add(3,dateFormat.format(untilDate));
+                                                }
+                                                recurringStats.add(recurringStat);
+                                            }
+                                        }
+                                    }
+                                    for(int i = 0; i < dates.size(); i++){//eliminate past dates that are intentional, and correct the past dates to a future date if unintentional judging by input provided date units
+                                        if(dates.get(i).before(new Date())){
+                                            Tree tree = group.getSyntaxTree().getChild(i);//gets each DATE_TIME subtree
+                                            if(tree.getChild(0).getText().equals("EXPLICIT_DATE") && tree.getChild(0).getChild(0).getText().equals("MONTH_OF_YEAR") && !(tree.getChildCount() > 2 && tree.getChild(0).getChild(2).getText().equals("YEAR_OF"))){
+                                                remindDates.add(dates.get(i));
+                                            }//filter out other past times
+                                        }else {
+                                            remindDates.add(dates.get(i));
+                                        }
+                                    }
+                                }
+                            }
+                            actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);
+                        }
+                        if(impLevel > 0){
+                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
+                            values.put(IMPORTANCE,impLevel);
+                            values.put(IMPORTANCE_TIMESTAMP,dateFormat.format(currentTime));
+                        }
+                        if(remindDates.size() > 0){
+                            Collections.sort(remindDates, new Comparator<Date>() {//sort dates from the most recent to the most distant
+                                @Override
+                                public int compare(Date o1, Date o2) {
+                                    if(o1 == null || o2 == null){
+                                        return 0;
+                                    }
+                                    return o1.compareTo(o2);
+                                }
+                            });
+                            Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
+                            String sortedDatesStr = arrayListToStrGson.toJson(remindDates);
+                            //DEPRECIATED//String sortedRemindDatesStr = sortedRemindDates.toString().replace("[","(").replace("]",")");
+                            //retrieve with
+                            //Gson remindGson = new Gson();
+                            //Type type = new TypeToken<ArrayList<Date>>() {}.getType();
+                            //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
+                            SimpleDateFormat defaultDateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
+                            values.put(RECENT_REMIND_TIME,defaultDateFormat.format(remindDates.get(0)));
+                            values.put(REMIND_TIMES,sortedDatesStr);
+                            System.out.println("Remind Dates: " + remindDates);
+                            if(!recurringStats.isEmpty()){
+                                Collections.sort(recurringStats, new Comparator<ArrayList<String>>() {
+                                    @Override
+                                    public int compare(ArrayList<String> o1, ArrayList<String> o2) {
+                                        return o1.get(2).compareTo(o2.get(2));//sort recurrence status based on initial remind date
+                                    }
+                                });
+                                String recurringStatStr = arrayListToStrGson.toJson(recurringStats);
+                                values.put(RECURRENCE_STATS,recurringStatStr);
+                            }
+                        }
+                        Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
+                        values.put(DATE_STRING_REFERENCES, arrayListToStrGson.toJson(dateStringReferences));//update the existing date string references if changes are made, otherwise this will just put the original references in again
+                    }
+                    Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
+                    getActivity().getContentResolver().update(uri, values, null, null);
+                }
+            }
+        }).start();//end of thread
+    }
+
+    //todo fix insertData return value problem
+    public void insertData(final String text, final long... id) {
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                if (!text.isEmpty()) {
+                    Date currentTime = new Date();//record current time for database timestamp
+                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
+                    ContentValues values = new ContentValues();
+                    values.put(TITLE, text);
+                    values.put(CREATED_TIMESTAMP, dateFormat.format(currentTime));
+                    if (id != null && id.length > 0) {
+                        values.put(ID, id[0]);
+                    }
+                    //store action string orders
+                    if(text.contains("@")){//contains @ functions
+                        String cleanStr = text.replace("*","");
+                        int actionStartPos = cleanStr.indexOf("@");
+                        int actionEndPos;
+                        String actionStr = "";
+                        ArrayList<Date> remindDates = new ArrayList<>();
+                        ArrayList<ArrayList<String>> recurringStats = new ArrayList<>();
+                        int impLevel = 0;
+                        ArrayList<ArrayList<Object>> dateStringReferences = new ArrayList<>();
+                        boolean doNotDisturb = false;
+                        while (actionStartPos >= 0){
+                            if(getDateString(cleanStr.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
+                                actionStartPos = cleanStr.indexOf("@",actionStartPos + 1);
+                                continue;
+                            }
+                            if(cleanStr.indexOf(" ", actionStartPos) == -1 && cleanStr.indexOf("\n", actionStartPos) == -1){
+                                actionEndPos = cleanStr.length();
+                            }else if (cleanStr.indexOf(" ", actionStartPos) == -1){
+                                actionEndPos = cleanStr.indexOf("\n", actionStartPos);
+                            }else if(cleanStr.indexOf("\n",actionStartPos) == -1){
+                                actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + getDateString(cleanStr.substring(actionStartPos + 1)).length() + 1);
+                            }else {
+                                //actionEndPos = Math.min(cleanStr.indexOf(" ", actionStartPos), cleanStr.indexOf("\n", actionStartPos));
+                                //if(actionEndPos == cleanStr.indexOf(" ", actionStartPos)){
+                                actionEndPos = Math.max(cleanStr.indexOf(" ", actionStartPos), actionStartPos + getDateString(cleanStr.substring(actionStartPos + 1, cleanStr.indexOf("\n",actionStartPos))).length() + 1);
+                                //}
+                            }
+                            actionStr = cleanStr.substring(actionStartPos + 1, actionEndPos);
+                            System.out.println("ACTION STR: [" + actionStr + "]");
+                            //mark as important
+                            impLevel += countOccurrences(actionStr,"!");
+                            if(actionStr.toLowerCase().contains("dnd")){
+                                doNotDisturb = true;
+                            }
+                            //set remind time
+                            String dateString = getProperDateString(actionStr);
+                            if(!(dateString == null) && !dateString.equals("")){
+                                //if(dateString.endsWith(" ")) dateString = dateString.substring(0, dateString.length() - 1);//remove if there's a space at the end
+                                dateStringReferences.add(new ArrayList<Object>(Arrays.asList(dateString,currentTime)));
                                 Parser parser = new Parser();
                                 List groups = parser.parse(dateString, currentTime);
                                 System.out.println("groups size: " + groups.size());
@@ -1893,22 +2146,27 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                     if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
                                                         recurringStat.add(0, recurringUnit);
                                                         recurringStat.add(1, recurringValue);
-                                                        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
                                                         Calendar calendar = Calendar.getInstance();
                                                         calendar.setTime(dates.get(i));
                                                         calendar.add(Calendar.YEAR,1);
                                                         recurringStat.add(2, dateFormat.format(calendar));
                                                     }
+                                                    if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                        recurringStat.add(0, recurringUnit);
+                                                        recurringStat.add(1, recurringValue);
+                                                        Calendar calendar = Calendar.getInstance();
+                                                        calendar.setTime(dates.get(i));
+                                                        calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                        recurringStat.add(2, dateFormat.format(calendar));
+                                                    }
                                                 }else {
                                                     recurringStat.add(0, recurringUnit);
                                                     recurringStat.add(1, recurringValue);
-                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
                                                     recurringStat.add(2, dateFormat.format(dates.get(i)));
                                                     System.out.println("Recurring Status: " + recurringStat.toString());
                                                 }
                                                 Date untilDate = group.getRecursUntil();//add until date
                                                 if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
-                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
                                                     recurringStat.add(3,dateFormat.format(untilDate));
                                                 }
                                                 recurringStats.add(recurringStat);
@@ -1930,7 +2188,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             actionStartPos = cleanStr.indexOf("@", actionStartPos + 1);
                         }
                         if(impLevel > 0){
-                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.getDefault());
                             values.put(IMPORTANCE,impLevel);
                             values.put(IMPORTANCE_TIMESTAMP,dateFormat.format(currentTime));
                         }
@@ -1951,8 +2208,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             //Gson remindGson = new Gson();
                             //Type type = new TypeToken<ArrayList<Date>>() {}.getType();
                             //ArrayList<Date> remindDatesOutput = remindGson.fromJson(remindTimeInput,type);
-                            SimpleDateFormat defaultDateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.getDefault());
-                            values.put(RECENT_REMIND_TIME,defaultDateFormat.format(remindDates.get(0)));
+                            values.put(RECENT_REMIND_TIME,dateFormat.format(remindDates.get(0)));
                             values.put(REMIND_TIMES,sortedDatesStr);
                             System.out.println("Remind Dates: " + remindDates);
                             if(!recurringStats.isEmpty()){
@@ -1966,6 +2222,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 values.put(RECURRENCE_STATS,recurringStatStr);
                             }
                         }
+                        Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
+                        values.put(DATE_STRING_REFERENCES, arrayListToStrGson.toJson(dateStringReferences));
                     }
                     getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
                 }
@@ -2143,7 +2401,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             int textCount = selectedContent.toArray().length;
             if (textCount <= 150){
                 dynamicTextSize = 30;
-            }else if(textCount < 500 && textCount > 150){
+            }else if(textCount < 500){
                 dynamicTextSize = 22;
             }else {
                 dynamicTextSize = 18;
@@ -2213,30 +2471,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             else finalPageNumber = textTotalHeight / pageHeight + 1;//calculate the total page number needed
             return finalPageNumber; //todo temporary, change later
             //return (int) Math.ceil(printItemCount / itemsPerPage);
-        }
-
-        private boolean scheduleReminder(int id) {//todo unfinished notification building
-            Cursor cursor = todoSql.getOneDataInTODO(id);
-            cursor.moveToFirst();
-            if(cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME)) != null){
-                Intent notificationIntent = new Intent(getContext(), ReminderBroadcastReceiver.class);
-                notificationIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
-                String recentRemindDateStr = cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME));
-                SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.getDefault());
-                Date remindTime = null;
-                try {
-                    remindTime = dateFormat.parse(recentRemindDateStr);
-                } catch (ParseException e){
-                    e.printStackTrace();
-                    return false;
-                }
-                PendingIntent pendingIntent = PendingIntent.getBroadcast(getContext(), 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-                AlarmManager alarmManager = (AlarmManager)getContext().getSystemService(Context.ALARM_SERVICE);
-                if(alarmManager != null){
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
-                }else return false;
-            }
-            return true;
         }
 
 //todo mark not important option to not show in the important column

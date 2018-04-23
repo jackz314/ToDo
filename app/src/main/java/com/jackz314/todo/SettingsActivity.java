@@ -24,8 +24,10 @@ import android.os.Environment;
 import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
 import android.provider.DocumentsContract;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBar;
 import android.preference.PreferenceManager;
@@ -88,7 +90,9 @@ import static com.jackz314.todo.DatabaseManager.DATABASE_NAME;
  * href="http://developer.android.com/guide/topics/ui/settings.html">Settings
  * API Guide</a> for more information on developing a Settings UI.
  */
-//todo change color picker edittext color
+//todo change color picker editText color
+//todo migrate the entire settings activity to PreferenceFragment based
+//todo add parse date interpretation settings (next XX (week, month...) e.g. as next week this time or monday...) and date interpretation rules
 public class SettingsActivity extends AppCompatPreferenceActivity {
     /**
      * A preference value change listener that updates the preference's summary
@@ -106,9 +110,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public SharedPreferences sharedPreferences;
     public boolean storageBackupPerDenied = false, storageRestorePerDenied = false;
     public String pathSelectorPath = "", fileSelected = "";
-    SwitchPreference autoClearSwitch,orderSwitch,mainHistorySwitch,darkThemeSwitch;
+    SwitchPreference autoClearSwitch, orderSwitch, mainHistorySwitch, darkThemeSwitch, mainOverdueSwitch, normalOverdueSwitch;
     ThemeListPreference themeSelector;
-    Preference wipeButton,themeColor,textColor,backgroundColor,resetAppearanceData,textSize,backupData,restoreData,chooseClrFrequency,restorePurchase;
+    Preference wipeButton, themeColor, textColor, backgroundColor, notificationSettings,
+        resetAppearanceData, textSize, backupData, restoreData, chooseClrFrequency, restorePurchase;
     MainActivity mainActivity;
 
     private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = new Preference.OnPreferenceChangeListener() {
@@ -190,6 +195,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         setColorForPref(textSize);
         setColorForPref(restorePurchase);
         setColorForPref(darkThemeSwitch);
+        setColorForPref(mainOverdueSwitch);
+        setColorForPref(normalOverdueSwitch);
+        setColorForPref(notificationSettings);
         Drawable themeColorD = getDrawable(R.drawable.ic_format_color_fill_black_24dp);
         themeColorD.setColorFilter(themeColorNum, PorterDuff.Mode.SRC);
         Drawable textColorD = getDrawable(R.drawable.ic_text_format_black_24dp);
@@ -249,6 +257,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         restoreData = findPreference(getString(R.string.restore_data_key));
         restorePurchase = findPreference(getString(R.string.restore_purchase_key));
         darkThemeSwitch = (SwitchPreference)findPreference(getString(R.string.dark_theme_key));
+        mainOverdueSwitch = (SwitchPreference)findPreference(getString(R.string.main_overdue_switch));
+        normalOverdueSwitch = (SwitchPreference)findPreference(getString(R.string.normal_overdue_switch));
+        notificationSettings = findPreference(getString(R.string.notification_settings));
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setColorPreferencesSettings();
         Window window = this.getWindow();
@@ -395,8 +406,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 final SharedPreferences.Editor editor = sharedPreferences.edit();
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 final View dialogView = inflater.inflate(R.layout.time_interval_choose_dialog, null);
-                final Spinner unitChooser = (Spinner) dialogView.findViewById(R.id.unit_chooser);
-                final NumberPicker intervalChooser = (NumberPicker)dialogView.findViewById(R.id.interval_num_picker);
+                final Spinner unitChooser = dialogView.findViewById(R.id.unit_chooser);
+                final NumberPicker intervalChooser = dialogView.findViewById(R.id.interval_num_picker);
                 intervalChooser.setValue(sharedPreferences.getInt(getString(R.string.clear_interval_num_key),1));
                 unitChooser.setSelection(sharedPreferences.getInt(getString(R.string.clear_interval_unit_num_key),2),true);
                 final AlertDialog dialog = new AlertDialog.Builder(SettingsActivity.this).setView(dialogView)
@@ -524,7 +535,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 final View dialogView = inflater.inflate(R.layout.editnum_dialog, null);
                 //final EditText edt = (EditText) dialogView.findViewById(R.id.num1);
-                final NumberPicker numberPicker = (NumberPicker)dialogView.findViewById(R.id.numberPicker);
+                final NumberPicker numberPicker = dialogView.findViewById(R.id.numberPicker);
                 numberPicker.setMinValue(1);
                 numberPicker.setMaxValue(60);
                 numberPicker.setValue(sharedPreferences.getInt("text_size_key",20));
@@ -875,10 +886,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             public boolean onPreferenceClick(Preference preference) {
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 View dialogView = inflater.inflate(R.layout.backup_dialog,null);
-                final EditText edt = (EditText)dialogView.findViewById(R.id.tagText);
+                final EditText edt = dialogView.findViewById(R.id.tagText);
                 edt.setBackgroundTintList(ColorStateList.valueOf(themeColorNum));
                 setCursorColor(edt,themeColorNum);
-                Button editPath =(Button)dialogView.findViewById(R.id.path_selector);
+                Button editPath = dialogView.findViewById(R.id.path_selector);
                 editPath.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -964,8 +975,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 final File storageRoot = Environment.getExternalStorageDirectory();
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 View dialogView = inflater.inflate(R.layout.restore_dialog,null);
-                final CheckBox replaceCheck = (CheckBox)dialogView.findViewById(R.id.replace_current_checkbox);
-                Button selectBackup = (Button)dialogView.findViewById(R.id.select_backup_file_btn);
+                final CheckBox replaceCheck = dialogView.findViewById(R.id.replace_current_checkbox);
+                Button selectBackup = dialogView.findViewById(R.id.select_backup_file_btn);
                 selectBackup.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -1015,6 +1026,44 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 return false;
             }
         });
+     mainOverdueSwitch.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+         @Override
+         public boolean onPreferenceChange(Preference preference, Object newValue) {
+             SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+             SharedPreferences.Editor editor = sharedPreferences.edit();
+             editor.putBoolean(getString(R.string.main_overdue_switch),(boolean)newValue);
+             editor.commit();
+             Bundle bundle = new Bundle();
+             bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "main_overdue_switch");
+             bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Main Overdue Switch: " + sharedPreferences.getBoolean(getString(R.string.main_overdue_switch),true));
+             bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "switch");
+             mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+             mainOverdueSwitch.setChecked(sharedPreferences.getBoolean(getString(R.string.main_overdue_switch),false));
+             PreferenceScreen screen = getPreferenceScreen();
+             if(mainOverdueSwitch.isChecked()){//remove/add normalOverdueSwitch based on status of mainOverdueSwitch
+                 screen.addPreference(normalOverdueSwitch);
+             }else {
+                 screen.removePreference(normalOverdueSwitch);
+             }
+             return false;
+         }
+     });
+
+     notificationSettings.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+         @Override
+         public boolean onPreferenceClick(Preference preference) {
+             Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                 intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+             }else {
+                 intent.putExtra("app_package", getPackageName());
+                 intent.putExtra("app_uid", getApplicationInfo().uid);
+             }
+             startActivity(intent);
+             return false;
+         }
+     });
+
     }
 
     public boolean restoreDataFromBackup(String filePath){
@@ -1193,8 +1242,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             coloredTitle.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredTitle.length(), 0 );
             coloredSummary.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredSummary.length(), 0 );
         }else {
-            coloredTitle.setSpan( new ForegroundColorSpan(colorUtils.lighten(textColorNum,0.5)), 0, coloredTitle.length(), 0 );
-            coloredSummary.setSpan( new ForegroundColorSpan(colorUtils.lighten(textColorNum,0.5)), 0, coloredSummary.length(), 0 );
+            coloredTitle.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColorNum,0.5)), 0, coloredTitle.length(), 0 );
+            coloredSummary.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColorNum,0.5)), 0, coloredSummary.length(), 0 );
         }
         pref.setTitle(coloredTitle);
         pref.setSummary(coloredSummary);
@@ -1225,7 +1274,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         if(pref.isEnabled()){
             //pref.setWidgetLayoutResource(R.layout.custom_switchpreference);
             Switch customSwitch = (Switch)getLayoutInflater().inflate(R.layout.custom_switchpreference,null);
-            Switch customRealSwitch = (Switch)customSwitch.findViewById(R.id.custom_switch_item);
+            Switch customRealSwitch = customSwitch.findViewById(R.id.custom_switch_item);
             ColorStateList buttonStates = new ColorStateList(
                     new int[][]{
                             new int[]{-android.R.attr.state_enabled},
@@ -1247,7 +1296,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 pref.setSummary(coloredSummary);
             }
         }else {
-            coloredTitle.setSpan( new ForegroundColorSpan(colorUtils.lighten(textColorNum,0.5)), 0, coloredTitle.length(), 0 );
+            coloredTitle.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColorNum,0.5)), 0, coloredTitle.length(), 0 );
             if(pref.getSummary()!= null){
                 String summary = pref.getSummary().toString();
                 Spannable coloredSummary = new SpannableString (summary);

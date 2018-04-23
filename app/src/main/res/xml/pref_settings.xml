@@ -9,8 +9,9 @@
          dismiss it. -->
     <!-- NOTE: ListPreference's summary should be set to its value by the activity code. -->
 
-    <com.jackz314.todo.MyPreferenceCategory android:title="@string/history_category"
-        android:id="@+id/hiscategory">
+    <com.jackz314.todo.MyPreferenceCategory
+        android:title="@string/history_category"
+        android:id="@+id/history_category">
         <com.jackz314.todo.ColorSwitchPreference
             android:defaultValue="true"
             android:key="@string/main_history_switch"
@@ -31,13 +32,48 @@
             android:textColor="#ff0000"
             android:title="@string/wipe_history"
             android:key="@string/wipe_history_key"
-            android:id="@+id/wipe_history">/>
-        </Preference>
+            android:id="@+id/wipe_history"/>
+    </com.jackz314.todo.MyPreferenceCategory>
+
+    <com.jackz314.todo.MyPreferenceCategory
+        android:title="@string/reminder_category"
+        android:id="@+id/reminder_category">
+        <com.jackz314.todo.ColorSwitchPreference
+            android:defaultValue="true"
+            android:key="@string/main_overdue_switch"
+            android:summaryOn="@string/main_overdue_switch_content_on"
+            android:summaryOff="@string/main_overdue_switch_content_off"
+            android:title="@string/main_overdue_switch_title" />
+        <com.jackz314.todo.ColorSwitchPreference
+            android:defaultValue="true"
+            android:switchTextOn="@string/normal_overdue_switch_title"
+            android:key="@string/normal_overdue_switch"
+            android:summaryOn="@string/normal_overdue_switch_content_on"
+            android:summaryOff="@string/normal_overdue_switch_content_off"
+            android:title="@string/normal_overdue_switch_title" />
+        <Preference
+            android:summary="@string/notification_settings_content"
+            android:title="@string/notification_settings_title"
+            android:key="@string/notification_settings"
+            android:id="@+id/notification_settings"/>
+        <com.jackz314.todo.ColorSwitchPreference
+            android:defaultValue="true"
+            android:key="@string/notification_light"
+            android:summaryOn="@string/main_overdue_switch_content_on"
+            android:summaryOff="@string/main_overdue_switch_content_off"
+            android:title="@string/notification_light_title" />
+        <com.jackz314.todo.ColorSwitchPreference
+            android:defaultValue="true"
+            android:key="@string/twenty_four_hour_mode"
+            android:summaryOn="@string/twenty_four_hour_mode_content_on"
+            android:summaryOff="@string/twenty_four_hour_mode_content_off"
+            android:title="@string/twenty_four_hour_mode_title" />
+
     </com.jackz314.todo.MyPreferenceCategory>
 
     <com.jackz314.todo.MyPreferenceCategory
         android:title="@string/appearance_category"
-        android:id="@+id/appcategory">
+        android:id="@+id/appearance_category">
         <com.jackz314.todo.ColorSwitchPreference
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -109,9 +145,10 @@
             android:title="@string/reset_appearance_title">/>
         </Preference>
     </com.jackz314.todo.MyPreferenceCategory>
+
     <com.jackz314.todo.MyPreferenceCategory
-        android:title="@string/others_category"
-        android:id="@+id/others_category">
+        android:title="@string/data_category"
+        android:id="@+id/data_category">
         <Preference
             android:id="@+id/backup_data"
             android:enabled="true"
@@ -130,6 +167,11 @@
             android:title="@string/restore_data_title"
             android:summary="@string/restore_data_content">/>
         </Preference>
+    </com.jackz314.todo.MyPreferenceCategory>
+
+    <com.jackz314.todo.MyPreferenceCategory
+        android:title="@string/others_category"
+        android:id="@+id/others_category">
         <Preference
             android:id="@+id/restore_purchase"
             android:enabled="true"
@@ -141,5 +183,4 @@
         </Preference>
     </com.jackz314.todo.MyPreferenceCategory>
 
-
-</PreferenceScreen>
+    </PreferenceScreen>

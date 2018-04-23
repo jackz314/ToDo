@@ -1,9 +1,14 @@
 package com.jackz314.todo;
 
 
+import android.app.AlarmManager;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.app.TaskStackBuilder;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -40,7 +45,9 @@ import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
+import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -66,6 +73,7 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
 import com.jackz314.dateparser.DateGroup;
 import com.jackz314.dateparser.Parser;
 import com.jackz314.todo.iap_utils.IabHelper;
@@ -73,6 +81,8 @@ import com.jackz314.todo.iap_utils.IabResult;
 import com.jackz314.todo.iap_utils.Inventory;
 import com.jackz314.todo.iap_utils.Purchase;
 import com.jackz314.todo.utils.ColorUtils;
+
+import org.threeten.bp.Duration;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -95,11 +105,21 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static android.support.v4.app.NotificationCompat.CATEGORY_REMINDER;
+
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
+import static com.jackz314.todo.DatabaseManager.ID;
+import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
 import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.RECURRENCE_STATS;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIMES;
 import static com.jackz314.todo.DatabaseManager.TITLE;
+import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_FINISH;
+import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_SNOOZE;
+import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_SNOOZE_TIME;
+import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_START_REMINDER;
+import static com.jackz314.todo.ReminderBroadcastReceiver.OVERDUE_REMINDER;
+import static com.jackz314.todo.ReminderBroadcastReceiver.SNOOZE_TIME;
 
 //   ┏┓　　　┏┓
 //┏┛┻━━━┛┻┓
@@ -131,6 +151,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     //paused ad//static int REMOVE_REQUEST_ID =1022;
     static int PURCHASE_PREMIUM_REQUEST_ID = 1025;
     public static String REMINDER_NOTIFICATION_ID = "reminder_notification_id";
+    public static String REMINDER_NOTIFICATION_GROUP = "reminder_notification_group";
+    public static String NORMAL_CHANNEL_ID = "10101", IMPORTANT_CHANNEL_ID = "10102", URGENT_CHANNEL_ID = "10103";
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -412,6 +434,49 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         historySettingPref += "BIjAN" + bep.substring(2,bep.length());
         //setMargins(fab,8,16,16,16);
         menuNav = navigationView.getMenu();
+
+        //create notification channels
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(
+                    NOTIFICATION_SERVICE);
+
+            // Create the normal NotificationChannel
+            CharSequence normalChannelName = getString(R.string.normal_channel_name);
+            String normalChannelDescription = getString(R.string.normal_channel_description);
+            int normalChannelImportance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel normalChannel = new NotificationChannel(NORMAL_CHANNEL_ID, normalChannelName, normalChannelImportance);
+            normalChannel.setDescription(normalChannelDescription);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(normalChannel);
+            }
+
+            // Create the important NotificationChannel
+            CharSequence importantChannelName = getString(R.string.important_channel_name);
+            String importantChannelDescription = getString(R.string.important_channel_description);
+            int importantChannelImportance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel importantChannel = new NotificationChannel(IMPORTANT_CHANNEL_ID, importantChannelName, importantChannelImportance);
+            importantChannel.setDescription(importantChannelDescription);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(importantChannel);
+            }
+
+            // Create the urgent NotificationChannel
+            CharSequence urgentChannelName = getString(R.string.urgent_channel_name);
+            String urgentChannelDescription = getString(R.string.urgent_channel_description);
+            int urgentChannelImportance = NotificationManager.IMPORTANCE_HIGH;//should be IMPORTANCE_MAX, but since it's unused for now, settle for IMPORTANCE_HIGH for now
+            NotificationChannel urgentChannel = new NotificationChannel(URGENT_CHANNEL_ID, urgentChannelName, urgentChannelImportance);
+            urgentChannel.setDescription(urgentChannelDescription);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(urgentChannel);
+            }
+        }
+
         todoTableId = todoTableId +
                 "CPMFnxQ5s0" +
                 "NBVs3kWNgN" +
@@ -1157,49 +1222,51 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static String getDateString(String str, String... addOnOps){//addOnOps: startPos (inclusive),endPos (exclusive),replaceWithString
         Parser parser = new Parser();
         List groups = parser.parse(str, getCurrentTime());
-        if(groups.size() <= 0){
-            String strLow = str.toLowerCase();
-            if(strLow.contains("every sec") ||
-                    strLow.contains("every min") ||
-                    strLow.contains("every hr") ||
-                    strLow.contains("every hour") ||
-                    strLow.contains("every day") ||
-                    strLow.contains("every wk") ||
-                    strLow.contains("every week") ||
-                    strLow.contains("every month") ||
-                    strLow.contains("every yr") ||
-                    strLow.contains("every year")){
-                return getDateString(insertToString(str," 1",strLow.indexOf("every ") + 5), Integer.toString(strLow.indexOf("every ") + 5), Integer.toString(strLow.indexOf("every ") + 7));
-            }else if(strLow.contains("everyday")){
-                return getDateString(insertToString(str," 1 ",strLow.indexOf("everyday") + 5), Integer.toString(strLow.indexOf("every ") + 5), Integer.toString(strLow.indexOf("every ") + 8));
-            }else if(strLow.contains("weekday")){
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(str);
-                if(strLow.contains("weekdays")){
-                    stringBuilder.replace(strLow.indexOf("weekdays"),strLow.indexOf("weekdays") + 8,"Mon and Tue and Wed and Thu and Fri");
-                    return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekdays")), Integer.toString(strLow.indexOf("weekdays") + 35));//34 == weekdays string length + 1 because of exclusive
-                }else {
-                    stringBuilder.replace(strLow.indexOf("weekday"),strLow.indexOf("weekday") + 7,"Mon and Tue and Wed and Thu and Fri");
-                    return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekday")), Integer.toString(strLow.indexOf("weekday") + 35));//34 == weekdays string length + 1 because of exclusive
-                }
-            }else if(strLow.contains("weekend")){
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(str);
-                if(strLow.contains("weekends")){
-                    stringBuilder.replace(strLow.indexOf("weekends"),strLow.indexOf("weekends") + 8,"Sat and Sun");
-                    return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekends")), Integer.toString(strLow.indexOf("weekends") + 11));// == weekends string length + 1 because of exclusive
-                }else {
-                    stringBuilder.replace(strLow.indexOf("weekend"),strLow.indexOf("weekend") + 7,"Sat and Sun");
-                    return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekend")), Integer.toString(strLow.indexOf("weekend") + 11));// == weekends string length + 1 because of exclusive
-                }
+        if(groups.size() <= 0){//handle only importance level situations
+            if(str.replace("!","").isEmpty()){//not a date string but a action string
+                return "";
             }else {
-                if(str.replace("!","").isEmpty()){//not a date string but a action string
-                    return "";
-                }else {
-                    return null;
-                }
+                return null;
             }
         }
+
+        //todo try to handle these natively within the DateParser
+        String strLow = str.toLowerCase();//handle natively unhandled situations
+        if(strLow.contains("every sec") ||
+                strLow.contains("every min") ||
+                strLow.contains("every hr") ||
+                strLow.contains("every hour") ||
+                strLow.contains("every day") ||
+                strLow.contains("every wk") ||
+                strLow.contains("every week") ||
+                strLow.contains("every month") ||
+                strLow.contains("every yr") ||
+                strLow.contains("every year")){
+            return getDateString(insertToString(str," 1",strLow.indexOf("every ") + 5), Integer.toString(strLow.indexOf("every ") + 5), Integer.toString(strLow.indexOf("every ") + 7));
+        }else if(strLow.contains("everyday")){
+            return getDateString(insertToString(str," 1 ",strLow.indexOf("everyday") + 5), Integer.toString(strLow.indexOf("every ") + 5), Integer.toString(strLow.indexOf("every ") + 8));
+        }else if(strLow.contains("weekday")){
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append(str);
+            if(strLow.contains("weekdays")){
+                stringBuilder.replace(strLow.indexOf("weekdays"),strLow.indexOf("weekdays") + 8,"Mon and Tue and Wed and Thu and Fri");
+                return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekdays")), Integer.toString(strLow.indexOf("weekdays") + 35));//34 == weekdays string length + 1 because of exclusive
+            }else {
+                stringBuilder.replace(strLow.indexOf("weekday"),strLow.indexOf("weekday") + 7,"Mon and Tue and Wed and Thu and Fri");
+                return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekday")), Integer.toString(strLow.indexOf("weekday") + 35));//34 == weekdays string length + 1 because of exclusive
+            }
+        }else if(strLow.contains("weekend")){
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append(str);
+            if(strLow.contains("weekends")){
+                stringBuilder.replace(strLow.indexOf("weekends"),strLow.indexOf("weekends") + 8,"Sat and Sun");
+                return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekends")), Integer.toString(strLow.indexOf("weekends") + 11));// == weekends string length + 1 because of exclusive
+            }else {
+                stringBuilder.replace(strLow.indexOf("weekend"),strLow.indexOf("weekend") + 7,"Sat and Sun");
+                return getDateString(stringBuilder.toString(), Integer.toString(strLow.indexOf("weekend")), Integer.toString(strLow.indexOf("weekend") + 11));// == weekends string length + 1 because of exclusive
+            }
+        }
+
         StringBuilder dateString = new StringBuilder();
         dateString.append("");//avoid null
         for(Object groupF : groups) {
@@ -1241,7 +1308,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return dateString.toString();
     }
 
-    public static String generateRecurrenceStr(ArrayList<String> recurStat){
+    public static String generateDetailedRecurrenceStr(ArrayList<String> recurStat){
         String recurFinalStr = "";
         if(recurStat != null && recurStat.size() == 3){
             String recurUnit = recurStat.get(0);
@@ -1862,6 +1929,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         return false;
     }
+    //todo consider migrating to localdates to deal with timezones better?
 //todo handle past/invalid/finished/overdue reminders, update dates in comply with untilDate and stuff like that.
     /**
      * Generates the notification for the reminder
@@ -1874,10 +1942,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * @param cursor the cursor returned from quering a note
      * @return the reminder notification, null if failed during the process, for example, ParseException
      */
-    public static Notification generateReminderNotification(Context context, Cursor cursor){
+    public static Notification generateReminderNotification(Context context, Cursor cursor, long... previouslySnoozedTime){
         String title = cursor.getString(cursor.getColumnIndex(TITLE));
         String recentRemindDateStr = cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME));
-        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
         Date nowRemindTime = null;
         try {
             nowRemindTime = dateFormat.parse(recentRemindDateStr);
@@ -1886,26 +1954,37 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         Gson remindGson = new Gson();
         Type type = new TypeToken<ArrayList<Date>>() {}.getType();
         ArrayList<Date> remindDates = remindGson.fromJson(remindTimesStr,type);
-        if(nowRemindTime.before(new Date())){
-            remindDates =
+        boolean isOverdue = false;
+        Date currentTimeConsiderDelay = new Date(new Date().getTime() - 3000);
+        if(nowRemindTime.before(currentTimeConsiderDelay)){//current time with a considered 3 second delay//consider the difference caused by the delay of current time and stored time has when determine overdue/past dates
+            remindDates = removePastDates(remindDates);
+            isOverdue = true;
         }
         Date nextUpRemindTime = remindDates.get(1);
         Date thenUpRemindTime = remindDates.get(2);
         SimpleDateFormat timeNotificationDateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         SimpleDateFormat dateNotificationDateFormat = new SimpleDateFormat("MMM d",Locale.getDefault());
         SimpleDateFormat wholeTimeDateFormat = new SimpleDateFormat("hh aa",Locale.getDefault());
-        StringBuilder notificationContent = new StringBuilder();
-        String nowUpTimeStr = "";StringBuilder nextUpTimeStr = new StringBuilder();
-        StringBuilder thenUpTimeStr = new StringBuilder();
+        SpannableStringBuilder notificationContent = new SpannableStringBuilder();
+        SpannableStringBuilder nowUpTimeStr;
+        StringBuilder nextUpTimeStr, thenUpTimeStr;
         ArrayList<ArrayList<String>> nextUpRecurStats = new ArrayList<>(), thenUpRecurStats = new ArrayList<>();
-        nowUpTimeStr = timeNotificationDateFormat.format(nowRemindTime);
-        if(nowUpTimeStr.endsWith(":00") ){//if whole time then change display from XX:XX to XX AM/PM todo consider add 24/12 hr mode setting and add that decision logic here
-            nowUpTimeStr = wholeTimeDateFormat.format(nowRemindTime);
+        nowUpTimeStr = new SpannableStringBuilder(timeNotificationDateFormat.format(nowRemindTime));
+        if(nowUpTimeStr.toString().endsWith(":00") ){//if whole time then change display from XX:XX to XX AM/PM todo consider add 24/12 hr mode setting and add that decision logic here
+            nowUpTimeStr = new SpannableStringBuilder(wholeTimeDateFormat.format(nowRemindTime));
+        }
+        if(isOverdue){
+            String overdueText = context.getString(R.string.overdue);
+            nowUpTimeStr = new SpannableStringBuilder(overdueText + getDateDiffStr(getSmartRoughDateDiff(nowRemindTime, currentTimeConsiderDelay), context) + " (" + nowUpTimeStr + ")");
+            //set "Overdue VV UU ago" bold and italic, leave the rest of the string untouched
+            nowUpTimeStr.setSpan(new StyleSpan(Typeface.BOLD), nowUpTimeStr.toString().indexOf(overdueText), nowUpTimeStr.toString().indexOf("(") - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            nowUpTimeStr.setSpan(new StyleSpan(Typeface.ITALIC), nowUpTimeStr.toString().indexOf(overdueText), nowUpTimeStr.toString().indexOf("(") - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         String recurrenceStatsStr = cursor.getString(cursor.getColumnIndex(RECURRENCE_STATS));
         if(recurrenceStatsStr != null) {//has recurrences
             Type recurStatType = new TypeToken<ArrayList<ArrayList<String>>>() {}.getType();
             ArrayList<ArrayList<String>> recurrenceStats = remindGson.fromJson(recurrenceStatsStr,recurStatType);
+            if(isOverdue) recurrenceStats = removePastDatesRecur(recurrenceStats);//update stats, remove past stats if exist
             if(nextUpRemindTime == null){
                 nextUpRemindTime = new Date(Long.MAX_VALUE);
             }
@@ -1913,7 +1992,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 thenUpRemindTime = new Date(Long.MAX_VALUE);
             }
 
-            //add recur stat to now up str (all nowUp equal units' recur stats are added in here
+            //add recur stat to nowUp str (all nowUp equal units' recur stats are added in here
             int coincideCount = 0;
             StringBuilder nowUpRecurStrBuilder = new StringBuilder();
             for(ArrayList<String> recurStat : recurrenceStats){
@@ -1941,8 +2020,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
                 nowUpRecurStrBuilder.insert(0," (" + context.getString(R.string.reminder_notification_every));
                 nowUpRecurStrBuilder.append(")");//wrap up
-                nowUpTimeStr += nowUpRecurStrBuilder.toString();
+                nowUpTimeStr.append(nowUpRecurStrBuilder.toString());
             }
+
             //determine nextUpDate
             for(int i = 0; i < recurrenceStats.size(); i++){
                 Date recurDate = null;
@@ -2085,8 +2165,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         }
         notificationContent.append(nowUpTimeStr);//start with the most recent reminder time
+        if(isOverdue) notificationContent.append("\n");
         if(nextUpRemindTime != null && nextUpRemindTime.getTime() != Long.MAX_VALUE){
-            notificationContent.append(context.getString(R.string.reminder_notification_splitter));
+            if(!isOverdue) notificationContent.append(context.getString(R.string.reminder_notification_splitter));
             notificationContent.append(context.getString(R.string.reminder_notification_next_up));
             if(isToday(nextUpRemindTime)){
                 nextUpTimeStr = new StringBuilder(timeNotificationDateFormat.format(nextUpRemindTime));
@@ -2178,12 +2259,340 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //if(remindDates.get(3) != null || recurrenceStatsStr != null){
         //    notificationContent.append("…");
         //} //unnecessary
-        Notification.Builder reminderNotifBuilder = new Notification.Builder(context);
+
+        //generate notification
+        Notification.Builder reminderNotifBuilder = new Notification.Builder(context);//set different notification importance level based on the reminder's importance level
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            reminderNotifBuilder = new Notification.Builder(context,NORMAL_CHANNEL_ID);
+            if(cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) > 0){
+                reminderNotifBuilder = new Notification.Builder(context,IMPORTANT_CHANNEL_ID);
+                if(cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) > 2){
+                    reminderNotifBuilder = new Notification.Builder(context,URGENT_CHANNEL_ID);
+                }
+            }
+        }else{//for OS lower than Android O, set notification priority separately instead of assign them to according notification channels
+            reminderNotifBuilder.setPriority(Notification.PRIORITY_DEFAULT);
+            if(cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) > 0){
+                reminderNotifBuilder.setPriority(Notification.PRIORITY_HIGH);
+                if(cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) > 2){
+                    reminderNotifBuilder.setPriority(Notification.PRIORITY_MAX);
+                }
+            }
+        }
+
+        //default click notification action intent
+        // Create an Intent for the activity you want to start
+        Intent resultIntent = new Intent(context, MainActivity.class);
+        // Create the TaskStackBuilder and add the intent, which inflates the back stack
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        stackBuilder.addNextIntentWithParentStack(resultIntent);
+        // Get the PendingIntent containing the entire back stack
+        PendingIntent defaultClickPendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        //choose snooze time button action intent
+        Intent snoozeIntent = new Intent(context, ReminderBroadcastReceiver.class);
+        snoozeIntent.setAction(ACTION_SNOOZE);
+        snoozeIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
+        PendingIntent snoozePendingIntent = PendingIntent.getBroadcast(context, 0, snoozeIntent, 0);
+
+        //snooze for specific time button action intent
+        Intent snoozeTimeIntent = new Intent(context, ReminderBroadcastReceiver.class);
+        snoozeTimeIntent.setAction(ACTION_SNOOZE_TIME);
+        snoozeTimeIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
+        String snoozeButtonTxt;
+        if(previouslySnoozedTime.length > 0){//snooze actions are considerd prior to overdue procedures
+            String[] snoozeTimeIntervalStats = getSmartRoughDateDiffMills(previouslySnoozedTime[0] * 2);
+            snoozeButtonTxt = snoozeTimeIntervalStats[1] + " " + capitalize(snoozeTimeIntervalStats[0].toLowerCase());//e.g. 1 Hour
+            if(snoozeTimeIntervalStats[1].equals("1")){
+                snoozeButtonTxt += "s";
+            }
+            long snoozeTime = Long.valueOf(snoozeTimeIntervalStats[3]);//get the rounded up time diff value to set as actual preset snooze time
+            snoozeTimeIntent.putExtra(SNOOZE_TIME, snoozeTime);//if overdue, set smart snooze time to a day later
+        }else {
+            snoozeButtonTxt = "1 " + context.getString(R.string.hour_caps);//default
+            snoozeTimeIntent.putExtra(SNOOZE_TIME, (long)3600);//default snooze time 1 hour
+        }
+        PendingIntent snoozeTimePendingIntent = PendingIntent.getBroadcast(context, 0, snoozeTimeIntent, 0);
+
+        //finish button action intent
+        Intent finishIntent = new Intent(context, ReminderBroadcastReceiver.class);
+        finishIntent.setAction(ACTION_FINISH);
+        finishIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
+        PendingIntent finishPendingIntent = PendingIntent.getBroadcast(context, 0, finishIntent, 0);
+
         reminderNotifBuilder.setSmallIcon(R.mipmap.ic_launcher);
-        reminderNotifBuilder.setContentTitle(title);
+        reminderNotifBuilder.setContentTitle(formatNotificationToDoText(title,context));
         reminderNotifBuilder.setContentText(notificationContent);
+        reminderNotifBuilder.setGroup(REMINDER_NOTIFICATION_GROUP);
+        reminderNotifBuilder.setContentIntent(defaultClickPendingIntent);
+        reminderNotifBuilder.setCategory(CATEGORY_REMINDER);
+        //snooze to time action
+        reminderNotifBuilder.addAction(new Notification.Action(R.drawable.ic_snooze_black_24dp, snoozeButtonTxt, snoozeTimePendingIntent));
+        //finish action
+        reminderNotifBuilder.addAction(new Notification.Action(R.drawable.ic_done_black_24dp,context.getString(R.string.finish),finishPendingIntent));
+        //snooze action (choose snooze to time)
+        reminderNotifBuilder.addAction(new Notification.Action(R.drawable.ic_snooze_black_24dp,context.getString(R.string.later),snoozePendingIntent));
         return reminderNotifBuilder.build();
     }
+
+    public static ArrayList<Date> removePastDates(ArrayList<Date> dates, Date... fromTime){
+        Date currentDateConsiderDelay;
+        if(fromTime != null && fromTime.length > 0){
+            currentDateConsiderDelay = fromTime[0];
+        }else {
+            currentDateConsiderDelay = new Date(new Date().getTime() - 3000);
+        }
+        for(int i = 0; i < dates.size(); i++){
+            if(dates.get(i).before(currentDateConsiderDelay)){
+                dates.remove(i);//remove past dates
+            }
+        }
+        return dates;
+    }
+
+    public static ArrayList<ArrayList<String>> removePastDatesRecur(ArrayList<ArrayList<String>> recurStats, Date... fromTime){
+        Date currentDateConsiderDelay;
+        if(fromTime != null && fromTime.length > 0){
+            currentDateConsiderDelay = fromTime[0];
+        }else {
+            currentDateConsiderDelay = new Date(new Date().getTime() - 3000);
+        }
+        for(int i = 0; i < recurStats.size(); i++){
+            Date recurDate = null;
+            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.getDefault());
+            try {
+                recurDate = dateFormat.parse(recurStats.get(i).get(2));
+
+            } catch (ParseException e) {
+                e.printStackTrace();
+                break;
+            }
+            if(recurDate.before(currentDateConsiderDelay)){//update dates
+                Date nextRecurDate = recurDate;
+                while(true){
+                    nextRecurDate = generateNextRecurDate(updateRecurStatWithNewDate(recurStats.get(i),nextRecurDate));
+                    if(nextRecurDate == null || nextRecurDate.after(currentDateConsiderDelay)){//if date is terminated, break, remove below
+                        break;
+                    }
+                }
+                if(nextRecurDate != null){
+                    recurStats.get(i).set(2,dateFormat.format(nextRecurDate));
+                }else {
+                    recurStats.remove(i);
+                }
+            }
+        }
+        return recurStats;
+    }
+
+    /**
+     * Get a difference between two dates
+     * @param date1 the oldest date
+     * @param date2 the newest date
+     * @param timeUnit the unit in which you want the diff
+     * @return the difference (long) value, in the provided unit
+     * if date1 is before date date2, returns negative value, vice versa
+     */
+    public static long getDateDiff(Date date1, Date date2, TimeUnit timeUnit) {
+        long diffInMillies = date1.getTime() - date2.getTime();
+        return timeUnit.convert(diffInMillies,TimeUnit.MILLISECONDS);
+    }
+
+    //if date1 is before date date2, returns negative value, vice versa, second date should usually be current date
+    public static String[] getSmartRoughDateDiff(Date date1, Date date2){
+        long diffInMills = date1.getTime() - date2.getTime();
+        return getSmartRoughDateDiffMills(diffInMills);
+    }
+
+    //return: [0]: time unit in str, [1] time difference value relative to time unit in str, [2]: calculated rounded up time difference in millis based on the time unit & relative time diff
+    public static String[] getSmartRoughDateDiffMills(long diffInMills){
+        if(diffInMills == 0) return null;//null represents same time
+        Duration duration = Duration.ofMillis(diffInMills);
+        if(duration.toDays() == 0){//if bigger level have no difference, move to smaller levels
+            if(duration.toHours() == 0){
+                if(duration.toMinutes() == 0){
+                    return new String[]{"SECOND", Long.toString(Math.round(diffInMills/1000)), Long.toString(Math.round(diffInMills/1000) * 1000)};//round the second number when converting from milliseconds to seconds
+                }else {
+                    return new String[]{"MINUTE", Long.toString(duration.toMinutes()), Long.toString(duration.toMinutes() * 60 * 1000)};//no round up
+                }
+            }else {
+                return new String[]{"HOUR", Long.toString(duration.toHours() * 3600 * 1000)};
+            }
+        }else {
+            if(duration.toDays() > 30){
+                if(duration.toDays() > 365){
+                    return new String[]{"YEAR",Long.toString(duration.toDays()/365) , Long.toString((duration.toDays()/365) * 365 * 24 * 3600 * 1000)};//don't round up since adding more days than it should be to an overdue notification is annoying
+                }else {
+                    return new String[]{"MONTH",Long.toString(duration.toDays()/30) , Long.toString((duration.toDays()/30) * 30 * 24 * 3600 * 1000)};//don't round up since adding more days than it should be to an overdue notification is annoying
+                }
+            }
+            return new String[]{"DAY", Long.toString(duration.toDays()), Long.toString(duration.toDays() * 24 * 3600 * 1000)};//no round up
+        }
+    }
+
+    //adds "ago" if detected negative value
+    public static String getDateDiffStr(String[] dateDiffStat, Context context){
+        if(dateDiffStat != null){
+            String dateDiffValue = dateDiffStat[1];
+            String dateDiffUnit = dateDiffStat[0];
+            if(!"1".equals(dateDiffValue)){//plural situations, add "s" in the end;
+                dateDiffUnit += "S";
+            }
+            if(dateDiffValue.startsWith("-")){//VV UU ago
+                if(dateDiffValue.equals("-1") && dateDiffUnit.equals("DAY")){
+                    return context.getString(R.string.yesterday);
+                }
+                return dateDiffValue + " " + capitalize(dateDiffUnit.toLowerCase()) + " " + context.getString(R.string.ago);
+            }else {//in VV UU
+                if(dateDiffValue.equals("1") && dateDiffUnit.equals("DAY")){
+                    return context.getString(R.string.tomorrow);
+                }
+                return context.getString(R.string.in) + " " + dateDiffValue + " " + capitalize(dateDiffUnit.toLowerCase()) + " ";
+            }
+        }else {
+            return null;
+        }
+    }
+
+    public static Spannable formatNotificationToDoText(String text, Context context){
+        SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+        DatabaseManager todoSql = new DatabaseManager(context);
+        int themeColor = context.getSharedPreferences("settings_data",MODE_PRIVATE).getInt(context.getString(R.string.theme_color_key),context.getResources().getColor(R.color.colorActualPrimary));
+        //bold section, todo but don't display bold text in notifications?
+        int boldStartPos = text.indexOf("*");
+        if(boldStartPos >= 0){//contains bold markdown
+            while(boldStartPos < text.length() && boldStartPos >= 0){
+                int boldEndPos = text.indexOf("*",boldStartPos + 1);
+                if(boldEndPos < 0){
+                    break;
+                }else {
+                    text = removeCharAt(text, boldStartPos);//delete "*" after marked
+                    text = removeCharAt(text, boldEndPos - 1);//this doesn't work....
+                    System.out.println(text);
+                    spannable.setSpan(new StyleSpan(Typeface.BOLD), boldStartPos, boldEndPos - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
+                    boldStartPos = text.indexOf("*", boldEndPos - 2);
+                }
+            }
+        }
+
+        //tag section
+        int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+        if(tagStartPos >= 0){//if potentially contains tags
+            while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                int tagEndPos = -1;//assume neither enter nor space exists
+                if(text.indexOf(" ",tagStartPos) >= 0 && text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                    tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                    tagEndPos = text.indexOf("\n",tagStartPos);
+                }else {//contains only space
+                    tagEndPos = text.indexOf(" ",tagStartPos);
+                }
+                if(tagEndPos < 0){//if the tag is the last section of the note
+                    tagEndPos = text.length();
+                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                    continue;
+                }
+                //System.out.println(tagStartPos + " AND " + tagEndPos);
+                String tag = text.toLowerCase().substring(tagStartPos, tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                //System.out.println("TEXT: " + text + "****" + tag + "********");
+                String tagColor = todoSql.getTagColor(tag);
+                if(tagColor.equals("")) tagColor = String.valueOf(themeColor);
+                spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                        new ColorStateList(new int[][] {new int[] {}},
+                                new int[] {Color.parseColor(tagColor)})
+                        ,null), tagStartPos, tagEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+            }
+        }
+
+        //action string coloring part
+        if(text.contains("@")){
+            int actionStartPos = text.indexOf("@");
+            while (actionStartPos >= 0 && actionStartPos < text.length() - 1){
+                int actionEndPos = -1;
+                if(getDateString(text.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
+                    actionStartPos = text.indexOf("@",actionStartPos + 1);
+                    continue;
+                }
+                if(text.indexOf(" ", actionStartPos) == -1 && text.indexOf("\n", actionStartPos) == -1){
+                    actionEndPos = text.length();
+                }else if (text.indexOf(" ", actionStartPos) == -1){
+                    actionEndPos = text.indexOf("\n", actionStartPos);
+                }else if(text.indexOf("\n",actionStartPos) == -1){
+                    actionEndPos = Math.max(text.indexOf(" ", actionStartPos), actionStartPos + getDateString(text.substring(actionStartPos + 1)).length() + 1);
+                }else {
+                    //actionEndPos = Math.min(text.indexOf(" ", actionStartPos), text.indexOf("\n", actionStartPos));
+                    //if(actionEndPos == text.indexOf(" ", actionStartPos)){
+                    actionEndPos = Math.max(text.indexOf(" ", actionStartPos), actionStartPos + getDateString(text.substring(actionStartPos + 1, text.indexOf("\n",actionStartPos))).length() + 1);
+                    //}
+                }
+                spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                        new ColorStateList(new int[][] {new int[] {}},
+                                new int[] {themeColor})
+                        ,null), actionStartPos, actionEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                actionStartPos = text.indexOf("@",actionStartPos + 1);
+            }
+        }
+        return spannable;
+    }
+
+    public static boolean scheduleReminder(int id, Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
+        DatabaseManager todoSql = new DatabaseManager(context);
+        Cursor cursor = todoSql.getOneDataInTODO(id);
+        cursor.moveToFirst();
+        if(cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME)) != null){
+            Intent notificationIntent = new Intent(context, ReminderBroadcastReceiver.class);
+            notificationIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
+            notificationIntent.setAction(ACTION_START_REMINDER);
+            String recentRemindDateStr = cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME));
+            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.getDefault());
+            Date remindTime = null;
+            try {
+                remindTime = dateFormat.parse(recentRemindDateStr);
+            } catch (ParseException e){
+                e.printStackTrace();
+                return false;
+            }
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+            if(alarmManager != null){
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
+            }else return false;
+            if(sharedPreferences.getBoolean(context.getString(R.string.main_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here
+                Intent notificationOverdueIntent = new Intent(context, ReminderBroadcastReceiver.class);
+                notificationOverdueIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
+                notificationOverdueIntent.putExtra(OVERDUE_REMINDER, true);
+                notificationOverdueIntent.setAction(ACTION_START_REMINDER);
+                PendingIntent overduePendingIntent = PendingIntent.getBroadcast(context, id, notificationOverdueIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                if(sharedPreferences.getBoolean(context.getString(R.string.normal_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime() + 3600 * 1000, overduePendingIntent);//overdue reminder set at 1 hour later
+                }else if (cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) > 0){
+                    if(cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) < 3){//normal level overdue remind
+                        alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime() + 3600 * 1000, overduePendingIntent);//overdue reminder set at 1 hour later
+                    }else {//high level overdue remind
+                        alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime() + 1800 * 1000, overduePendingIntent);//overdue reminder set at 1 hour later
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    /*public static Map<TimeUnit,Long> getDateDiffMap(Date date1, Date date2) {
+        long diffInMillies = date2.getTime() - date1.getTime();
+        List<TimeUnit> units = new ArrayList<TimeUnit>(EnumSet.allOf(TimeUnit.class));
+        Collections.reverse(units);
+        Map<TimeUnit,Long> result = new LinkedHashMap<TimeUnit,Long>();
+        long milliesRest = diffInMillies;
+        for ( TimeUnit unit : units ) {
+            long diff = unit.convert(milliesRest,TimeUnit.MILLISECONDS);
+            long diffInMilliesForUnit = unit.toMillis(diff);
+            milliesRest = milliesRest - diffInMilliesForUnit;
+            result.put(unit,diff);
+        }
+        return result;
+    }*///not sure if this is going to be useful in the future
 
     public static Canvas generatePDFCanvas(Canvas canvas){//not in use for now
         return null;
@@ -2274,7 +2683,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     /*public void setMargins (View v, int l, int t, int r, int b) {
         if (v.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
             ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            float d = getApplicationContext().getResources().getDisplayMetrics().density;
+            float d = getApplicationContext().getResources().getDateDiffsplayMetrics().density;
             p.setMargins((int)(l*d), (int)(t*d), (int)(r*d), (int)(b*d));//dp to pixels
             v.requestLayout();
         }

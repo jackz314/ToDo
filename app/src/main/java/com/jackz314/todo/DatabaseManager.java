@@ -18,6 +18,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
+import static com.jackz314.todo.MainActivity.removePastDates;
+import static com.jackz314.todo.MainActivity.removePastDatesRecur;
+
 /**
  * Created by zhang on 2017/6/15.
  */
@@ -39,6 +42,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public static String RECENT_REMIND_TIME = "most_recent_remind_time";
     public static String IMPORTANCE_TIMESTAMP = "importance_timestamp";
     public static String RECURRENCE_STATS = "recurring_stats";
+    public static String DATE_STRING_REFERENCES = "date_string_references";
     public static String CREATED_TIMESTAMP = "created_timestamp";
     public static String DELETED_TIMESTAMP = "deleted_timestamp";
     public static String SAVED_FOR_LATER_TIMESTAMP = "saved_for_later_timestamp";
@@ -51,8 +55,8 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIMES + " TEXT, " + RECENT_REMIND_TIME + " DATETIME, " + RECURRENCE_STATS + " TEXT, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
-        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIMES + " TEXT, " + RECENT_REMIND_TIME + " DATETIME, " + RECURRENCE_STATS + " TEXT, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ TODO_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + "" + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIMES + " TEXT, " + RECENT_REMIND_TIME + " DATETIME, " + RECURRENCE_STATS + " TEXT, " + DATE_STRING_REFERENCES + " TEXT, " + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
+        db.execSQL("create table "+ HISTORY_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + IMPORTANCE_TIMESTAMP + " DATETIME, " + REMIND_TIMES + " TEXT, " + RECENT_REMIND_TIME + " DATETIME, " + RECURRENCE_STATS + " TEXT, " + DATE_STRING_REFERENCES + " TEXT, " + DELETED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         //database.execSQL("create table "+ SAVED_FOR_LATER_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TITLE + " TEXT," + CONTENT + " TEXT," + IMPORTANCE + " INTEGER," + SAVED_FOR_LATER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
         db.execSQL("create table "+ TAGS_TABLE + " (" + ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + TAG + " TEXT," + TAG_COLOR + " TEXT," + CREATED_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + ")");
     }
@@ -146,19 +150,19 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     public Cursor getHistory(){
         SQLiteDatabase database = this.getWritableDatabase();
-        Cursor cs = database.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE,null);
+        Cursor cs = database.rawQuery("SELECT _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE,null);
         return cs;
     }
 
     public  Cursor getHistoryDesc(){
         SQLiteDatabase database = this.getWritableDatabase();
-        Cursor cs = database.rawQuery("SELECT rowid _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE + " order by _id desc",null);
+        Cursor cs = database.rawQuery("SELECT _id,datetime(deleted_timestamp,'localtime'),* FROM " + HISTORY_TABLE + " order by _id desc",null);
         return cs;
     }
 
     public Integer finishData(Long id){
         SQLiteDatabase database = this.getWritableDatabase();
-        Cursor cs = database.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
+        Cursor cs = database.rawQuery("SELECT _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
         ContentValues cv = new ContentValues();
         String data;
         while(cs.moveToNext()){
@@ -221,7 +225,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     public String mergeBackup(String fileLocation) {//todo fix later
         SQLiteDatabase currentDatabase = null;
-        boolean attached = false;;
+        boolean attached = false;
         try {
             SQLiteDatabase backupDatabase = SQLiteDatabase.openDatabase(fileLocation, null, SQLiteDatabase.OPEN_READWRITE);
             currentDatabase = this.getWritableDatabase();
@@ -282,9 +286,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
                     }
                     combinedString = colBuilder.deleteCharAt(0).toString();
                     //System.out.println(combinedString);
-                    if(combinedString.contains(TITLE)){
-                        return true;
-                    }
+                    return combinedString.contains(TITLE);
                 }
                 /*//compare validate one with the current one with ".contains()"
                 Cursor currentCusor = currentDatabase.rawQuery("SELECT name FROM " + currentDbName + ".sqlite_master WHERE type='table'", null);
@@ -522,7 +524,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
-        cv.put(IMPORTANCE,true);
+        cv.put(IMPORTANCE,1);
         Date nowTime = Calendar.getInstance().getTime();//get now time
         cv.put(IMPORTANCE_TIMESTAMP, dateFormat.format(nowTime));
         database.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
@@ -532,14 +534,14 @@ public class DatabaseManager extends SQLiteOpenHelper{
         SQLiteDatabase database = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(ID,id);
-        cv.put(IMPORTANCE,false);
+        cv.put(IMPORTANCE,0);
         cv.put(IMPORTANCE_TIMESTAMP,(String)null);
         database.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
     public int getPinnedNotesCount(){
         SQLiteDatabase database = this.getWritableDatabase();
-        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID,IMPORTANCE},IMPORTANCE + " = ?",new String[]{"1"},null,null,"_id desc",null );//filter for pinned tag
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID,IMPORTANCE},IMPORTANCE + " > 0", null,null,null,"_id desc",null );//filter for pinned tag
         int count = cs.getCount();
         cs.close();
         return count;
@@ -566,31 +568,77 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return recentReminderCount;
     }
 
-    public void removeExpiredReminderDates(){
+    public void finishReminder(long id, Date... fromDate){
         SQLiteDatabase database = this.getWritableDatabase();
-        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.US);
-        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID, REMIND_TIMES}, REMIND_TIMES + " IS NOT NULL", null,null,null,null,null );//filter for recent reminders
-        Date currentTime = MainActivity.getCurrentTime();
-        String oldRemindTimeStr = "";
-        Gson remindGson = new Gson();
-        Type type = new TypeToken<ArrayList<Date>>() {}.getType();
-        int id;
-        while(cs.moveToNext()){
-            id = cs.getInt(cs.getColumnIndex(ID));
-            oldRemindTimeStr = cs.getString(cs.getColumnIndex(REMIND_TIMES));
-            ArrayList<Date> remindTimeOutput = remindGson.fromJson(oldRemindTimeStr,type);
-            for(Date remindTime : remindTimeOutput){
-                if(remindTime.compareTo(currentTime) <= 0){//remind time before or equals current time
-                    remindTimeOutput.remove(remindTime);
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{"*"}, ID + " = ?", new String[]{String.valueOf(id)},null,null,null,null );//filter for recent reminders
+        cs.moveToFirst();
+        String oldRemindTimeStr = cs.getString(cs.getColumnIndex(REMIND_TIMES));
+        String oldRecurrenceStatsStr = cs.getString(cs.getColumnIndex(RECURRENCE_STATS));
+        if(oldRemindTimeStr != null && !oldRemindTimeStr.isEmpty()){
+            Date currentTime;
+            if(fromDate != null && fromDate.length > 0){
+                currentTime = fromDate[0];
+            }else {
+                currentTime = MainActivity.getCurrentTime();
+            }
+
+            Gson remindGson = new Gson();
+
+            //update remind times
+            Type remindTimeType = new TypeToken<ArrayList<Date>>() {}.getType();
+            String newRemindTimeStr = null;
+            ArrayList<Date> remindTimes = null;
+            remindTimes = remindGson.fromJson(oldRemindTimeStr,remindTimeType);
+            remindTimes = removePastDates(remindTimes, currentTime);
+            if(remindTimes.size() > 0){
+                newRemindTimeStr = remindGson.toJson(remindTimes);
+            }
+
+            //update recurring statuses
+            Type recurStatType = new TypeToken<ArrayList<ArrayList<String>>>() {}.getType();
+            String newRecurStatStr = null;
+            if(oldRecurrenceStatsStr != null && !oldRecurrenceStatsStr.isEmpty()){//only update if recurring statuses exist
+                ArrayList<ArrayList<String>> recurrenceStats = remindGson.fromJson(oldRecurrenceStatsStr,recurStatType);
+                recurrenceStats = removePastDatesRecur(recurrenceStats, currentTime);
+                if(recurrenceStats.size() > 0){
+                    newRecurStatStr = remindGson.toJson(recurrenceStats);
                 }
             }
-            String newRemindTimeStr = remindGson.toJson(remindTimeOutput);
             ContentValues contentValues = new ContentValues();
             contentValues.put(ID,id);
-            contentValues.put(REMIND_TIMES, newRemindTimeStr);
-            contentValues.put(RECENT_REMIND_TIME, dateFormat.format(remindTimeOutput.get(0)));
-            database.update(TODO_TABLE, contentValues, ID + " = ?", new String[] { String.valueOf(id) });
+            contentValues.put(REMIND_TIMES, newRemindTimeStr);//could be null if no more remind times exist
+            if(newRemindTimeStr != null){//could be null if no more remind times exist
+                contentValues.put(RECENT_REMIND_TIME, dateFormat.format(remindTimes.get(0)));
+            }else {
+                contentValues.put(RECENT_REMIND_TIME, (String)null);
+            }
+            contentValues.put(RECURRENCE_STATS, newRecurStatStr);//could be null if no more remind times exist
+            database.update(TODO_TABLE, contentValues, ID + " = ?", new String[] { String.valueOf(id) });//finally, update the value
         }
+        cs.close();
+    }
+
+    public void storeSnoozedReminder(long id, long snoozeToTime){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Date snoozeToDate = new Date(snoozeToTime);
+        finishReminder(id,new Date(snoozeToTime));//update the rest of the reminder data to a status after the put off (snoozed) time, then add the snooze to time in there
+
+        //add the snooze to time into remind data set
+        Cursor cs = database.query(false,TODO_TABLE, new String[]{"*"}, ID + " = ?", new String[]{String.valueOf(id)},null,null,null,null );//filter for recent reminders
+        Gson remindGson = new Gson();
+        Type type = new TypeToken<ArrayList<Date>>() {}.getType();
+        ArrayList<Date> remindTimes = remindGson.fromJson(cs.getString(cs.getColumnIndex(REMIND_TIMES)), type);
+        cs.close();//close the cursor asap
+        remindTimes.add(0, snoozeToDate);
+        String newRemindTimesStr = remindGson.toJson(remindTimes);//pack up the remindTimes ArrayList again with the newly added snooze to time
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
+
+        ContentValues cv = new ContentValues();
+        cv.put(ID,id);
+        cv.put(REMIND_TIMES, newRemindTimesStr);
+        cv.put(RECENT_REMIND_TIME, dateFormat.format(snoozeToDate));//set the most recent remind time to the snooze to time
+        database.update(TODO_TABLE, cv, ID + " = ?", new String[] { String.valueOf(id) });
     }
 
     /* OLD METHOD
