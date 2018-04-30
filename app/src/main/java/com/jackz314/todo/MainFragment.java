@@ -103,7 +103,6 @@ import org.antlr.runtime.tree.Tree;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -828,8 +827,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if(charSequence.equals("#")){
+                if(charSequence.toString().endsWith("#")){//tag popup menu
                     Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();
+                }else if(charSequence.toString().endsWith("@")){//action popup menu
+
                 }
             }
 
@@ -1730,8 +1731,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoListAdapter.changeCursor(null);
     }
 
+    //todo start working on onTextChange, tag, action popup menus, edittext pre coloring
+    //todo work on customized edittext, with clickable actions, tags, and links
+
     @SafeVarargs
-    public final void updateData(final long id, final String text, ArrayList<ArrayList<Object>>... explicitDateReferences){
+    public final void updateData(final long id, final String text, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr){
         new Thread(new Runnable() {
 
             @Override
@@ -1751,13 +1755,31 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         ArrayList<ArrayList<Object>> dateStringReferences = new ArrayList<>();
                         ArrayList<String> dateStrRefStrs = null;
                         ArrayList<Date> dateStrRefDates = null;
-                        if(dateStringReferencesStr != null && !dateStringReferencesStr.isEmpty()){//have references (have dates)
+                        if((dateStringReferencesStr != null && !dateStringReferencesStr.isEmpty() || (explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0))){//have references (have dates)
                             Gson strToArrayListGson = new Gson();
                             Type type = new TypeToken<ArrayList<ArrayList<Object>>>() {}.getType();
                             dateStringReferences = strToArrayListGson.fromJson(dateStringReferencesStr,type);
                             for(ArrayList<Object> strArr : dateStringReferences){
                                 dateStrRefStrs.add((String) strArr.get(0));
                                 dateStrRefDates.add((Date) strArr.get(1));
+                            }
+                            if(explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0){
+                                ArrayList<ArrayList<Object>> explicitDateRefs = explicitDateReferencesArr[0];
+                                for(ArrayList<Object> explicitDateRef : explicitDateRefs){
+                                    String expRefStr = (String) (explicitDateRef.get(0));
+                                    Date expRefDate = (Date) (explicitDateRef.get(1));
+                                    int indexOfExpInAll = dateStrRefStrs.indexOf(expRefStr);
+                                    if(indexOfExpInAll >= 0){//if the explicit date exist in previous date-string reference data, update it
+                                        dateStrRefDates.remove(indexOfExpInAll);
+                                        dateStrRefDates.add(expRefDate);
+                                        dateStringReferences.remove(indexOfExpInAll);
+                                        dateStringReferences.add(indexOfExpInAll, new ArrayList<Object>(Arrays.asList(expRefStr,expRefDate)));
+                                    }else {//otherwise add the reference in
+                                        dateStrRefStrs.add(expRefStr);
+                                        dateStrRefDates.add(expRefDate);
+                                        dateStringReferences.add(new ArrayList<Object>(Arrays.asList(expRefStr,expRefDate)));
+                                    }
+                                }
                             }
                         }
                         String cleanStr = text.replace("*","");
@@ -1996,8 +2018,15 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }).start();//end of thread
     }
 
-    //todo fix insertData return value problem
-    public void insertData(final String text, final long... id) {
+    public void insertData(String text, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr){
+        if(explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0){
+            insertData(text, -1, explicitDateReferencesArr);
+        }else {
+            insertData(text, -1);
+        }
+    }
+
+    public void insertData(final String text, final long id, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr) {
         new Thread(new Runnable() {
 
             @Override
@@ -2008,8 +2037,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     ContentValues values = new ContentValues();
                     values.put(TITLE, text);
                     values.put(CREATED_TIMESTAMP, dateFormat.format(currentTime));
-                    if (id != null && id.length > 0) {
-                        values.put(ID, id[0]);
+                    if (id != -1) {
+                        values.put(ID, id);
                     }
                     //store action string orders
                     if(text.contains("@")){//contains @ functions
@@ -2220,6 +2249,30 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 });
                                 String recurringStatStr = arrayListToStrGson.toJson(recurringStats);
                                 values.put(RECURRENCE_STATS,recurringStatStr);
+                            }
+                        }
+                        if(explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0){//add/replace with explicitly indicated date-string references in the total date-string references data
+                            ArrayList<String> dateStrRefStrs = null;
+                            ArrayList<Date> dateStrRefDates = null;
+                            for(ArrayList<Object> refArr : dateStringReferences){
+                                dateStrRefStrs.add((String) refArr.get(0));
+                                dateStrRefDates.add((Date) refArr.get(1));
+                            }
+                            ArrayList<ArrayList<Object>> explicitDateRefs = explicitDateReferencesArr[0];
+                            for(ArrayList<Object> explicitDateRef : explicitDateRefs){
+                                String expRefStr = (String) (explicitDateRef.get(0));
+                                Date expRefDate = (Date) (explicitDateRef.get(1));
+                                int indexOfExpInAll = dateStrRefStrs.indexOf(expRefStr);
+                                if(indexOfExpInAll >= 0){//if the explicit date exist in previous date-string reference data, update it
+                                    dateStrRefDates.remove(indexOfExpInAll);
+                                    dateStrRefDates.add(expRefDate);
+                                    dateStringReferences.remove(indexOfExpInAll);
+                                    dateStringReferences.add(indexOfExpInAll, new ArrayList<Object>(Arrays.asList(expRefStr,expRefDate)));
+                                }else {//otherwise add the reference in
+                                    dateStrRefStrs.add(expRefStr);
+                                    dateStrRefDates.add(expRefDate);
+                                    dateStringReferences.add(new ArrayList<Object>(Arrays.asList(expRefStr,expRefDate)));
+                                }
                             }
                         }
                         Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
