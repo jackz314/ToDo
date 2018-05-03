@@ -42,7 +42,6 @@ public class ColorPickerView extends View {
 
 	private float lightness = 1;
 	private float alpha = 1;
-	private int backgroundColor = 0x00000000;
 
 	private Integer initialColors[] = new Integer[]{null, null, null, null, null};
 	private int colorSelection = 0;
@@ -72,9 +71,7 @@ public class ColorPickerView extends View {
 
 				// set the color without changing the edit text preventing stack overflow
 				setColor(color, false);
-			} catch (Exception e) {
-
-			}
+			} catch (Exception ignored) {}
 		}
 
 		@Override
@@ -275,6 +272,7 @@ public class ColorPickerView extends View {
 	@Override
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
+		int backgroundColor = 0x00000000;
 		canvas.drawColor(backgroundColor);
 		if (colorWheel != null)
 			canvas.drawBitmap(colorWheel, 0, 0, null);
@@ -475,7 +473,7 @@ public class ColorPickerView extends View {
 			if (i == selectedColor) {
 				childLayout.setBackgroundColor(Color.WHITE);
 			}
-			ImageView childImage = (ImageView) childLayout.findViewById(R.id.image_preview);
+			ImageView childImage = childLayout.findViewById(R.id.image_preview);
 			childImage.setClickable(true);
 			childImage.setTag(i);
 			childImage.setOnClickListener(new OnClickListener() {
@@ -533,7 +531,7 @@ public class ColorPickerView extends View {
 		if (!(childView instanceof LinearLayout))
 			return;
 		LinearLayout childLayout = (LinearLayout) childView;
-		ImageView childImage = (ImageView) childLayout.findViewById(R.id.image_preview);
+		ImageView childImage = childLayout.findViewById(R.id.image_preview);
 		childImage.setImageDrawable(new CircleColorDrawable(newColor));
 	}
 

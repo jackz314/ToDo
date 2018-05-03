@@ -133,6 +133,7 @@ import static com.jackz314.todo.MainActivity.getDateString;
 import static com.jackz314.todo.MainActivity.getProperDateString;
 import static com.jackz314.todo.MainActivity.isStringContainAnyOfTheseWords;
 import static com.jackz314.todo.MainActivity.removeCharAt;
+import static com.jackz314.todo.MainActivity.scheduleReminder;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
@@ -879,7 +880,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 //setOutOfSelectionMode();
                 String inputText=input.getText().toString().trim();
                 interruptAutoSend();
-                if(inputText.isEmpty() && !input.getText().toString().isEmpty()){
+                if(inputText.isEmpty() && input.getText().toString().isEmpty()){
                     if(isAdd){
                         AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
@@ -2018,7 +2019,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }).start();//end of thread
     }
 
-    public void insertData(String text, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr){
+    @SafeVarargs
+    public final void insertData(String text, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr){
         if(explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0){
             insertData(text, -1, explicitDateReferencesArr);
         }else {
@@ -2026,7 +2028,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }
     }
 
-    public void insertData(final String text, final long id, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr) {
+    @SafeVarargs
+    public final void insertData(final String text, final long id, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr) {
         new Thread(new Runnable() {
 
             @Override
@@ -2279,6 +2282,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         values.put(DATE_STRING_REFERENCES, arrayListToStrGson.toJson(dateStringReferences));
                     }
                     getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
+                    scheduleReminder((int)todoSql.getIdOfLatestDataInTODO(), getContext());
                 }
             }
         }).start();//end of thread
@@ -2507,7 +2511,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             int textCount = selectedContent.toArray().length;
             if (textCount <= 150){
                 dynamicTextSize = 30;
-            }else if(textCount < 500 && textCount > 150){
+            }else if(textCount < 500){
                 dynamicTextSize = 22;
             }else {
                 dynamicTextSize = 18;

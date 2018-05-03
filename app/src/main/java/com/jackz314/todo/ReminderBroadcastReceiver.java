@@ -24,41 +24,43 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
     public static String ACTION_FINISH = "action_finish";
     public static String ACTION_SNOOZE_TIME = "action_snooze_time";
     public static String SNOOZE_TIME = "snooze_time_value";
+    public static String ANDROID_BOOT_COMPLETE_INTENT = "android.intent.action.BOOT_COMPLETED";
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        System.out.println("BROADCAST RECEIVED!");
+        if (ANDROID_BOOT_COMPLETE_INTENT.equals(intent.getAction())) {
+            //todo Re-set alarms after device reboot
 
+        }
         if(ACTION_START_REMINDER.equals(intent.getAction())){
+            System.out.println("START REMINDER INTENT RECEIVED " + intent.getDataString());
             PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
-            boolean isScreenOn;
-            if (pm != null) {
-                isScreenOn = pm.isInteractive();
-                if(!isScreenOn){
-                    PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"ToDoReminderWakeLock");
-                    wl.acquire(5000);//wake screen for 5 seconds.
-                }
-                NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-                int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
-                Notification reminderNotification;
-                DatabaseManager todoSql = new DatabaseManager(context);
-                if(intent.getBooleanExtra(SNOOZED_REMINDER,false)){
-                    long previouslySnoozedTime = intent.getLongExtra(SNOOZE_TIME, 3600);
-                    reminderNotification = generateReminderNotification(context,todoSql.getOneDataInTODO(id), previouslySnoozedTime);
+            if (pm != null && !pm.isInteractive()) {//screen is off
+                PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"ToDoReminderWakeLock");
+                wl.acquire(5000);//wake screen for 5 seconds.
+            }
+            NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+            int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
+            Notification reminderNotification;
+            DatabaseManager todoSql = new DatabaseManager(context);
+            if(intent.getBooleanExtra(SNOOZED_REMINDER,false)){
+                long previouslySnoozedTime = intent.getLongExtra(SNOOZE_TIME, 3600);
+                reminderNotification = generateReminderNotification(context,todoSql.getOneDataInTODO(id), previouslySnoozedTime);
+            }else {
+                reminderNotification = generateReminderNotification(context,todoSql.getOneDataInTODO(id));
+            }
+            if (notificationManager != null && reminderNotification != null) {
+                notificationManager.notify(id,reminderNotification);
+            }else if(reminderNotification == null){
+                Notification.Builder notificationBuilder = new Notification.Builder(context);
+                notificationBuilder.setSmallIcon(R.mipmap.ic_launcher);
+                notificationBuilder.setContentTitle(context.getString(R.string.failed_to_create_reminder));
+                notificationBuilder.setContentText(context.getString(R.string.failed_to_create_reminder_detail));
+                if (notificationManager != null) {
+                    notificationManager.notify(id,notificationBuilder.build());
                 }else {
-                    reminderNotification = generateReminderNotification(context,todoSql.getOneDataInTODO(id));
-                }
-                if (notificationManager != null && reminderNotification != null) {
-                    notificationManager.notify(id,reminderNotification);
-                }else if(reminderNotification == null){
-                    Notification.Builder notificationBuilder = new Notification.Builder(context);
-                    notificationBuilder.setSmallIcon(R.mipmap.ic_launcher);
-                    notificationBuilder.setContentTitle(context.getString(R.string.failed_to_create_reminder));
-                    notificationBuilder.setContentText(context.getString(R.string.failed_to_create_reminder_detail));
-                    if (notificationManager != null) {
-                        notificationManager.notify(id,notificationBuilder.build());
-                    }else {
-                        Toast.makeText(context,"FAILED TO CREATE NotificationManager",Toast.LENGTH_LONG).show();
-                    }
+                    Toast.makeText(context,"FAILED TO CREATE NotificationManager",Toast.LENGTH_LONG).show();
                 }
             }
         }else if(ACTION_SNOOZE.equals(intent.getAction())){

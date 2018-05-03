@@ -82,7 +82,6 @@ import com.jackz314.todo.iap_utils.Inventory;
 import com.jackz314.todo.iap_utils.Purchase;
 import com.jackz314.todo.utils.ColorUtils;
 
-import org.threeten.bp.Duration;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -94,6 +93,7 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -871,7 +871,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             field = editor.getClass().getDeclaredField("mCursorDrawable");
             field.setAccessible(true);
             field.set(editor, drawables);
-            setEdittextHandleColor(view, color);
+            setEditTextHandleColor(view, color);
         } catch (Exception ignored) {
         }
     }
@@ -885,7 +885,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * @param color
      *     The color to set for the text handles
      */
-    public static void setEdittextHandleColor(TextView view, int color) {
+    public static void setEditTextHandleColor(TextView view, int color) {
         try {
             Field editorField = TextView.class.getDeclaredField("mEditor");
             if (!editorField.isAccessible()) {
@@ -2078,7 +2078,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             nextUpRemindTime = recurDate;
                             nextUpRecurStats.add(recurrenceStats.get(i));
                         }
-
                     }else break;//if the dates are after existing nextUp&thenUp dates, break
                 }else if(recurDate.compareTo(nextUpRemindTime) <= 0){//only one date left, no need to compare with other dates
                     if(recurDate.equals(nowRemindTime)){//recurDate is nowRemindTime, so only genRecurDate can be nextRemindTime
@@ -2407,26 +2406,28 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     //return: [0]: time unit in str, [1] time difference value relative to time unit in str, [2]: calculated rounded up time difference in millis based on the time unit & relative time diff
     public static String[] getSmartRoughDateDiffMills(long diffInMills){
         if(diffInMills == 0) return null;//null represents same time
-        Duration duration = Duration.ofMillis(diffInMills);
-        if(duration.toDays() == 0){//if bigger level have no difference, move to smaller levels
-            if(duration.toHours() == 0){
-                if(duration.toMinutes() == 0){
+        long days = TimeUnit.MILLISECONDS.toDays(diffInMills);
+        if(days == 0){//if bigger level have no difference, move to smaller levels
+            long hours = TimeUnit.MILLISECONDS.toHours(diffInMills);
+            if(hours == 0){
+                long minutes = TimeUnit.MILLISECONDS.toMinutes(diffInMills);
+                if(minutes == 0){
                     return new String[]{"SECOND", Long.toString(Math.round(diffInMills/1000)), Long.toString(Math.round(diffInMills/1000) * 1000)};//round the second number when converting from milliseconds to seconds
                 }else {
-                    return new String[]{"MINUTE", Long.toString(duration.toMinutes()), Long.toString(duration.toMinutes() * 60 * 1000)};//no round up
+                    return new String[]{"MINUTE", Long.toString(minutes), Long.toString(minutes * 60 * 1000)};//no round up
                 }
             }else {
-                return new String[]{"HOUR", Long.toString(duration.toHours() * 3600 * 1000)};
+                return new String[]{"HOUR", Long.toString(hours * 3600 * 1000)};
             }
         }else {
-            if(duration.toDays() > 30){
-                if(duration.toDays() > 365){
-                    return new String[]{"YEAR",Long.toString(duration.toDays()/365) , Long.toString((duration.toDays()/365) * 365 * 24 * 3600 * 1000)};//don't round up since adding more days than it should be to an overdue notification is annoying
+            if(days > 30){
+                if(days > 365){
+                    return new String[]{"YEAR",Long.toString(days/365) , Long.toString((days/365) * 365 * 24 * 3600 * 1000)};//don't round up since adding more days than it should be to an overdue notification is annoying
                 }else {
-                    return new String[]{"MONTH",Long.toString(duration.toDays()/30) , Long.toString((duration.toDays()/30) * 30 * 24 * 3600 * 1000)};//don't round up since adding more days than it should be to an overdue notification is annoying
+                    return new String[]{"MONTH",Long.toString(days/30) , Long.toString((days/30) * 30 * 24 * 3600 * 1000)};//don't round up since adding more days than it should be to an overdue notification is annoying
                 }
             }
-            return new String[]{"DAY", Long.toString(duration.toDays()), Long.toString(duration.toDays() * 24 * 3600 * 1000)};//no round up
+            return new String[]{"DAY", Long.toString(days), Long.toString(days * 24 * 3600 * 1000)};//no round up
         }
     }
 
@@ -2557,6 +2558,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
             AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
             if(alarmManager != null){
+                System.out.println("ALARM SET at " + remindTime);
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
             }else return false;
             if(sharedPreferences.getBoolean(context.getString(R.string.main_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here

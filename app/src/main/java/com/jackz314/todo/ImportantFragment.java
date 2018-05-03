@@ -1718,10 +1718,10 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             final int delay = 1000 * 60; //every minute
             handler.postDelayed(new Runnable(){
                 public void run(){
-                    getLoaderManager().restartLoader(123,null,ImportantFragment.this);
                     if(getContext() != null && !isInSearchMode && !isInSelectionMode){
                         TabLayout tabLayout = getActivity().findViewById(R.id.tabs_layout);
                         if(tabLayout.getSelectedTabPosition() == 0){//continue if still displaying
+                            getLoaderManager().restartLoader(123,null,ImportantFragment.this);
                             handler.postDelayed(this, delay);
                         }
                     }
