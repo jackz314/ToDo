@@ -73,7 +73,6 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
 import com.jackz314.dateparser.DateGroup;
 import com.jackz314.dateparser.Parser;
 import com.jackz314.todo.iap_utils.IabHelper;
@@ -81,7 +80,6 @@ import com.jackz314.todo.iap_utils.IabResult;
 import com.jackz314.todo.iap_utils.Inventory;
 import com.jackz314.todo.iap_utils.Purchase;
 import com.jackz314.todo.utils.ColorUtils;
-
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -93,7 +91,6 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -106,7 +103,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static android.support.v4.app.NotificationCompat.CATEGORY_REMINDER;
-
 import static com.jackz314.todo.DatabaseManager.DATE_FORMAT;
 import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.IMPORTANCE;
@@ -1220,11 +1216,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     //todo add "wk", "yr", and "&" (relative to "wks", "yrs", and "and") to DateLexer.g and compile a new one
     public static String getDateString(String str, String... addOnOps){//addOnOps: startPos (inclusive),endPos (exclusive),replaceWithString
+        if(str.trim().isEmpty()) return null;
         Parser parser = new Parser();
         List groups = parser.parse(str, getCurrentTime());
         if(groups.size() <= 0){//handle only importance level situations
             if(str.replace("!","").isEmpty()){//not a date string but a action string
-                return "";
+                return str;
             }else {
                 return null;
             }
@@ -1306,6 +1303,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         }
         return dateString.toString();
+    }
+
+    public static String getActionString(String str){
+        String dateStr = getDateString(str);
+        if(dateStr == null) return null;
+        if(dateStr.equals("")){
+
+        }
+        return dateStr;
     }
 
     public static String generateDetailedRecurrenceStr(ArrayList<String> recurStat){
@@ -1731,6 +1737,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return count;
     }
 
+    //todo fix substring index out of bound error
     public static int countContinuousOccurrences(String str, String sub){
         if (str.isEmpty() || sub.isEmpty()) {
             return 0;

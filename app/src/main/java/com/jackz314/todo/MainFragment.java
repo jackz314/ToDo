@@ -672,10 +672,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         AnimatedVectorDrawable d = (AnimatedVectorDrawable) getActivity().getDrawable(R.drawable.avd_plus_to_send); // Insert your AnimatedVectorDrawable resource identifier
                         fab.setImageDrawable(d);
                         isAdd = false;
-                        d.start();
+                        if (d != null) {
+                            d.start();
+                        }
                     }
                     input.setVisibility(View.VISIBLE);
-                    input.setText(todoSql.getOneTitleInTODO(id));
+                    input.setText(colorActsAndTags(todoSql.getOneTitleInTODO(id)));//color the stuff
                     input.requestFocus();
                     input.setSelection(input.getText().length());
                     showKeyboard();
@@ -706,7 +708,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 if(isInSelectionMode){//copy note to clipboard
                     ClipboardManager clipboard = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("ToDo", todoSql.getOneTitleInTODO(id));
-                    clipboard.setPrimaryClip(clip);
+                    if (clipboard != null) {
+                        clipboard.setPrimaryClip(clip);
+                    }
                     Snackbar.make(getView(),getString(R.string.todo_copied),Snackbar.LENGTH_SHORT).show();
                 }else {
                     setOutOfSelectionMode();
@@ -821,23 +825,113 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         });
 
         input.addTextChangedListener(new TextWatcher() {//todo implement when input "#", pop up choosing list of in-use tags
+
+            String beforeText = null;
+
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
             }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if(charSequence.toString().endsWith("#")){//tag popup menu
-                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();
-                }else if(charSequence.toString().endsWith("@")){//action popup menu
-
+                if(beforeText != null && (beforeText.substring(i, i + i1).contains("@") || beforeText.substring(i, i + i1).contains("#"))){//if one of the action/tag indicator has been deleted, delete the following spans as well
+                    //Toast.makeText(getContext(),String.valueOf(i) + "|" + String.valueOf(i1) + "|" + String.valueOf(i2) + "|" + beforeText,Toast.LENGTH_SHORT).show();
+                    input.removeTextChangedListener(this);
+                    Editable editable = input.getText();
+                    int actPos1 = beforeText.indexOf("@", i);
+                    int tagPos1 = beforeText.indexOf("#", i);
+                    actPos1 = actPos1 == -1 ? Integer.MAX_VALUE : actPos1;
+                    tagPos1 = tagPos1 == -1 ? Integer.MAX_VALUE : tagPos1;
+                    int deletionStartPos = Math.min(actPos1, tagPos1);
+                    int actPos2 = beforeText.indexOf("@", deletionStartPos);
+                    int tagPos2 = beforeText.indexOf("#", deletionStartPos);
+                    actPos2 = actPos2 == -1 ? Integer.MAX_VALUE : actPos2;
+                    tagPos2 = tagPos2 == -1 ? Integer.MAX_VALUE : tagPos2;
+                    int deletionEndPos = Math.min(actPos2, tagPos2);
+                    TextAppearanceSpan[] spans = editable.getSpans(deletionStartPos, deletionEndPos, TextAppearanceSpan.class);
+                    for (TextAppearanceSpan span : spans) editable.removeSpan(span);
+                    input.addTextChangedListener(this);
                 }
             }
 
             @Override
             public void afterTextChanged(Editable editable) {
+                //todo fix when date string starts with numbers, the following stuff will always be seemed as valid act strings
+                //todo fix problems with ! importance level indicators
+                String text = editable.toString();
+                beforeText = text;
+                //Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
+                int cursorPos = Math.max(0, input.getSelectionStart());
+                int actPos = text.substring(0, cursorPos).lastIndexOf("@");
+                int tagPos = text.substring(0, cursorPos).lastIndexOf("#");
+                int popStartPos = Math.max(actPos, tagPos);
+                if(popStartPos > 1){
+                    if (!(text.charAt(popStartPos - 1) == ' ' || text.charAt(popStartPos - 1) == '\n')){
+                        popStartPos = -1;//don't process if the @ or # is right next to other characters other than space or enter
+                    }
+                }
+                if(popStartPos >= 0){//needs to pop up menu
+                    int popEndPos;
+                    if(actPos > tagPos){//action popup
+                        boolean validAct;
+                        if(getDateString(text.substring(popStartPos + 1)) == null){
+                            validAct = false;
+                            int spacePos = text.indexOf(" ", popStartPos);
+                            int enterPos = text.indexOf("\n", popStartPos);
+                            if(spacePos == -1){
+                                spacePos = Integer.MAX_VALUE;
+                            }
+                            if(enterPos == -1){
+                                enterPos = Integer.MAX_VALUE;
+                            }
+                            popEndPos = Math.min(spacePos, enterPos);
+                            if(popEndPos == Integer.MAX_VALUE) popEndPos = text.length();
+                        }else {
+                            validAct = true;
+                            if(text.indexOf(" ", popStartPos) == -1 && text.indexOf("\n", popStartPos) == -1){//ends at the full text's end
+                                popEndPos = text.length();
+                            }else if (text.indexOf(" ", popStartPos) == -1){//no space but only enter left
+                                popEndPos = text.indexOf("\n", popStartPos);
+                            }else if(text.indexOf("\n",popStartPos) == -1){//no enter but only space left
+                                popEndPos = Math.max(text.indexOf(" ", popStartPos), popStartPos + getDateString(text.substring(popStartPos + 1)).length() + 1);
+                            }else {
+                                popEndPos = Math.max(text.indexOf(" ", popStartPos), popStartPos + getDateString(text.substring(popStartPos + 1, text.indexOf("\n",popStartPos))).length() + 1);
+                            }
+                        }
+                        if(popEndPos < cursorPos) popEndPos = -1;//out of valid pop up range
+                        if(popEndPos >= 0){
+                            SpannableString spannableActTxt = new SpannableString(text.substring(popStartPos, popEndPos));
+                            input.removeTextChangedListener(this);
+                            if (validAct) {
+                                spannableActTxt.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                        new ColorStateList(new int[][] {new int[] {}},
+                                                new int[] {themeColor})
+                                        ,null), 0, popEndPos - popStartPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                editable.replace(popStartPos, popEndPos,spannableActTxt);
+                            }else {
+                                TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
+                                for (TextAppearanceSpan span : spans) editable.removeSpan(span);
+                                //replace(popStartPos, popEndPos, text.substring(popStartPos, popEndPos));//restore to plain text
+                                //spannableActTxt.setSpan(new StyleSpan(Typeface.ITALIC), 0, popEndPos - popStartPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            }
+                            input.addTextChangedListener(this);
+                        }
+                    }else {//tag popup
+                        if(text.indexOf(" ",popStartPos) >= 0 && text.indexOf("\n",popStartPos) >= 0){//contains both enter and space
+                            popEndPos = Math.min(text.indexOf(" ",popStartPos),text.indexOf("\n",popStartPos));//find the position of end point of the tag: space or line break
+                        }else if(text.indexOf(" ",popStartPos) < 0){//contains only enter
+                            popEndPos = text.indexOf("\n",popStartPos);
+                        }else {//contains only space
+                            popEndPos = text.indexOf(" ",popStartPos);
+                        }
+                        if(popEndPos < 0){//if the tag is the last section of the note
+                            popEndPos = text.length();
+                        }else if(popEndPos == popStartPos + 1){//if only one #, skip to next loop
 
+                        }
+                        //System.out.println(tagStartPos + " AND " + tagEndPos);
+                    }
+                }
             }
         });
 
@@ -1291,6 +1385,73 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
         //todoList.setDividerHeight(2);
+    }
+
+    public SpannableStringBuilder colorActsAndTags(String text){
+        SpannableStringBuilder spannable = new SpannableStringBuilder(text);
+        //tag section
+        int tagStartPos = text.indexOf("#",0);//find the position of the start point of the tag
+        if(tagStartPos >= 0){//if potentially contains tags
+            while(tagStartPos < text.length() - 1 && tagStartPos >= 0){//search and set color for all tags
+                int tagEndPos = -1;//assume neither enter nor space exists
+                if(text.indexOf(" ",tagStartPos) >= 0 && text.indexOf("\n",tagStartPos) >= 0){//contains both enter and space
+                    tagEndPos = Math.min(text.indexOf(" ",tagStartPos),text.indexOf("\n",tagStartPos));//find the position of end point of the tag: space or line break
+                }else if(text.indexOf(" ",tagStartPos) < 0){//contains only enter
+                    tagEndPos = text.indexOf("\n",tagStartPos);
+                }else {//contains only space
+                    tagEndPos = text.indexOf(" ",tagStartPos);
+                }
+                if(tagEndPos < 0){//if the tag is the last section of the note
+                    tagEndPos = text.length();
+                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                    continue;
+                }
+                //System.out.println(tagStartPos + " AND " + tagEndPos);
+                String tag = text.toLowerCase().substring(tagStartPos, tagEndPos);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
+                //System.out.println("TEXT: " + text + "****" + tag + "********");
+                String tagColor = todoSql.getTagColor(tag);
+                if(!tagColor.isEmpty()){
+                    spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                            new ColorStateList(new int[][] {new int[] {}},
+                                    new int[] {Color.parseColor(tagColor)})
+                            ,null), tagStartPos, tagEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                }else {
+                    spannable.setSpan(new StyleSpan(Typeface.ITALIC), tagStartPos, tagEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                tagStartPos = text.indexOf("#",tagEndPos);//set tagStartPos to the new tag start point
+                //todo solve performance issues
+            }
+        }
+
+        //action string coloring part
+        int actionStartPos = text.indexOf("@");
+        if(actionStartPos >= 0){
+            while (actionStartPos >= 0 && actionStartPos < text.length() - 1){
+                int actionEndPos = -1;
+                if(getDateString(text.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
+                    actionStartPos = text.indexOf("@",actionStartPos + 1);
+                    continue;
+                }
+                if(text.indexOf(" ", actionStartPos) == -1 && text.indexOf("\n", actionStartPos) == -1){
+                    actionEndPos = text.length();
+                }else if (text.indexOf(" ", actionStartPos) == -1){
+                    actionEndPos = text.indexOf("\n", actionStartPos);
+                }else if(text.indexOf("\n",actionStartPos) == -1){
+                    actionEndPos = Math.max(text.indexOf(" ", actionStartPos), actionStartPos + getDateString(text.substring(actionStartPos + 1)).length() + 1);
+                }else {
+                    //actionEndPos = Math.min(text.indexOf(" ", actionStartPos), text.indexOf("\n", actionStartPos));
+                    //if(actionEndPos == text.indexOf(" ", actionStartPos)){
+                    actionEndPos = Math.max(text.indexOf(" ", actionStartPos), actionStartPos + getDateString(text.substring(actionStartPos + 1, text.indexOf("\n",actionStartPos))).length() + 1);
+                    //}
+                }
+                spannable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                        new ColorStateList(new int[][] {new int[] {}},
+                                new int[] {themeColor})
+                        ,null), actionStartPos, actionEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                actionStartPos = text.indexOf("@",actionStartPos + 1);
+            }
+        }
+        return spannable;
     }
 
     @Override
@@ -1754,8 +1915,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         prevCursor.moveToFirst();
                         String dateStringReferencesStr = prevCursor.getString(prevCursor.getColumnIndex(DATE_STRING_REFERENCES));
                         ArrayList<ArrayList<Object>> dateStringReferences = new ArrayList<>();
-                        ArrayList<String> dateStrRefStrs = null;
-                        ArrayList<Date> dateStrRefDates = null;
+                        ArrayList<String> dateStrRefStrs = new ArrayList<>();
+                        ArrayList<Date> dateStrRefDates = new ArrayList<>();
                         if((dateStringReferencesStr != null && !dateStringReferencesStr.isEmpty() || (explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0))){//have references (have dates)
                             Gson strToArrayListGson = new Gson();
                             Type type = new TypeToken<ArrayList<ArrayList<Object>>>() {}.getType();
