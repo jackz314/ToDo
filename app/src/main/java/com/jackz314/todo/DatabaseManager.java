@@ -505,7 +505,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public long getTagId(String tag){
         SQLiteDatabase database = this.getWritableDatabase();
         Cursor cs = database.query(false,TAGS_TABLE, new String[]{ID,TAG},TAG + " LIKE ?",new String[]{"" + tag + ""},null,null,"_id desc",null );
-        cs.moveToNext();
+        cs.moveToFirst();
         long id = cs.getInt(cs.getColumnIndex(ID));
         cs.close();
         return id;

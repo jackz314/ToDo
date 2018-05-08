@@ -83,6 +83,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -827,6 +828,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         input.addTextChangedListener(new TextWatcher() {//todo implement when input "#", pop up choosing list of in-use tags
 
             String beforeText = null;
+            PopupWindow popupWindow;
 
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -900,19 +902,16 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                         if(popEndPos < cursorPos) popEndPos = -1;//out of valid pop up range
                         if(popEndPos >= 0){
-                            SpannableString spannableActTxt = new SpannableString(text.substring(popStartPos, popEndPos));
                             input.removeTextChangedListener(this);
                             if (validAct) {
-                                spannableActTxt.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                editable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                         new ColorStateList(new int[][] {new int[] {}},
                                                 new int[] {themeColor})
                                         ,null), 0, popEndPos - popStartPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                                editable.replace(popStartPos, popEndPos,spannableActTxt);
                             }else {
                                 TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
-                                for (TextAppearanceSpan span : spans) editable.removeSpan(span);
-                                //replace(popStartPos, popEndPos, text.substring(popStartPos, popEndPos));//restore to plain text
-                                //spannableActTxt.setSpan(new StyleSpan(Typeface.ITALIC), 0, popEndPos - popStartPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove span if the action string is not valid
+                                //todo number involved spans are weired, fix them
                             }
                             input.addTextChangedListener(this);
                         }
@@ -929,6 +928,21 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }else if(popEndPos == popStartPos + 1){//if only one #, skip to next loop
 
                         }
+                        String tag = text.substring(popStartPos, popEndPos);
+                        String tagColor = todoSql.getTagColor(tag);
+                        input.removeTextChangedListener(this);
+                        TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
+                        for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove previous spans
+                        if(!tagColor.isEmpty()){
+                            editable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                    new ColorStateList(new int[][] {new int[] {}},
+                                            new int[] {Color.parseColor(tagColor)})
+                                    ,null), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                        }else {
+                            editable.setSpan(new StyleSpan(Typeface.ITALIC), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        }
+                        input.addTextChangedListener(this);
+                        //popupWindow = new PopupWindow();
                         //System.out.println(tagStartPos + " AND " + tagEndPos);
                     }
                 }
@@ -2067,48 +2081,52 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                     tree = tree.getChild(0);//continue to next loop
                                                 }
                                                 //todo check if all dates are covered and stored properly with debug
+                                                //todo this doesn't run
                                                 ArrayList<String> recurringStat = new ArrayList<>();
-                                                if(dates.get(i).before(new Date())){
-                                                    //if explicitly indicated a past time, warn that stupid person/troll :)
-                                                    String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
-                                                    if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
-                                                        //BZZZZZZZZZZZZZZZZZZZZZZZ!!
-                                                        Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
-                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                            if (vibrator != null) {
-                                                                vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                for(int j = 0; j < dates.size(); j++){
+                                                    if(dates.get(i).before(new Date())){//deal with past dates in recurring stats
+                                                        //if explicitly indicated a past time, warn that stupid person/troll :)
+                                                        String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
+                                                        if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                            //BZZZZZZZZZZZZZZZZZZZZZZZ!!
+                                                            Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                                if (vibrator != null) {
+                                                                    vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                                }
+                                                            }else {
+                                                                if (vibrator != null) {
+                                                                    vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                                }
                                                             }
-                                                        }else {
-                                                            if (vibrator != null) {
-                                                                vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
-                                                            }
+                                                            Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                        }//otherwise deal with them by adding time to it
+                                                        //not dealing with other past date cases other than the following two
+                                                        if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                            recurringStat.add(0, recurringUnit);
+                                                            recurringStat.add(1, recurringValue);
+                                                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                            Calendar calendar = Calendar.getInstance();
+                                                            calendar.setTime(dates.get(i));
+                                                            calendar.add(Calendar.YEAR,1);
+                                                            recurringStat.add(2, dateFormat.format(calendar));
                                                         }
-                                                        Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
-                                                    }//otherwise deal with them by adding time to it
-                                                    if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                        if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                            recurringStat.add(0, recurringUnit);
+                                                            recurringStat.add(1, recurringValue);
+                                                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                            Calendar calendar = Calendar.getInstance();
+                                                            calendar.setTime(dates.get(i));
+                                                            calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                            recurringStat.add(2, dateFormat.format(calendar));
+                                                        }
+                                                    }else {
                                                         recurringStat.add(0, recurringUnit);
                                                         recurringStat.add(1, recurringValue);
                                                         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                        Calendar calendar = Calendar.getInstance();
-                                                        calendar.setTime(dates.get(i));
-                                                        calendar.add(Calendar.YEAR,1);
-                                                        recurringStat.add(2, dateFormat.format(calendar));
+                                                        recurringStat.add(2, dateFormat.format(dates.get(i)));
+                                                        System.out.println("Recurring Status: " + recurringStat.toString());
                                                     }
-                                                    if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
-                                                        recurringStat.add(0, recurringUnit);
-                                                        recurringStat.add(1, recurringValue);
-                                                        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                        Calendar calendar = Calendar.getInstance();
-                                                        calendar.setTime(dates.get(i));
-                                                        calendar.add(Calendar.DAY_OF_YEAR,1);
-                                                        recurringStat.add(2, dateFormat.format(calendar));
-                                                    }
-                                                }else {
-                                                    recurringStat.add(0, recurringUnit);
-                                                    recurringStat.add(1, recurringValue);
-                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                    recurringStat.add(2, dateFormat.format(dates.get(i)));
-                                                    System.out.println("Recurring Status: " + recurringStat.toString());
                                                 }
                                                 Date untilDate = group.getRecursUntil();//add until date
                                                 if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
@@ -2255,7 +2273,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                     System.out.println("SyntaxTree: " + syntaxTree);
                                     Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
                                     System.out.println("Parse Locations map: " + parseMap.toString());
-                                    if(group.isRecurring()){
+                                    if(group.isRecurring()){//todo some necessary code is skipped in this part, fix it and don't forget the similar updateData() method
                                         String recurringUnit = "", recurringValue = "";
                                         Tree tree = group.getSyntaxTree();
                                         if(tree.getChild(0).getText().equals("DATE_TIME")) {
@@ -2319,44 +2337,48 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                 }
                                                 //todo check if all dates are covered and stored properly with debug
                                                 ArrayList<String> recurringStat = new ArrayList<>();
-                                                if(dates.get(i).before(new Date())){
-                                                    //if explicitly indicated a past time, warn that stupid person/troll :)
-                                                    String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
-                                                    if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
-                                                        //BZZZZZZZZZZZZZZZZZZZZZZZ!!
-                                                        Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
-                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                            if (vibrator != null) {
-                                                                vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                System.out.println("ppp"+dates);
+                                                for(int j = 0; j < dates.size(); j++){
+                                                    if(dates.get(i).before(new Date())){
+                                                        System.out.println("PAST & RECUR");
+                                                        //if explicitly indicated a past time, warn that stupid person/troll :)
+                                                        String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
+                                                        if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                            //BZZZZZZZZZZZZZZZZZZZZZZZ!!
+                                                            Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                                if (vibrator != null) {
+                                                                    vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                                }
+                                                            }else {
+                                                                if (vibrator != null) {
+                                                                    vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                                }
                                                             }
-                                                        }else {
-                                                            if (vibrator != null) {
-                                                                vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
-                                                            }
+                                                            Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                        }//otherwise deal with them by adding time to it
+                                                        if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                            recurringStat.add(0, recurringUnit);
+                                                            recurringStat.add(1, recurringValue);
+                                                            Calendar calendar = Calendar.getInstance();
+                                                            calendar.setTime(dates.get(i));
+                                                            calendar.add(Calendar.YEAR,1);
+                                                            recurringStat.add(2, dateFormat.format(calendar));
                                                         }
-                                                        Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
-                                                    }//otherwise deal with them by adding time to it
-                                                    if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                        if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                            recurringStat.add(0, recurringUnit);
+                                                            recurringStat.add(1, recurringValue);
+                                                            Calendar calendar = Calendar.getInstance();
+                                                            calendar.setTime(dates.get(i));
+                                                            calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                            recurringStat.add(2, dateFormat.format(calendar));
+                                                        }
+                                                    }else {
                                                         recurringStat.add(0, recurringUnit);
                                                         recurringStat.add(1, recurringValue);
-                                                        Calendar calendar = Calendar.getInstance();
-                                                        calendar.setTime(dates.get(i));
-                                                        calendar.add(Calendar.YEAR,1);
-                                                        recurringStat.add(2, dateFormat.format(calendar));
+                                                        recurringStat.add(2, dateFormat.format(dates.get(i)));
+                                                        System.out.println("Recurring Status: " + recurringStat.toString());
                                                     }
-                                                    if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
-                                                        recurringStat.add(0, recurringUnit);
-                                                        recurringStat.add(1, recurringValue);
-                                                        Calendar calendar = Calendar.getInstance();
-                                                        calendar.setTime(dates.get(i));
-                                                        calendar.add(Calendar.DAY_OF_YEAR,1);
-                                                        recurringStat.add(2, dateFormat.format(calendar));
-                                                    }
-                                                }else {
-                                                    recurringStat.add(0, recurringUnit);
-                                                    recurringStat.add(1, recurringValue);
-                                                    recurringStat.add(2, dateFormat.format(dates.get(i)));
-                                                    System.out.println("Recurring Status: " + recurringStat.toString());
                                                 }
                                                 Date untilDate = group.getRecursUntil();//add until date
                                                 if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
