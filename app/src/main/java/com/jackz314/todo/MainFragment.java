@@ -55,6 +55,7 @@ import android.support.v4.content.Loader;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -93,7 +94,6 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jackz314.dateparser.DateGroup;
-import com.jackz314.dateparser.ParseLocation;
 import com.jackz314.dateparser.Parser;
 import com.jackz314.todo.speechrecognitionview.RecognitionProgressView;
 import com.jackz314.todo.speechrecognitionview.adapters.RecognitionListenerAdapter;
@@ -113,7 +113,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
@@ -144,7 +143,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     private static final String ARG_PARAM = "param";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
     private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
-    private String mParam;
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -804,7 +802,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
-                                selectionTitle.setText(count + getString(R.string.selection_mode_title));
+                                String selectionText = count + getString(R.string.selection_mode_title);
+                                selectionTitle.setText(selectionText);
                             }
                         }
                     });
@@ -819,7 +818,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                     });*/
                     addSelectedId(id);
-                    ((AppCompatActivity)getActivity()).getSupportActionBar().setDisplayShowTitleEnabled(true);
+                    ActionBar actionBar = ((AppCompatActivity)getActivity()).getSupportActionBar();
+                    if(actionBar != null){
+                        actionBar.setDisplayShowTitleEnabled(true);
+                    }
                 }
                 return true;
             }
@@ -858,8 +860,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
             @Override
             public void afterTextChanged(Editable editable) {
-                //todo fix when date string starts with numbers, the following stuff will always be seemed as valid act strings
-                //todo fix problems with ! importance level indicators
                 String text = editable.toString();
                 beforeText = text;
                 //Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
@@ -892,29 +892,61 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             validAct = true;
                             if(text.indexOf(" ", popStartPos) == -1 && text.indexOf("\n", popStartPos) == -1){//ends at the full text's end
                                 popEndPos = text.length();
-                            }else if (text.indexOf(" ", popStartPos) == -1){//no space but only enter left
+                            }else if (text.indexOf(" ", popStartPos) == -1){//only have enter
                                 popEndPos = text.indexOf("\n", popStartPos);
-                            }else if(text.indexOf("\n",popStartPos) == -1){//no enter but only space left
+                                if(getDateString(text.substring(popStartPos + 1, text.indexOf("\n",popStartPos))).length() + popStartPos < popEndPos){
+                                    popEndPos = getDateString(text.substring(popStartPos + 1, text.indexOf("\n",popStartPos))).length() + popStartPos;
+                                }
+                            }else if(text.indexOf("\n",popStartPos) == -1){//only have space
                                 popEndPos = Math.max(text.indexOf(" ", popStartPos), popStartPos + getDateString(text.substring(popStartPos + 1)).length() + 1);
-                            }else {
-                                popEndPos = Math.max(text.indexOf(" ", popStartPos), popStartPos + getDateString(text.substring(popStartPos + 1, text.indexOf("\n",popStartPos))).length() + 1);
+                                //Toast.makeText(getContext(), text.substring(popStartPos, popEndPos), Toast.LENGTH_SHORT).show();
+                            }else {//have both space and enter
+                                String dateStrBeforeNewLn = getDateString(text.substring(popStartPos + 1, text.indexOf("\n",popStartPos)));
+                                if(dateStrBeforeNewLn == null){
+                                    validAct = false;
+                                    popEndPos = -1;
+                                }else {
+                                    popEndPos = Math.max(text.indexOf(" ", popStartPos), popStartPos + getDateString(text.substring(popStartPos + 1, text.indexOf("\n",popStartPos))).length() + 1);
+                                }
                             }
                         }
                         if(popEndPos < cursorPos) popEndPos = -1;//out of valid pop up range
+                        input.removeTextChangedListener(this);
+                        //Toast.makeText(getContext(), String.valueOf(popStartPos) + "|" + String.valueOf(popEndPos), Toast.LENGTH_SHORT).show();
                         if(popEndPos >= 0){
-                            input.removeTextChangedListener(this);
+                            //Toast.makeText(getContext(), text.substring(popStartPos, popEndPos), Toast.LENGTH_SHORT).show();
                             if (validAct) {
                                 editable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
                                         new ColorStateList(new int[][] {new int[] {}},
                                                 new int[] {themeColor})
-                                        ,null), 0, popEndPos - popStartPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                        ,null), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                             }else {
                                 TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
                                 for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove span if the action string is not valid
-                                //todo number involved spans are weired, fix them
                             }
-                            input.addTextChangedListener(this);
+                        }else {
+                            int spacePosStart = text.substring(0,cursorPos).lastIndexOf(" ");
+                            int enterPosStart = text.substring(0,cursorPos).lastIndexOf("\n");
+                            popStartPos = Math.max(spacePosStart, enterPosStart);
+                            if(popStartPos == -1){
+                                popStartPos = Math.max(tagPos, actPos);//if no space or enter before cursor, start from the closest tag/act position
+                            }
+                            int spacePos = text.indexOf(" ", cursorPos);
+                            int enterPos = text.indexOf("\n", cursorPos);
+                            if(spacePos == -1){
+                                spacePos = Integer.MAX_VALUE;
+                            }
+                            if(enterPos == -1){
+                                enterPos = Integer.MAX_VALUE;
+                            }
+                            popEndPos = Math.min(spacePos, enterPos);
+                            if(popEndPos == Integer.MAX_VALUE) popEndPos = text.length();
+                            //Toast.makeText(getContext(), String.valueOf(popStartPos) + "|" + String.valueOf(popEndPos), Toast.LENGTH_SHORT).show();
+                            TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
+                            for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove span if the action string is not valid
                         }
+                        input.addTextChangedListener(this);
+
                     }else {//tag popup
                         if(text.indexOf(" ",popStartPos) >= 0 && text.indexOf("\n",popStartPos) >= 0){//contains both enter and space
                             popEndPos = Math.min(text.indexOf(" ",popStartPos),text.indexOf("\n",popStartPos));//find the position of end point of the tag: space or line break
@@ -925,25 +957,27 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
                         if(popEndPos < 0){//if the tag is the last section of the note
                             popEndPos = text.length();
-                        }else if(popEndPos == popStartPos + 1){//if only one #, skip to next loop
+                        }
+                        if(!(popEndPos == popStartPos + 1)){//if only detected one #, skip
+                            String tag = text.substring(popStartPos, popEndPos);
+                            String tagColor = todoSql.getTagColor(tag);
+                            input.removeTextChangedListener(this);
+                            TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
+                            for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove previous spans
+                            if(!tagColor.isEmpty()){
+                                editable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                        new ColorStateList(new int[][] {new int[] {}},
+                                                new int[] {Color.parseColor(tagColor)})
+                                        ,null), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                            }else {
+                                editable.setSpan(new StyleSpan(Typeface.ITALIC), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            }
+                            input.addTextChangedListener(this);
+                        }
 
-                        }
-                        String tag = text.substring(popStartPos, popEndPos);
-                        String tagColor = todoSql.getTagColor(tag);
-                        input.removeTextChangedListener(this);
-                        TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
-                        for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove previous spans
-                        if(!tagColor.isEmpty()){
-                            editable.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
-                                    new ColorStateList(new int[][] {new int[] {}},
-                                            new int[] {Color.parseColor(tagColor)})
-                                    ,null), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
-                        }else {
-                            editable.setSpan(new StyleSpan(Typeface.ITALIC), popStartPos, popEndPos, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        }
-                        input.addTextChangedListener(this);
-                        //popupWindow = new PopupWindow();
-                        //System.out.println(tagStartPos + " AND " + tagEndPos);
+                        //popup section
+                        popupWindow = new PopupWindow();
+
                     }
                 }
             }
@@ -1145,10 +1179,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam = getArguments().getString(ARG_PARAM);
-        }
-
+        //if (getArguments() != null) {
+            //mParam = getArguments().getString(ARG_PARAM);
+        //}
     }
 
     ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT ) {//draw the options after swipe left
@@ -1417,7 +1450,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 }
                 if(tagEndPos < 0){//if the tag is the last section of the note
                     tagEndPos = text.length();
-                }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                }
+                if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
                     continue;
                 }
                 //System.out.println(tagStartPos + " AND " + tagEndPos);
@@ -1441,7 +1475,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         int actionStartPos = text.indexOf("@");
         if(actionStartPos >= 0){
             while (actionStartPos >= 0 && actionStartPos < text.length() - 1){
-                int actionEndPos = -1;
+                int actionEndPos;
                 if(getDateString(text.substring(actionStartPos + 1)) == null){//skip if starts with invalid actionStr
                     actionStartPos = text.indexOf("@",actionStartPos + 1);
                     continue;
@@ -1553,7 +1587,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             }
                             if(tagEndPos < 0){//if the tag is the last section of the note
                                 tagEndPos = text.length();
-                            }else if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
+                            }
+                            if(tagEndPos == tagStartPos + 1){//if only one #, skip to next loop
                                 continue;
                             }
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
@@ -1888,6 +1923,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
+        //todo empty main doesn't show
         if(data.getCount() == 0 && isInSearchMode){
             emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(getString(R.string.empty_search_result));
@@ -1924,11 +1960,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     if(text.contains("@")){//contains @ functions
                         Date currentTime = new Date();//record current time asap
 
-                        //get previous data if t
+                        //get previous data if exist
                         Cursor prevCursor = todoSql.getOneDataInTODO(id);
                         prevCursor.moveToFirst();
                         String dateStringReferencesStr = prevCursor.getString(prevCursor.getColumnIndex(DATE_STRING_REFERENCES));
-                        ArrayList<ArrayList<Object>> dateStringReferences = new ArrayList<>();
+                        ArrayList<ArrayList<Object>> dateStringReferences = new ArrayList<>();//todo seems to have problems sometimes, check later
                         ArrayList<String> dateStrRefStrs = new ArrayList<>();
                         ArrayList<Date> dateStrRefDates = new ArrayList<>();
                         if((dateStringReferencesStr != null && !dateStringReferencesStr.isEmpty() || (explicitDateReferencesArr != null && explicitDateReferencesArr.length > 0))){//have references (have dates)
@@ -2016,125 +2052,130 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                     //remindDates.addAll(dates);
                                     String syntaxTree = group.getSyntaxTree().toStringTree();
                                     System.out.println("SyntaxTree: " + syntaxTree);
-                                    Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
-                                    System.out.println("Parse Locations map: " + parseMap.toString());
+                                    //Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
+                                    //System.out.println("Parse Locations map: " + parseMap.toString());
                                     if(group.isRecurring()){
                                         String recurringUnit = "", recurringValue = "";
                                         Tree tree = group.getSyntaxTree();
-                                        if(tree.getChild(0).getText().equals("DATE_TIME")) {
-                                            for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
-                                                tree = tree.getChild(i);
-                                                while(true){//loop through a tree longitudinal (parent to child, units)
-                                                    if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
-                                                    System.out.println("Tree getText: " + tree.getText());
-                                                    StringBuilder unitTemp = new StringBuilder(tree.getText());
-                                                    if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
-                                                        recurringValue = tree.getChild(0).getText();
-                                                        if (unitTemp.toString().equals("SEEK")) {
-                                                            unitTemp = new StringBuilder(tree.getChild(tree.getChildCount() - 1).getText());//if tree starts with "SEEK", look for unit indicator at the last index in the same level of tree.
-                                                            recurringValue = tree.getChild(tree.getChildCount() - 2).getText();
+                                        while (true){
+                                            if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                            if(tree.getChild(0).getText().equals("DATE_TIME")){
+                                                Tree parentTree = tree;
+                                                for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
+                                                    tree = parentTree.getChild(i);
+                                                    while(true){//loop through a tree longitudinal (parent to child, units)
+                                                        if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                                        System.out.println("Tree getText: " + tree.getText());
+                                                        StringBuilder unitTemp = new StringBuilder(tree.getText());
+                                                        if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
+                                                            recurringValue = tree.getChild(0).getText();
+                                                            if (unitTemp.toString().equals("SEEK")) {
+                                                                unitTemp = new StringBuilder(tree.getChild(tree.getChildCount() - 1).getText());//if tree starts with "SEEK", look for unit indicator at the last index in the same level of tree.
+                                                                recurringValue = tree.getChild(tree.getChildCount() - 2).getText();
 
-                                                            if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("EXPLICIT_SEEK")) {
-                                                                if (tree.getParent().getChild(1).getChildCount() > 1) {//day_of_week, Xth WEEKDAY of MONTH
-                                                                    unitTemp.insert(0, tree.getParent().getChild(1).getChild(1).getText() + "[OF]");//DAY_OF_WEEK[OF]MONTH_OF_YEAR
-                                                                    recurringValue = tree.getParent().getChild(1).getChild(0).getText();//1st,2nd,3rd,... WEEKDAY of MONTH
-                                                                } else {//day_of_month, Xth of MONTH
-                                                                    unitTemp.append("|").append(tree.getParent().getChild(1).getChild(0).getText());//MONTH_OF_YEAR|DAY_OF_MONTH
-                                                                    recurringValue = tree.getChild(tree.getChildCount() - 1).getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getChild(0).getText();//[MONTH]|[DAY]
+                                                                if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("EXPLICIT_SEEK")) {
+                                                                    if (tree.getParent().getChild(1).getChildCount() > 1) {//day_of_week, Xth WEEKDAY of MONTH
+                                                                        unitTemp.insert(0, tree.getParent().getChild(1).getChild(1).getText() + "[OF]");//DAY_OF_WEEK[OF]MONTH_OF_YEAR
+                                                                        recurringValue = tree.getParent().getChild(1).getChild(0).getText();//1st,2nd,3rd,... WEEKDAY of MONTH
+                                                                    } else {//day_of_month, Xth of MONTH
+                                                                        unitTemp.append("|").append(tree.getParent().getChild(1).getChild(0).getText());//MONTH_OF_YEAR|DAY_OF_MONTH
+                                                                        recurringValue = tree.getChild(tree.getChildCount() - 1).getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getChild(0).getText();//[MONTH]|[DAY]
+                                                                    }
+                                                                }
+
+                                                                //the EXPLICIT_DATE one is supposed to be grammatically wrong and not parsed at all, but we'll try to parse it by ignoring the explicit date (change from month+day to just month)
+                                                                if (tree.getChildCount() > 4 && (tree.getChild(4).getText().equals("RELATIVE_DATE") || tree.getChild(4).getText().equals("EXPLICIT_DATE"))) {
+                                                                    unitTemp.append("[OF]MONTH_OF_YEAR");
+                                                                    //recurringValue already set properly previously, so no need to set here
                                                                 }
                                                             }
 
-                                                            //the EXPLICIT_DATE one is supposed to be grammatically wrong and not parsed at all, but we'll try to parse it by ignoring the explicit date (change from month+day to just month)
-                                                            if (tree.getChildCount() > 4 && (tree.getChild(4).getText().equals("RELATIVE_DATE") || tree.getChild(4).getText().equals("EXPLICIT_DATE"))) {
-                                                                unitTemp.append("[OF]MONTH_OF_YEAR");
-                                                                //recurringValue already set properly previously, so no need to set here
+                                                            recurringUnit = unitTemp.toString().toUpperCase();
+                                                            //todo carefully evaluate if recurringValue is useful
+                                                            if (recurringUnit.equals("MONTH_OF_YEAR")) {
+                                                                if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("DAY_OF_MONTH")) {
+                                                                    recurringUnit += "|DAY_OF_MONTH";//special condition month and day
+                                                                    recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[MONTH]|[DAY]
+                                                                }
+                                                                if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("YEAR_OF")) {
+                                                                    recurringUnit += "|YEAR_OF";//special condition month and day
+                                                                    recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText() + tree.getParent().getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[YEAR]
+                                                                }
+                                                                if (tree.getParent().getParent().getChildCount() > 1 && tree.getParent().getParent().getChild(1).getChild(0).getText().equals("HOURS_OF_DAY")) {//also deals with weird situations like 13 on jun(TIME on MONTH (1st))
+                                                                    recurringUnit += "|HOURS_OF_DAY";
+                                                                    recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(0).getChild(0).getText() + "|" + tree.getParent().getParent().getChild(1).getChild(1).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]
+                                                                    if (tree.getParent().getParent().getChild(1).getChildCount() > 2 && tree.getParent().getParent().getChild(1).getChild(3).getText().equals("SECONDS_OF_MINUTE")) {
+                                                                        recurringUnit += "|SECONDS_OF_MINUTE";
+                                                                        recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
+                                                                    }
+                                                                }
+                                                            }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
+                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
+                                                                if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
+                                                                    recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
+                                                                    recurringValue += tree.getParent().getChild(2).getChild(0).getText(); //[HOUR]|[MINUTE]|[SECOND]
+                                                                }
                                                             }
                                                         }
-
-                                                        recurringUnit = unitTemp.toString().toUpperCase();
-                                                        //todo carefully evaluate if recurringValue is useful
-                                                        if (recurringUnit.equals("MONTH_OF_YEAR")) {
-                                                            if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("DAY_OF_MONTH")) {
-                                                                recurringUnit += "|DAY_OF_MONTH";//special condition month and day
-                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[MONTH]|[DAY]
-                                                            }
-                                                            if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("YEAR_OF")) {
-                                                                recurringUnit += "|YEAR_OF";//special condition month and day
-                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText() + tree.getParent().getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[YEAR]
-                                                            }
-                                                            if (tree.getParent().getParent().getChildCount() > 1 && tree.getParent().getParent().getChild(1).getChild(0).getText().equals("HOURS_OF_DAY")) {//also deals with weird situations like 13 on jun(TIME on MONTH (1st))
-                                                                recurringUnit += "|HOURS_OF_DAY";
-                                                                recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(0).getChild(0).getText() + "|" + tree.getParent().getParent().getChild(1).getChild(1).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]
-                                                                if (tree.getParent().getParent().getChild(1).getChildCount() > 2 && tree.getParent().getParent().getChild(1).getChild(3).getText().equals("SECONDS_OF_MINUTE")) {
-                                                                    recurringUnit += "|SECONDS_OF_MINUTE";
-                                                                    recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
+                                                        tree = tree.getChild(0);//continue to next loop
+                                                    }
+                                                    //todo check if all dates are covered and stored properly with debug
+                                                    //todo this doesn't run
+                                                    ArrayList<String> recurringStat = new ArrayList<>();
+                                                    for(int j = 0; j < dates.size(); j++){
+                                                        if(dates.get(i).before(new Date())){//deal with past dates in recurring stats
+                                                            //if explicitly indicated a past time, warn that stupid person/troll :)
+                                                            String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
+                                                            if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                                //BZZZZZZZZZZZZZZZZZZZZZZZ!!
+                                                                Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                                    if (vibrator != null) {
+                                                                        vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                                    }
+                                                                }else {
+                                                                    if (vibrator != null) {
+                                                                        vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                                    }
                                                                 }
+                                                                Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                            }//otherwise deal with them by adding time to it
+                                                            //not dealing with other past date cases other than the following two
+                                                            if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                                recurringStat.add(0, recurringUnit);
+                                                                recurringStat.add(1, recurringValue);
+                                                                SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                                Calendar calendar = Calendar.getInstance();
+                                                                calendar.setTime(dates.get(i));
+                                                                calendar.add(Calendar.YEAR,1);
+                                                                recurringStat.add(2, dateFormat.format(calendar));
                                                             }
-                                                        }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
-                                                            recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
-                                                            if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
-                                                                recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
-                                                                recurringValue += tree.getParent().getChild(2).getChild(0).getText(); //[HOUR]|[MINUTE]|[SECOND]
+                                                            if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                                recurringStat.add(0, recurringUnit);
+                                                                recurringStat.add(1, recurringValue);
+                                                                SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                                Calendar calendar = Calendar.getInstance();
+                                                                calendar.setTime(dates.get(i));
+                                                                calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                                recurringStat.add(2, dateFormat.format(calendar));
                                                             }
+                                                        }else {
+                                                            recurringStat.add(0, recurringUnit);
+                                                            recurringStat.add(1, recurringValue);
+                                                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
+                                                            recurringStat.add(2, dateFormat.format(dates.get(i)));
+                                                            System.out.println("Recurring Status: " + recurringStat.toString());
                                                         }
                                                     }
-                                                    tree = tree.getChild(0);//continue to next loop
-                                                }
-                                                //todo check if all dates are covered and stored properly with debug
-                                                //todo this doesn't run
-                                                ArrayList<String> recurringStat = new ArrayList<>();
-                                                for(int j = 0; j < dates.size(); j++){
-                                                    if(dates.get(i).before(new Date())){//deal with past dates in recurring stats
-                                                        //if explicitly indicated a past time, warn that stupid person/troll :)
-                                                        String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
-                                                        if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
-                                                            //BZZZZZZZZZZZZZZZZZZZZZZZ!!
-                                                            Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
-                                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                                if (vibrator != null) {
-                                                                    vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
-                                                                }
-                                                            }else {
-                                                                if (vibrator != null) {
-                                                                    vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
-                                                                }
-                                                            }
-                                                            Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
-                                                        }//otherwise deal with them by adding time to it
-                                                        //not dealing with other past date cases other than the following two
-                                                        if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
-                                                            recurringStat.add(0, recurringUnit);
-                                                            recurringStat.add(1, recurringValue);
-                                                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                            Calendar calendar = Calendar.getInstance();
-                                                            calendar.setTime(dates.get(i));
-                                                            calendar.add(Calendar.YEAR,1);
-                                                            recurringStat.add(2, dateFormat.format(calendar));
-                                                        }
-                                                        if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
-                                                            recurringStat.add(0, recurringUnit);
-                                                            recurringStat.add(1, recurringValue);
-                                                            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                            Calendar calendar = Calendar.getInstance();
-                                                            calendar.setTime(dates.get(i));
-                                                            calendar.add(Calendar.DAY_OF_YEAR,1);
-                                                            recurringStat.add(2, dateFormat.format(calendar));
-                                                        }
-                                                    }else {
-                                                        recurringStat.add(0, recurringUnit);
-                                                        recurringStat.add(1, recurringValue);
+                                                    Date untilDate = group.getRecursUntil();//add until date
+                                                    if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
                                                         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                        recurringStat.add(2, dateFormat.format(dates.get(i)));
-                                                        System.out.println("Recurring Status: " + recurringStat.toString());
+                                                        recurringStat.add(3,dateFormat.format(untilDate));
                                                     }
+                                                    recurringStats.add(recurringStat);
                                                 }
-                                                Date untilDate = group.getRecursUntil();//add until date
-                                                if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
-                                                    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                    recurringStat.add(3,dateFormat.format(untilDate));
-                                                }
-                                                recurringStats.add(recurringStat);
                                             }
+                                            tree = tree.getChild(0);
                                         }
                                     }
                                     for(int i = 0; i < dates.size(); i++){//eliminate past dates that are intentional, and correct the past dates to a future date if unintentional judging by input provided date units
@@ -2207,6 +2248,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         }
     }
 
+    //todo add "at" as an alternative to "@" when detecting action string starts
     @SafeVarargs
     public final void insertData(final String text, final long id, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr) {
         new Thread(new Runnable() {
@@ -2271,122 +2313,128 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                     //remindDates.addAll(dates);
                                     String syntaxTree = group.getSyntaxTree().toStringTree();
                                     System.out.println("SyntaxTree: " + syntaxTree);
-                                    Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
-                                    System.out.println("Parse Locations map: " + parseMap.toString());
+                                    //Map<String, List<ParseLocation>> parseMap = group.getParseLocations();
+                                    //System.out.println("Parse Locations map: " + parseMap.toString());
                                     if(group.isRecurring()){//todo some necessary code is skipped in this part, fix it and don't forget the similar updateData() method
                                         String recurringUnit = "", recurringValue = "";
                                         Tree tree = group.getSyntaxTree();
-                                        if(tree.getChild(0).getText().equals("DATE_TIME")) {
-                                            for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
-                                                tree = tree.getChild(i);
-                                                while(true){//loop through a tree longitudinal (parent to child, units)
-                                                    if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
-                                                    System.out.println("Tree getText: " + tree.getText());
-                                                    StringBuilder unitTemp = new StringBuilder(tree.getText());
-                                                    if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
-                                                        recurringValue = tree.getChild(0).getText();
-                                                        if (unitTemp.toString().equals("SEEK")) {
-                                                            unitTemp = new StringBuilder(tree.getChild(tree.getChildCount() - 1).getText());//if tree starts with "SEEK", look for unit indicator at the last index in the same level of tree.
-                                                            recurringValue = tree.getChild(tree.getChildCount() - 2).getText();
+                                        System.out.println(tree.getChild(0).getText());
+                                        while(true){
+                                            if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                            if(tree.getChild(0).getText().equals("DATE_TIME")) {//todo loop to DATE_TIME first, then do the rest of the work
+                                                Tree parentTree = tree;
+                                                for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
+                                                    tree = parentTree.getChild(i);
+                                                    while(true){//loop through a tree longitudinal (parent to child, units)
+                                                        if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                                        System.out.println("Tree getText: " + tree.getText());
+                                                        StringBuilder unitTemp = new StringBuilder(tree.getText());
+                                                        if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
+                                                            recurringValue = tree.getChild(0).getText();
+                                                            if (unitTemp.toString().equals("SEEK")) {
+                                                                unitTemp = new StringBuilder(tree.getChild(tree.getChildCount() - 1).getText());//if tree starts with "SEEK", look for unit indicator at the last index in the same level of tree.
+                                                                recurringValue = tree.getChild(tree.getChildCount() - 2).getText();
 
-                                                            if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("EXPLICIT_SEEK")) {
-                                                                if (tree.getParent().getChild(1).getChildCount() > 1) {//day_of_week, Xth WEEKDAY of MONTH
-                                                                    unitTemp.insert(0, tree.getParent().getChild(1).getChild(1).getText() + "[OF]");//DAY_OF_WEEK[OF]MONTH_OF_YEAR
-                                                                    recurringValue = tree.getParent().getChild(1).getChild(0).getText();//1st,2nd,3rd,... WEEKDAY of MONTH
-                                                                } else {//day_of_month, Xth of MONTH
-                                                                    unitTemp.append("|").append(tree.getParent().getChild(1).getChild(0).getText());//MONTH_OF_YEAR|DAY_OF_MONTH
-                                                                    recurringValue = tree.getChild(tree.getChildCount() - 1).getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getChild(0).getText();//[MONTH]|[DAY]
+                                                                if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("EXPLICIT_SEEK")) {
+                                                                    if (tree.getParent().getChild(1).getChildCount() > 1) {//day_of_week, Xth WEEKDAY of MONTH
+                                                                        unitTemp.insert(0, tree.getParent().getChild(1).getChild(1).getText() + "[OF]");//DAY_OF_WEEK[OF]MONTH_OF_YEAR
+                                                                        recurringValue = tree.getParent().getChild(1).getChild(0).getText();//1st,2nd,3rd,... WEEKDAY of MONTH
+                                                                    } else {//day_of_month, Xth of MONTH
+                                                                        unitTemp.append("|").append(tree.getParent().getChild(1).getChild(0).getText());//MONTH_OF_YEAR|DAY_OF_MONTH
+                                                                        recurringValue = tree.getChild(tree.getChildCount() - 1).getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getChild(0).getText();//[MONTH]|[DAY]
+                                                                    }
+                                                                }
+
+                                                                //the EXPLICIT_DATE one is supposed to be grammatically wrong and not parsed at all, but we'll try to parse it by ignoring the explicit date (change from month+day to just month)
+                                                                if (tree.getChildCount() > 4 && (tree.getChild(4).getText().equals("RELATIVE_DATE") || tree.getChild(4).getText().equals("EXPLICIT_DATE"))) {
+                                                                    unitTemp.append("[OF]MONTH_OF_YEAR");
+                                                                    //recurringValue already set properly previously, so no need to set here
                                                                 }
                                                             }
 
-                                                            //the EXPLICIT_DATE one is supposed to be grammatically wrong and not parsed at all, but we'll try to parse it by ignoring the explicit date (change from month+day to just month)
-                                                            if (tree.getChildCount() > 4 && (tree.getChild(4).getText().equals("RELATIVE_DATE") || tree.getChild(4).getText().equals("EXPLICIT_DATE"))) {
-                                                                unitTemp.append("[OF]MONTH_OF_YEAR");
-                                                                //recurringValue already set properly previously, so no need to set here
-                                                            }
-                                                        }
-
-                                                        recurringUnit = unitTemp.toString().toUpperCase();
-                                                        //todo carefully evaluate if recurringValue is useful
-                                                        if (recurringUnit.equals("MONTH_OF_YEAR")) {
-                                                            if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("DAY_OF_MONTH")) {
-                                                                recurringUnit += "|DAY_OF_MONTH";//special condition month and day
-                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[MONTH]|[DAY]
-                                                            }
-                                                            if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("YEAR_OF")) {
-                                                                recurringUnit += "|YEAR_OF";//special condition month and day
-                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText() + tree.getParent().getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[YEAR]
-                                                            }
-                                                            if (tree.getParent().getParent().getChildCount() > 1 && tree.getParent().getParent().getChild(1).getChild(0).getText().equals("HOURS_OF_DAY")) {//also deals with weird situations like 13 on jun(TIME on MONTH (1st))
-                                                                recurringUnit += "|HOURS_OF_DAY";
-                                                                recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(0).getChild(0).getText() + "|" + tree.getParent().getParent().getChild(1).getChild(1).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]
-                                                                if (tree.getParent().getParent().getChild(1).getChildCount() > 2 && tree.getParent().getParent().getChild(1).getChild(3).getText().equals("SECONDS_OF_MINUTE")) {
-                                                                    recurringUnit += "|SECONDS_OF_MINUTE";
-                                                                    recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
+                                                            recurringUnit = unitTemp.toString().toUpperCase();
+                                                            //todo carefully evaluate if recurringValue is useful
+                                                            if (recurringUnit.equals("MONTH_OF_YEAR")) {
+                                                                if (tree.getParent().getChildCount() > 1 && tree.getParent().getChild(1).getText().equals("DAY_OF_MONTH")) {
+                                                                    recurringUnit += "|DAY_OF_MONTH";//special condition month and day
+                                                                    recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[MONTH]|[DAY]
+                                                                }
+                                                                if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("YEAR_OF")) {
+                                                                    recurringUnit += "|YEAR_OF";//special condition month and day
+                                                                    recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText() + tree.getParent().getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[YEAR]
+                                                                }
+                                                                if (tree.getParent().getParent().getChildCount() > 1 && tree.getParent().getParent().getChild(1).getChild(0).getText().equals("HOURS_OF_DAY")) {//also deals with weird situations like 13 on jun(TIME on MONTH (1st))
+                                                                    recurringUnit += "|HOURS_OF_DAY";
+                                                                    recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(0).getChild(0).getText() + "|" + tree.getParent().getParent().getChild(1).getChild(1).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]
+                                                                    if (tree.getParent().getParent().getChild(1).getChildCount() > 2 && tree.getParent().getParent().getChild(1).getChild(3).getText().equals("SECONDS_OF_MINUTE")) {
+                                                                        recurringUnit += "|SECONDS_OF_MINUTE";
+                                                                        recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
+                                                                    }
+                                                                }
+                                                            }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
+                                                                recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
+                                                                if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
+                                                                    recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
+                                                                    recurringValue += tree.getParent().getChild(2).getChild(0).getText(); //[HOUR]|[MINUTE]|[SECOND]
                                                                 }
                                                             }
-                                                        }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
-                                                            recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
-                                                            if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
-                                                                recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
-                                                                recurringValue += tree.getParent().getChild(2).getChild(0).getText(); //[HOUR]|[MINUTE]|[SECOND]
-                                                            }
                                                         }
+                                                        tree = tree.getChild(0);//continue to next loop
                                                     }
-                                                    tree = tree.getChild(0);//continue to next loop
-                                                }
-                                                //todo check if all dates are covered and stored properly with debug
-                                                ArrayList<String> recurringStat = new ArrayList<>();
-                                                System.out.println("ppp"+dates);
-                                                for(int j = 0; j < dates.size(); j++){
-                                                    if(dates.get(i).before(new Date())){
-                                                        System.out.println("PAST & RECUR");
-                                                        //if explicitly indicated a past time, warn that stupid person/troll :)
-                                                        String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
-                                                        if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
-                                                            //BZZZZZZZZZZZZZZZZZZZZZZZ!!
-                                                            Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
-                                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                                if (vibrator != null) {
-                                                                    vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                    //todo check if all dates are covered and stored properly with debug
+                                                    ArrayList<String> recurringStat = new ArrayList<>();
+                                                    for(int j = 0; j < dates.size(); j++){
+                                                        if(dates.get(i).before(new Date())){
+                                                            System.out.println("PAST & RECUR");
+                                                            //if explicitly indicated a past time, warn that stupid person/troll :)
+                                                            String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
+                                                            if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                                //BZZZZZZZZZZZZZZZZZZZZZZZ!!
+                                                                Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
+                                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                                    if (vibrator != null) {
+                                                                        vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                                    }
+                                                                }else {
+                                                                    if (vibrator != null) {
+                                                                        vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                                    }
                                                                 }
-                                                            }else {
-                                                                if (vibrator != null) {
-                                                                    vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
-                                                                }
+                                                                Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                            }//otherwise deal with them by adding time to it
+                                                            if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                                recurringStat.add(0, recurringUnit);
+                                                                recurringStat.add(1, recurringValue);
+                                                                Calendar calendar = Calendar.getInstance();
+                                                                calendar.setTime(dates.get(i));
+                                                                calendar.add(Calendar.YEAR,1);
+                                                                recurringStat.add(2, dateFormat.format(calendar));
                                                             }
-                                                            Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
-                                                        }//otherwise deal with them by adding time to it
-                                                        if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                            if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                                recurringStat.add(0, recurringUnit);
+                                                                recurringStat.add(1, recurringValue);
+                                                                Calendar calendar = Calendar.getInstance();
+                                                                calendar.setTime(dates.get(i));
+                                                                calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                                recurringStat.add(2, dateFormat.format(calendar));
+                                                            }
+                                                        }else {
                                                             recurringStat.add(0, recurringUnit);
                                                             recurringStat.add(1, recurringValue);
-                                                            Calendar calendar = Calendar.getInstance();
-                                                            calendar.setTime(dates.get(i));
-                                                            calendar.add(Calendar.YEAR,1);
-                                                            recurringStat.add(2, dateFormat.format(calendar));
+                                                            recurringStat.add(2, dateFormat.format(dates.get(i)));
+                                                            System.out.println("Recurring Status: " + recurringStat.toString());
                                                         }
-                                                        if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
-                                                            recurringStat.add(0, recurringUnit);
-                                                            recurringStat.add(1, recurringValue);
-                                                            Calendar calendar = Calendar.getInstance();
-                                                            calendar.setTime(dates.get(i));
-                                                            calendar.add(Calendar.DAY_OF_YEAR,1);
-                                                            recurringStat.add(2, dateFormat.format(calendar));
-                                                        }
-                                                    }else {
-                                                        recurringStat.add(0, recurringUnit);
-                                                        recurringStat.add(1, recurringValue);
-                                                        recurringStat.add(2, dateFormat.format(dates.get(i)));
-                                                        System.out.println("Recurring Status: " + recurringStat.toString());
                                                     }
+                                                    Date untilDate = group.getRecursUntil();//add until date
+                                                    if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
+                                                        recurringStat.add(3,dateFormat.format(untilDate));
+                                                    }
+                                                    recurringStats.add(recurringStat);
                                                 }
-                                                Date untilDate = group.getRecursUntil();//add until date
-                                                if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
-                                                    recurringStat.add(3,dateFormat.format(untilDate));
-                                                }
-                                                recurringStats.add(recurringStat);
                                             }
+                                            tree = tree.getChild(0);
                                         }
+
                                     }
                                     for(int i = 0; i < dates.size(); i++){//eliminate past dates that are intentional, and correct the past dates to a future date if unintentional judging by input provided date units
                                         if(dates.get(i).before(new Date())){

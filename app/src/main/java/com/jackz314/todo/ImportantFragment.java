@@ -125,7 +125,6 @@ import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
  * create an instance of this fragment.
  */
 public class ImportantFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
-    //todo got data from the wrong parameter, fix it
     private static final String ARG_PARAM = "param";
     private String mParam;
     private static final String[] PROJECTION = new String[]{"*"};//
@@ -178,7 +177,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     }
 
     public interface OnImportantBackPressedListener {
-        public void doBack();
+        void doBack();
     }
 
     public class ImportantBackPressedListener implements OnImportantBackPressedListener {
@@ -250,7 +249,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     }
                 }else {
                     //System.out.println(String.valueOf(exit));
-                    DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                    DrawerLayout drawer = getActivity().findViewById(R.id.drawer_layout);
                     //main.requestFocus();
                     //input.clearFocus();
                     hideKeyboard();
@@ -562,7 +561,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     setOutOfSearchMode();
                 }
                 if (isInSelectionMode) {
-                    multiSelectionBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
+                    multiSelectionBox = view.findViewById(R.id.multiSelectionBox);
                     if(multiSelectionBox.isChecked()){
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
@@ -677,7 +676,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     selectedItemID = id;
                     getLoaderManager().restartLoader(123,null,ImportantFragment.this);
                     displayAllNotes();
-                    selectionTitle = (TextView)selectionToolBar.findViewById(R.id.selection_toolbar_title);
+                    selectionTitle = selectionToolBar.findViewById(R.id.selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
@@ -771,8 +770,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if(charSequence.equals("#")){
-                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();//todo make tags into ITALIC on text change
+                if(charSequence.toString().endsWith("#")){
+                    Toast.makeText(getContext(),"TAG DETECTED",Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -1168,7 +1167,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
         //int[] heights = { 20, 24, 18, 23, 16 };
         int[] heights = { 30, 36, 27, 35, 24 };
-        recognitionProgressView = (RecognitionProgressView) getView().findViewById(R.id.important_recognition_view);
+        recognitionProgressView = getView().findViewById(R.id.important_recognition_view);
         recognitionProgressView.setColors(colors);
         recognitionProgressView.setBarMaxHeightsInDp(heights);
         recognitionProgressView.setCircleRadiusInDp(3);
@@ -1356,7 +1355,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     //System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
-                            CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            CheckBox cb = v.findViewById(R.id.multiSelectionBox);
                             unSelectAll = false;
                             selectAll = false;
                             if (cb.isChecked()) {
@@ -1522,7 +1521,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         searchView.setMaxWidth(Integer.MAX_VALUE);
         EditText searchViewTextField = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
         MainActivity.setCursorColor(searchViewTextField,Color.WHITE);
-        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor

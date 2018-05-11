@@ -139,7 +139,7 @@
                 android:value="com.jackz314.todo.MainActivity" />
         </activity>
 
-        <receiver android:name=".ReminderBroadcastReceiver" >
+        <receiver android:name="com.jackz314.todo.ReminderBroadcastReceiver" android:process=":remote">
         </receiver>
     </application>
 

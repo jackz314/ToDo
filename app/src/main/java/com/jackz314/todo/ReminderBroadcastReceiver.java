@@ -7,13 +7,11 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.os.PowerManager;
 import android.widget.Toast;
 
 import static com.jackz314.todo.MainActivity.REMINDER_NOTIFICATION_ID;
 import static com.jackz314.todo.MainActivity.generateReminderNotification;
-import static com.jackz314.todo.MainActivity.removePastDates;
 
 public class ReminderBroadcastReceiver extends BroadcastReceiver{
 
@@ -34,7 +32,7 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
 
         }
         if(ACTION_START_REMINDER.equals(intent.getAction())){
-            System.out.println("START REMINDER INTENT RECEIVED " + intent.getDataString());
+            System.out.println("START REMINDER INTENT RECEIVED " + intent);
             PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
             if (pm != null && !pm.isInteractive()) {//screen is off
                 PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"ToDoReminderWakeLock");

@@ -572,7 +572,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 this, mDrawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
             //Called when a drawer has settled in a completely closed state.
             public void onDrawerClosed(View view) {
-               // EditText input = mainFragment.input; //todo this doesn't work, fix it
+               // EditText input = mainFragment.input;
 //                if(input.isCursorVisible() && input.getVisibility() == View.VISIBLE){
                //     showKeyboard();
               //  }
@@ -1291,7 +1291,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         if(suffix.startsWith("!")){
             int impIndicatorCount = countContinuousOccurrences(suffix,"!");
-            dateString.append(suffix.substring(0,impIndicatorCount + 1));
+            dateString.append(suffix.substring(0,impIndicatorCount));
         }
 
         //System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
@@ -1737,14 +1737,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return count;
     }
 
-    //todo fix substring index out of bound error
     public static int countContinuousOccurrences(String str, String sub){
-        if (str.isEmpty() || sub.isEmpty()) {
+        if (str.isEmpty() || sub.isEmpty() || sub.length() > str.length()) {
             return 0;
         }
         int count = 0;
         int idx = 0;
-        while (str.substring(idx,idx + sub.length()).equals(sub)) {
+        while (idx < str.length() && sub.equals(str.substring(idx, idx + sub.length()))) {
             count++;
             idx += sub.length();
         }
@@ -2565,7 +2564,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
             AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
             if(alarmManager != null){
-                System.out.println("ALARM SET at " + remindTime);
+                System.out.println("ALARM SET at " + remindTime + ", current time: " + new Date() + ", time difference: " + ((remindTime.getTime() - System.currentTimeMillis()) / 1000) + " seconds");
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
             }else return false;
             if(sharedPreferences.getBoolean(context.getString(R.string.main_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here
