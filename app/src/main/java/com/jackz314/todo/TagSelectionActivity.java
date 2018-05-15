@@ -19,9 +19,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
-import android.support.v4.content.CursorLoader;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AlertDialog;
@@ -50,10 +51,10 @@ import com.jackz314.colorpicker.builder.ColorPickerClickListener;
 import com.jackz314.colorpicker.builder.ColorPickerDialogBuilder;
 import com.jackz314.todo.utils.ColorUtils;
 
-import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.TAG;
 import static com.jackz314.todo.DatabaseManager.TAG_COLOR;
+import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 
 public class TagSelectionActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
@@ -76,10 +77,10 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tag_selection);
         toolbar = findViewById(R.id.tags_sel_toolbar);
-        tagList = findViewById(R.id.tagsel_list);
+        tagList = findViewById(R.id.tag_sel_list);
         emptyTextView = findViewById(R.id.emptyTagSelection);
         setSupportActionBar(toolbar);
-        main = (CoordinatorLayout)findViewById(R.id.tagsel_main);
+        main = findViewById(R.id.tagsel_main);
         try{
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }catch (NullPointerException ignored){
@@ -158,9 +159,10 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
             tagList.setLayoutManager(linearLayoutManager);
             tagListAdapter = (new TodoListAdapter(null){
 
+                @NonNull
                 @Override
                 public TodoViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {//override creating method to inflate from a different layout
-                    View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.selectionlist,parent,false);
+                    View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.selection_list,parent,false);
                     //System.out.println("|cursor created");
                     return new TodoViewHolder(view);
                 }
@@ -305,7 +307,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         }
         tagList.setBackgroundColor(backgroundColor);
         //  navigationView.setBackgroundColor(backgroundColor);
-        //View listView = LayoutInflater.from(TagsActivity.this).inflate(R.layout.todolist, null);
+        //View listView = LayoutInflater.from(TagsActivity.this).inflate(R.layout.todo_list_item, null);
         if (ColorUtils.determineBrightness(backgroundColor) < 0.5) {// dark
             // input.setHintTextColor(ColorUtils.makeTransparent(textColor, 0.5));
         } else {
@@ -356,7 +358,7 @@ public class TagSelectionActivity extends AppCompatActivity implements LoaderMan
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
-        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor

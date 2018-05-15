@@ -143,6 +143,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     private static final String ARG_PARAM = "param";
     private static final String[] PROJECTION = new String[]{ID, TITLE};//"REPLACE (title, '*', '')"
     private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
+    public static final int TODO_LOADER_ID = 123, TAG_POPUP_LOADER_ID = 234, ACT_POPUP_LOADER_ID = 345;
     public boolean isInSearchMode = false, isInSelectionMode = false;
     public ArrayList<Long> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
@@ -154,7 +155,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     EditText input;
     FloatingActionButton fab;
     TextView modifyId;
-    RecyclerView todoList;
+    RecyclerView todoList, popupRecyclerView;
+    PopupWindow popupWindow;
     int exit=0;
     boolean justex = false;
     boolean selectAll = false, unSelectAll = false;
@@ -164,7 +166,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     int doubleClickCount = 0;
     ConstraintLayout main;
     Boolean noInterruption = true;
-    TodoListAdapter todoListAdapter;
+    TodoListAdapter todoListAdapter, actPopupAdapter, tagPopupAdapter;
     TextView emptyTextView, selectionTitle;
     CheckBox multiSelectionBox;
     SpeechRecognizer speechRecognizer;
@@ -720,7 +722,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     input.setVisibility(View.GONE);
                     isInSelectionMode = true;
                     selectedItemID = id;
-                    getLoaderManager().restartLoader(123,null,MainFragment.this);
+                    getLoaderManager().restartLoader(TODO_LOADER_ID,null,MainFragment.this);
                     //multiSelectionBox = (CheckBox)view.getView().(R.id.multiSelectionBox);
                     //multiSelectionBox.setChecked(true);
                     //multiSelectionBox = view.findViewById(R.id.multiSelectionBox);
@@ -830,7 +832,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         input.addTextChangedListener(new TextWatcher() {//todo implement when input "#", pop up choosing list of in-use tags
 
             String beforeText = null;
-            PopupWindow popupWindow;
 
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -859,11 +860,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             }
 
             @Override
-            public void afterTextChanged(Editable editable) {
+            public void afterTextChanged(final Editable editable) {
                 String text = editable.toString();
                 beforeText = text;
                 //Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
-                int cursorPos = Math.max(0, input.getSelectionStart());
+                final int cursorPos = Math.max(0, input.getSelectionStart());
                 int actPos = text.substring(0, cursorPos).lastIndexOf("@");
                 int tagPos = text.substring(0, cursorPos).lastIndexOf("#");
                 int popStartPos = Math.max(actPos, tagPos);
@@ -958,8 +959,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         if(popEndPos < 0){//if the tag is the last section of the note
                             popEndPos = text.length();
                         }
+
+                        final String tag = text.substring(popStartPos, popEndPos);
                         if(!(popEndPos == popStartPos + 1)){//if only detected one #, skip
-                            String tag = text.substring(popStartPos, popEndPos);
                             String tagColor = todoSql.getTagColor(tag);
                             input.removeTextChangedListener(this);
                             TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
@@ -976,9 +978,51 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         }
 
                         //popup section
-                        popupWindow = new PopupWindow();
-
+                        input.removeTextChangedListener(this);
+                        if(popupRecyclerView == null || tagPopupAdapter == null){
+                            if(popupRecyclerView == null){
+                                LayoutInflater inflater = LayoutInflater.from(getContext());
+                                View popupView = inflater.inflate(R.layout.popup_window,null);
+                                popupWindow = new PopupWindow(popupView);
+                                popupRecyclerView = popupView.findViewById(R.id.popup_recycler_view);
+                                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
+                                linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+                                popupRecyclerView.setLayoutManager(linearLayoutManager);
+                            }
+                            if(tagPopupAdapter == null){
+                                tagPopupAdapter = new TodoListAdapter(todoSql.getTagsCursor());
+                            }
+                            popupRecyclerView.setAdapter(tagPopupAdapter);
+                        }
+                        Bundle bundle = new Bundle();
+                        bundle.putString("QUERY", tag);
+                        getLoaderManager().restartLoader(TAG_POPUP_LOADER_ID, bundle, MainFragment.this);
+                        //popupWindow.showAsDropDown(input);
+                        final int finalPopEndPos = popEndPos;
+                        final int finalPopStartPos = popStartPos;
+                        ItemClickSupport.addTo(popupRecyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
+                            @Override
+                            public void onItemClicked(RecyclerView recyclerView, int position, View v) {
+                                //todo complete or do whatever here
+                                long id = tagPopupAdapter.getItemId(position);
+                                String tagColor = todoSql.getTagColor(tag);
+                                SpannableString completeTag = new SpannableString(todoSql.getTag(id));
+                                if(!tagColor.isEmpty()){
+                                    completeTag.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
+                                            new ColorStateList(new int[][] {new int[] {}},
+                                                    new int[] {Color.parseColor(tagColor)})
+                                            ,null), 0, completeTag.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//highlight tag text
+                                }else {
+                                    completeTag.setSpan(new StyleSpan(Typeface.ITALIC), 0, completeTag.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                }
+                                editable.replace(finalPopStartPos, finalPopEndPos, completeTag);
+                                popupWindow.dismiss();
+                            }
+                        });
+                        input.addTextChangedListener(this);
                     }
+                }else {
+                    tagPopupAdapter = null;
                 }
             }
         });
@@ -1298,7 +1342,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             input.setVisibility(View.VISIBLE);
         }
         isInSearchMode = false;
-        getLoaderManager().restartLoader(123,null,this);
+        getLoaderManager().restartLoader(TODO_LOADER_ID,null,this);
         displayAllNotes();
         hideKeyboard();
     }
@@ -1306,7 +1350,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public void setOutOfSelectionMode(){
         isInSelectionMode = false;
         proFab.setVisibility(View.VISIBLE);
-        getLoaderManager().restartLoader(123,null,this);
+        getLoaderManager().restartLoader(TODO_LOADER_ID,null,this);
         selectedId.clear();
         selectedContent.clear();
         selectAll = false;
@@ -1404,7 +1448,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         recognitionProgressView.setIdleStateAmplitudeInDp(2);
         recognitionProgressView.setRotationRadiusInDp(12);
         recognitionProgressView.play();
-        LayoutInflater inflater = LayoutInflater.from(getContext());
         //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
         //setEdgeColor(todoList,themeColor);
         //int[] themeColors = {backgroundColor,themeColor};
@@ -1698,11 +1741,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 }
             });
             todoList.setAdapter(todoListAdapter);
-            getLoaderManager().initLoader(123, null, this);
+            getLoaderManager().initLoader(TODO_LOADER_ID, null, this);
             ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
             mItemTouchHelper.attachToRecyclerView(todoList);
         }
-        getLoaderManager().restartLoader(123,null,this);
+        getLoaderManager().restartLoader(TODO_LOADER_ID,null,this);
     }
 
     public void interruptAutoSend(){
@@ -1902,45 +1945,93 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         bundle.putString("QUERY", query);
         searchText = query;
         //System.out.println("calledquery" + " " + text);
-        getLoaderManager().restartLoader(123, bundle, MainFragment.this);
+        getLoaderManager().restartLoader(TODO_LOADER_ID, bundle, MainFragment.this);
     }
 
+    @NonNull
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        setColorPreferences();
-        //determine order of the list
-        String sort = null;
-        if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
-            sort = "_id DESC";
+        switch (id){
+            case TODO_LOADER_ID:{
+                setColorPreferences();
+                //determine order of the list
+                String sort = null;
+                if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+                    sort = "_id DESC";
+                }
+                if (args != null) {
+                    String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
+                    return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+                }
+                return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, null, null, sort);
+            }case TAG_POPUP_LOADER_ID:{
+                //todo load popup data here
+                return new CursorLoader(getContext());
+            }case ACT_POPUP_LOADER_ID:{
+                return new CursorLoader(getContext());
+
+            }default:{//not actually going to happen, but just in case it did, return the default loader
+                String sort = null;
+                if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
+                    sort = "_id DESC";
+                }
+                if (args != null) {
+                    String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
+                    return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
+                }
+                return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, null, null, null);
+            }
         }
-        if (args != null) {
-            String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
-            return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, SELECTION, selectionArgs, sort);
-        }
-        return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, null, null, sort);
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
-        //todo empty main doesn't show
-        if(data.getCount() == 0 && isInSearchMode){
-            emptyTextView.setVisibility(View.VISIBLE);
-            emptyTextView.setText(getString(R.string.empty_search_result));
-        }else if(data.getCount() == 0 && !isInSearchMode){
-            System.out.println("EMPTY_MAIN");
-            emptyTextView.setVisibility(View.VISIBLE);
-            emptyTextView.setText(R.string.empty_todolist);
-        }else {
-            emptyTextView.setVisibility(View.GONE);
-            emptyTextView.setText("");
+        switch (loader.getId()){
+            case TODO_LOADER_ID:{
+                //System.out.println("dataCount" + data.getCount() + " " + isInSearchMode);
+                //todo empty main doesn't show
+                if(data.getCount() == 0 && isInSearchMode){
+                    emptyTextView.setVisibility(View.VISIBLE);
+                    emptyTextView.setText(getString(R.string.empty_search_result));
+                }else if(data.getCount() == 0 && !isInSearchMode){
+                    System.out.println("EMPTY_MAIN");
+                    emptyTextView.setVisibility(View.VISIBLE);
+                    emptyTextView.setText(R.string.empty_todolist);
+                }else {
+                    emptyTextView.setVisibility(View.GONE);
+                    emptyTextView.setText("");
+                }
+                todoListAdapter.changeCursor(data);
+            }case TAG_POPUP_LOADER_ID:{
+                if(data.getCount() == 0){
+                    if(popupRecyclerView != null) popupRecyclerView.setAdapter(null);
+                    if(tagPopupAdapter != null) tagPopupAdapter.changeCursor(null);
+                    if(popupWindow != null) popupWindow.dismiss();
+                }
+                if(tagPopupAdapter != null) tagPopupAdapter.changeCursor(data);
+            }case ACT_POPUP_LOADER_ID:{
+                if(data.getCount() == 0){
+                    if(popupRecyclerView != null) popupRecyclerView.setAdapter(null);
+                    if(actPopupAdapter != null) actPopupAdapter.changeCursor(null);
+                    if(popupWindow != null) popupWindow.dismiss();
+                }
+                if(actPopupAdapter != null) actPopupAdapter.changeCursor(data);
+            }
         }
-        todoListAdapter.changeCursor(data);
+
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-        todoListAdapter.changeCursor(null);
+        switch (loader.getId()){
+            case TODO_LOADER_ID:{
+                if(todoListAdapter != null) todoListAdapter.changeCursor(null);
+            }case TAG_POPUP_LOADER_ID:{
+                if(tagPopupAdapter != null) tagPopupAdapter.changeCursor(null);
+            }case ACT_POPUP_LOADER_ID:{
+                if(actPopupAdapter != null) actPopupAdapter.changeCursor(null);
+            }
+        }
     }
 
     //todo start working on onTextChange, tag, action popup menus, edittext pre coloring
@@ -2760,7 +2851,5 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             return finalPageNumber; //todo temporary, change later
             //return (int) Math.ceil(printItemCount / itemsPerPage);
         }
-
-//todo mark not important option to not show in the important column
     }
 }

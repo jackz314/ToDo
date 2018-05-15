@@ -21,7 +21,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:listitem="@layout/todolist" />
+        tools:listitem="@layout/todo_list_item" />
 
     <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
         android:id="@+id/tags_recognition_view"

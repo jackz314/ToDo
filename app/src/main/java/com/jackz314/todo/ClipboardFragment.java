@@ -5,8 +5,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
@@ -54,7 +52,7 @@ public class ClipboardFragment extends Fragment {
     }
 
     public interface OnClipboardBackPressedListener {
-        public void doBack();
+        void doBack();
     }
 
     public class ClipboardBackPressedListener implements OnClipboardBackPressedListener {
@@ -75,9 +73,9 @@ public class ClipboardFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam = getArguments().getString(ARG_PARAM);
-        }
+        //if (getArguments() != null) {
+        //    mParam = getArguments().getString(ARG_PARAM);
+        //}
     }
 
     @Override
@@ -87,7 +85,7 @@ public class ClipboardFragment extends Fragment {
         ((MainActivity)getActivity()).setOnClipboardBackPressedListener(new ClipboardBackPressedListener(getActivity()){
             @Override
             public void doBack() {//todo handle back press here
-                DrawerLayout drawer = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+                DrawerLayout drawer = getActivity().findViewById(R.id.drawer_layout);
                 if (drawer.isDrawerOpen(GravityCompat.START)) {
                     drawer.closeDrawer(GravityCompat.START);
                 }else {

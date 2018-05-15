@@ -312,7 +312,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     setOutOfSearchMode();
                 }
                 if (isInSelectionMode) {
-                    multiSelectionBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
+                    multiSelectionBox = view.findViewById(R.id.multiSelectionBox);
                     if (multiSelectionBox.isChecked()) {//change to false
                         removeSelectedId(id);
                         multiSelectionBox.setChecked(false);
@@ -363,7 +363,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     selectedItemID = id;
                     getSupportLoaderManager().restartLoader(123, null, TagsActivity.this);
                     displayAllNotes();
-                    selectionTitle = (TextView) selectionToolBar.findViewById(R.id.tags_selection_toolbar_title);
+                    selectionTitle = selectionToolBar.findViewById(R.id.tags_selection_toolbar_title);
                     toolbar.setVisibility(View.GONE);
                     selectionToolBar.setVisibility(View.VISIBLE);
                     selectionTitle.setText(getString(R.string.selection_mode_title));
@@ -1368,7 +1368,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     //System.out.println(text+"|cursor read");
                     holder.cBox.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
-                            CheckBox cb = (CheckBox) v.findViewById(R.id.multiSelectionBox);
+                            CheckBox cb = v.findViewById(R.id.multiSelectionBox);
                             unSelectAll = false;
                             selectAll = false;
                             if (cb.isChecked()) {
@@ -1429,7 +1429,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         tagList.setBackgroundColor(backgroundColor);
       //  navigationView.setBackgroundColor(backgroundColor);
-        View listView = LayoutInflater.from(TagsActivity.this).inflate(R.layout.todolist, null);
+        View listView = LayoutInflater.from(TagsActivity.this).inflate(R.layout.todo_list_item, null);
         if (ColorUtils.determineBrightness(backgroundColor) < 0.5) {// dark
            // input.setHintTextColor(ColorUtils.makeTransparent(textColor, 0.5));
         } else {
@@ -1462,7 +1462,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
-        LinearLayout searchBar = (LinearLayout) searchView.findViewById(R.id.search_bar);
+        LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
         if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor

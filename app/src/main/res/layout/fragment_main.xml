@@ -70,7 +70,7 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0"
-        tools:listitem="@layout/todolist" />
+        tools:listitem="@layout/todo_list_item" />
 
     <com.jackz314.todo.speechrecognitionview.RecognitionProgressView
         android:id="@+id/recognition_view"

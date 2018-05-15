@@ -1,6 +1,7 @@
 package com.jackz314.todo;
 
 import android.database.Cursor;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -11,9 +12,8 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
-
 /*
- * Created by zhang on 2017/8/13.
+ * Created by Zhang on 2017/8/13.
  */
 
  class TodoListAdapter extends CursorRecyclerAdapter<TodoListAdapter.TodoViewHolder> {
@@ -31,9 +31,10 @@ import java.util.ArrayList;
         c = cursor;
     }
 
+    @NonNull
     @Override
     public TodoViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todolist,parent,false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todo_list_item,parent,false);
         //System.out.println("|cursor created");
         return new TodoViewHolder(view);
     }
@@ -81,10 +82,10 @@ import java.util.ArrayList;
         CheckBox cBox;
         TodoViewHolder(View view){
             super(view);
-            todoText = (TextView) view.findViewById(R.id.titleText);
-            tagText = (TextView) view.findViewById(R.id.tags_selection_text);
-            cBox = (CheckBox) view.findViewById(R.id.multiSelectionBox);
-            cardView = (CardView) view.findViewById(R.id.cardView);
+            todoText = view.findViewById(R.id.titleText);
+            tagText = view.findViewById(R.id.tags_selection_text);
+            cBox = view.findViewById(R.id.multiSelectionBox);
+            cardView = view.findViewById(R.id.cardView);
             tagDot = view.findViewById(R.id.tag_dot);
             /*final long id = getItemId(position);
             cBox.setOnClickListener(new View.OnClickListener() {
@@ -120,7 +121,7 @@ import java.util.ArrayList;
 
 
     public void setCheckboxChecked(View view, boolean YN){
-        CheckBox checkBox = (CheckBox)view.findViewById(R.id.multiSelectionBox);
+        CheckBox checkBox = view.findViewById(R.id.multiSelectionBox);
         checkBox.setChecked(YN);
     }
 
@@ -130,7 +131,7 @@ import java.util.ArrayList;
     }
 
     public interface MyInterface{
-        public void foo();
+        void foo();
     }
 
     public void clearCheckbox(){
@@ -141,7 +142,7 @@ import java.util.ArrayList;
         if(c.moveToPosition(position)){
             if (view == null) {
                 LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                view = inflater.inflate(R.layout.todolist, null);
+                view = inflater.inflate(R.layout.todo_list_item, null);
                 newView(context,c,parent);
             }
             bindView(view,context,c);
@@ -182,14 +183,14 @@ import java.util.ArrayList;
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        return inflater.inflate(R.layout.todolist, parent,false);
+        return inflater.inflate(R.layout.todo_list_item, parent,false);
     }
 
     public void bindView(View view, final Context context, Cursor cursor){
         int position = cursor.getPosition();
         if (view == null) {
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            view = inflater.inflate(R.layout.todolist, null);
+            view = inflater.inflate(R.layout.todo_list_item, null);
         }
         //System.out.println("bindView!");
 

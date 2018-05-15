@@ -424,7 +424,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return allColors;
     }
 
-    public ArrayList<String> getAllTags(){
+    public ArrayList<String> getTags(){
         SQLiteDatabase database = this.getWritableDatabase();
         Cursor cs = database.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE ,null);
         ArrayList<String> allTags = new ArrayList<String>();
@@ -435,6 +435,11 @@ public class DatabaseManager extends SQLiteOpenHelper{
         }
         cs.close();
         return allTags;
+    }
+
+    public Cursor getTagsCursor(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE ,null);
     }
 
     public ArrayList<String> getTagsForNavMenu(){
@@ -509,6 +514,20 @@ public class DatabaseManager extends SQLiteOpenHelper{
         long id = cs.getInt(cs.getColumnIndex(ID));
         cs.close();
         return id;
+    }
+
+    public String getTag(long id){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cs = database.query(false,TAGS_TABLE, new String[]{ID, TAG}, ID + " = ?", new String[]{String.valueOf(id)}, null, null, "_id desc", null);
+        cs.moveToFirst();
+        String tag = cs.getString(cs.getColumnIndex(TAG));
+        cs.close();
+        return tag;
+    }
+
+    public Cursor getTagData(long id){
+        SQLiteDatabase database = this.getWritableDatabase();
+        return database.query(false,TAGS_TABLE, new String[]{ID, TAG}, ID + " = ?", new String[]{String.valueOf(id)}, null, null, "_id desc", null);
     }
 
     public void createNewTag(String tag, String tagColor){

@@ -83,6 +83,8 @@
     <string name="important_tab_title">Important</string>
     <string name="main_tab_title">Main</string>
     <string name="clipboard_tab_title">Clipboard</string>
+    <string name="location">Location</string>
+    <string name="time">Time</string>
 
 
     <string-array name="interval_units">

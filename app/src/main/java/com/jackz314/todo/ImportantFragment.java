@@ -985,9 +985,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam = getArguments().getString(ARG_PARAM);
-        }
+        //if (getArguments() != null) {
+            //mParam = getArguments().getString(ARG_PARAM);
+        //}
 
     }
 
