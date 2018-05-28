@@ -33,7 +33,7 @@ import java.util.ArrayList;
 
     @NonNull
     @Override
-    public TodoViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public TodoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todo_list_item,parent,false);
         //System.out.println("|cursor created");
         return new TodoViewHolder(view);
@@ -41,7 +41,7 @@ import java.util.ArrayList;
 
     @Override
     public void onBindViewHolder(TodoViewHolder holder, final Cursor cursor) {
-        final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+        //final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
         //String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));
         //holder.todoText.setText(text);
         //holder.todoText.setTextColor(Color.BLACK);

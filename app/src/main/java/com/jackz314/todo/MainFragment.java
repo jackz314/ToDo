@@ -22,6 +22,7 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
@@ -71,6 +72,7 @@ import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
+import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -79,6 +81,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
@@ -126,6 +129,8 @@ import static com.jackz314.todo.DatabaseManager.IMPORTANCE_TIMESTAMP;
 import static com.jackz314.todo.DatabaseManager.RECENT_REMIND_TIME;
 import static com.jackz314.todo.DatabaseManager.RECURRENCE_STATS;
 import static com.jackz314.todo.DatabaseManager.REMIND_TIMES;
+import static com.jackz314.todo.DatabaseManager.TAG;
+import static com.jackz314.todo.DatabaseManager.TAG_COLOR;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.countOccurrences;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
@@ -156,6 +161,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     FloatingActionButton fab;
     TextView modifyId;
     RecyclerView todoList, popupRecyclerView;
+    View popupView = null;
     PopupWindow popupWindow;
     int exit=0;
     boolean justex = false;
@@ -254,6 +260,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     proFab.setVisibility(View.VISIBLE);
                 }
                 speechRecognizer.stopListening();
+                if(popupWindow != null && popupWindow.isShowing()){
+                    tagPopupAdapter = null;
+                    actPopupAdapter = null;
+                    popupWindow.dismiss();
+                }
                 if(isInSelectionMode || isInSearchMode){
                     if(isInSelectionMode){
                         setOutOfSelectionMode();
@@ -960,9 +971,15 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             popEndPos = text.length();
                         }
 
-                        final String tag = text.substring(popStartPos, popEndPos);
+                        final String typedTag = text.substring(popStartPos, popEndPos);
+                        final String queryTag;
+                        if(typedTag.equals("#")){
+                            queryTag = typedTag;//query the only "#"
+                        }else {
+                            queryTag = typedTag.substring(1);//query without the first "#"
+                        }
                         if(!(popEndPos == popStartPos + 1)){//if only detected one #, skip
-                            String tagColor = todoSql.getTagColor(tag);
+                            String tagColor = todoSql.getTagColor(typedTag);
                             input.removeTextChangedListener(this);
                             TextAppearanceSpan[] spans = editable.getSpans(popStartPos, popEndPos, TextAppearanceSpan.class);
                             for (TextAppearanceSpan span : spans) editable.removeSpan(span);//remove previous spans
@@ -979,25 +996,64 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
                         //popup section
                         input.removeTextChangedListener(this);
-                        if(popupRecyclerView == null || tagPopupAdapter == null){
-                            if(popupRecyclerView == null){
-                                LayoutInflater inflater = LayoutInflater.from(getContext());
-                                View popupView = inflater.inflate(R.layout.popup_window,null);
-                                popupWindow = new PopupWindow(popupView);
-                                popupRecyclerView = popupView.findViewById(R.id.popup_recycler_view);
-                                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
-                                linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-                                popupRecyclerView.setLayoutManager(linearLayoutManager);
+                        if(popupWindow == null || !popupWindow.isShowing() || popupRecyclerView == null || tagPopupAdapter == null){
+                            LayoutInflater inflater = LayoutInflater.from(getContext());
+                            popupView = inflater.inflate(R.layout.popup_window,null);
+                            popupWindow = new PopupWindow(popupView, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                            //popupWindow.setFocusable(true);
+                            popupWindow.setContentView(popupView);
+                            popupWindow.setBackgroundDrawable(new ColorDrawable(Color.WHITE));
+                            popupWindow.setOutsideTouchable(true);
+                            popupWindow.setElevation(10);
+                            popupRecyclerView = popupView.findViewById(R.id.popup_recycler_view);
+                            LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
+                            linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+                            popupRecyclerView.setLayoutManager(linearLayoutManager);
+                            if(popupRecyclerView.getAdapter() == null){
+                                System.out.println("CREATING NEW ADAPTER AND POPUP WINDOW");
+                                tagPopupAdapter = (new TodoListAdapter(null){
+                                    @NonNull
+                                    @Override
+                                    public TodoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                                        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.popup_item,parent,false);
+                                        //System.out.println("|cursor created");
+                                        return new TodoViewHolder(view);
+                                    }
+
+                                    @Override
+                                    public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
+                                        super.onBindViewHolder(holder, cursor);
+                                        String fullTag = cursor.getString(cursor.getColumnIndex(DatabaseManager.TAG));
+                                        String tagColor = cursor.getString(cursor.getColumnIndex(DatabaseManager.TAG_COLOR));
+                                        SpannableStringBuilder spannable = new SpannableStringBuilder(fullTag);
+                                        int startPos = fullTag.indexOf(queryTag);
+                                        spannable.setSpan(new StyleSpan(Typeface.BOLD), 0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                        if(!(startPos <0)){
+                                            do{
+                                                int start = Math.min(startPos, fullTag.length());
+                                                int end = Math.min(startPos + queryTag.length(), fullTag.length());
+                                                startPos = fullTag.indexOf(queryTag, end);
+                                                spannable.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set searched text to bold
+                                            }while (startPos > 0);
+                                        }
+                                        final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                                        holder.todoText.setText(spannable);
+                                        holder.todoText.setTextColor(Color.parseColor(tagColor));
+                                    }
+                                });
+                                popupRecyclerView.setAdapter(tagPopupAdapter);
                             }
-                            if(tagPopupAdapter == null){
-                                tagPopupAdapter = new TodoListAdapter(todoSql.getTagsCursor());
-                            }
-                            popupRecyclerView.setAdapter(tagPopupAdapter);
                         }
+                        input.getSelectionStart();
+
+                        popupWindow.showAsDropDown(input, 0, 0, Gravity.CENTER);
                         Bundle bundle = new Bundle();
-                        bundle.putString("QUERY", tag);
+                        bundle.putString("QUERY", queryTag);//query without the first "#"
                         getLoaderManager().restartLoader(TAG_POPUP_LOADER_ID, bundle, MainFragment.this);
-                        //popupWindow.showAsDropDown(input);
+                        int[] a = new int[2];
+                        input.getLocationInWindow(a);
+                        //popupWindow.showAtLocation(getActivity().getWindow().getDecorView(), Gravity.NO_GRAVITY, 0 , a[1]+input.getHeight());
+                        //popupWindow = new PopupWindow(popupView, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                         final int finalPopEndPos = popEndPos;
                         final int finalPopStartPos = popStartPos;
                         ItemClickSupport.addTo(popupRecyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
@@ -1005,7 +1061,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
                                 //todo complete or do whatever here
                                 long id = tagPopupAdapter.getItemId(position);
-                                String tagColor = todoSql.getTagColor(tag);
+                                String tagColor = todoSql.getTagColor(typedTag);
                                 SpannableString completeTag = new SpannableString(todoSql.getTag(id));
                                 if(!tagColor.isEmpty()){
                                     completeTag.setSpan(new TextAppearanceSpan(null,Typeface.ITALIC,-1,
@@ -1015,15 +1071,25 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 }else {
                                     completeTag.setSpan(new StyleSpan(Typeface.ITALIC), 0, completeTag.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                                 }
+
                                 editable.replace(finalPopStartPos, finalPopEndPos, completeTag);
+                                tagPopupAdapter = null;
+                                actPopupAdapter = null;
                                 popupWindow.dismiss();
                             }
                         });
                         input.addTextChangedListener(this);
                     }
-                }else {
-                    tagPopupAdapter = null;
+                }else {//no need to popup anything
+                    if(popupWindow != null && popupWindow.isShowing()){
+                        popupWindow.dismiss();
+                        tagPopupAdapter = null;
+                        actPopupAdapter = null;
+                    }
                 }
+                /*else {
+                    tagPopupAdapter = null;
+                }*/
             }
         });
 
@@ -1077,6 +1143,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     showKeyboard();
                     input.requestFocus();
                 }else{
+
                     if (!modifyId.getText().toString().equals("")){
                         Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "update_notes");
@@ -1154,15 +1221,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             }
         });
 
-
-        input.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                interruptAutoSend();
-                return false;
-            }
-        });
-
         input.setOnFocusChangeListener(new View.OnFocusChangeListener(){
             @Override
             public void onFocusChange(View v, boolean hasFocus){
@@ -1173,6 +1231,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 }
                 else {
                     hideKeyboard();
+                    if(popupWindow != null && popupWindow.isShowing()){
+                        tagPopupAdapter = null;
+                        actPopupAdapter = null;
+                        popupWindow.dismiss();
+                    }
                     main.requestFocus();
                     //Toast.makeText(getContext(,"focus cleared, touched, request focus",Toast.LENGTH_SHORT).show();
                     if(input.isCursorVisible()||input.isInEditMode()||input.isInputMethodTarget()||input.isFocused()||input.hasFocus()){
@@ -1966,7 +2029,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 return new CursorLoader(getContext(), DatabaseContract.Item.TODO_URI, PROJECTION, null, null, sort);
             }case TAG_POPUP_LOADER_ID:{
                 //todo load popup data here
-                return new CursorLoader(getContext());
+                if (args != null) {
+                    String[] selectionArgs = new String[]{"%" + args.getString("QUERY") + "%"};
+                    return new CursorLoader(getContext(), DatabaseContract.Item.TAGS_URI, new String[]{ID, TAG, TAG_COLOR}, TAG + " LIKE ?", selectionArgs, null);
+                }
+                return new CursorLoader(getContext(), DatabaseContract.Item.TAGS_URI, new String[]{ID, TAG, TAG_COLOR}, null, null, null);
             }case ACT_POPUP_LOADER_ID:{
                 return new CursorLoader(getContext());
 
@@ -2006,14 +2073,22 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 if(data.getCount() == 0){
                     if(popupRecyclerView != null) popupRecyclerView.setAdapter(null);
                     if(tagPopupAdapter != null) tagPopupAdapter.changeCursor(null);
-                    if(popupWindow != null) popupWindow.dismiss();
+                    if(popupWindow != null) {
+                        tagPopupAdapter = null;
+                        actPopupAdapter = null;
+                        popupWindow.dismiss();
+                    }
                 }
                 if(tagPopupAdapter != null) tagPopupAdapter.changeCursor(data);
             }case ACT_POPUP_LOADER_ID:{
                 if(data.getCount() == 0){
                     if(popupRecyclerView != null) popupRecyclerView.setAdapter(null);
                     if(actPopupAdapter != null) actPopupAdapter.changeCursor(null);
-                    if(popupWindow != null) popupWindow.dismiss();
+                    if(popupWindow != null) {
+                        tagPopupAdapter = null;
+                        actPopupAdapter = null;
+                        popupWindow.dismiss();
+                    }
                 }
                 if(actPopupAdapter != null) actPopupAdapter.changeCursor(data);
             }
