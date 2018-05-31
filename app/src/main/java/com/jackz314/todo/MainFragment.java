@@ -78,10 +78,8 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
@@ -1044,14 +1042,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 popupRecyclerView.setAdapter(tagPopupAdapter);
                             }
                         }
-                        input.getSelectionStart();
-
-                        popupWindow.showAsDropDown(input, 0, 0, Gravity.CENTER);
+                        float xOffSet = input.getLayout().getPrimaryHorizontal(popStartPos);
                         Bundle bundle = new Bundle();
                         bundle.putString("QUERY", queryTag);//query without the first "#"
                         getLoaderManager().restartLoader(TAG_POPUP_LOADER_ID, bundle, MainFragment.this);
-                        int[] a = new int[2];
-                        input.getLocationInWindow(a);
+                        //popupView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                        Toast.makeText(getContext(),String.valueOf(popupRecyclerView.getHeight()),Toast.LENGTH_SHORT).show();
+                        popupWindow.showAsDropDown(input, (int) xOffSet, -input.getHeight() - popupRecyclerView.getHeight(), Gravity.TOP);
                         //popupWindow.showAtLocation(getActivity().getWindow().getDecorView(), Gravity.NO_GRAVITY, 0 , a[1]+input.getHeight());
                         //popupWindow = new PopupWindow(popupView, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                         final int finalPopEndPos = popEndPos;
@@ -1059,7 +1056,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         ItemClickSupport.addTo(popupRecyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
                             @Override
                             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
-                                //todo complete or do whatever here
                                 long id = tagPopupAdapter.getItemId(position);
                                 String tagColor = todoSql.getTagColor(typedTag);
                                 SpannableString completeTag = new SpannableString(todoSql.getTag(id));
