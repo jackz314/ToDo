@@ -91,8 +91,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         /*sharedPreferences) = sharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
-        textColor=sharedPreferences).getInt(getString(R.string.text_color_key), Color.BLACK);
+        themeColorSetting=sharedPreferences).getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
+        textColorSetting=sharedPreferences).getInt(getString(R.string.text_color_key), Color.BLACK);
         backgroundColor=sharedPreferences).getInt(getString(R.string.theme_color_key),Color.WHITE);*/
         super.onCreate(savedInstanceState);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
@@ -109,7 +109,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         selectionTitle = (TextView)toolbar.findViewById(R.id.history_selection_toolbar_title);
         selectionTitle.setText(R.string.history_name);
        //View toolbarView = inflater.inflate(R.layout.app_bar_main,null);
-        //toolbar.setBackgroundColor(themeColor);// not working yet!
+        //toolbar.setBackgroundColor(themeColorSetting);// not working yet!
         setHistoryColorsPreferences();
         deleteExpiredNotes();
         displayAllNotes();
@@ -219,7 +219,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     );
                     //selectAllBox.setBackground(new ColorDrawable(Color.WHITE));
                     selectAllBox.setButtonTintList(colorStateList);//set the color tint list
-                    //selectAllBox.getButtonDrawable().setColorFilter(themeColor, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
+                    //selectAllBox.getButtonDrawable().setColorFilter(themeColorSetting, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -359,7 +359,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             historyList.setLayoutManager(linearLayoutManager);
-            historyListAdapter = (new TodoListAdapter(null){
+            historyListAdapter = (new TodoListAdapter(){
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
@@ -811,9 +811,9 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setIconifiedByDefault(true);
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
-        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );
-        }else {//light themeColor
+        }else {//light themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
         }
         searchView.setQueryHint(hintText);
@@ -881,7 +881,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     String cursorText = cursor.getString(cursor.getColumnIndex(TITLE));
                     int startPos = cursorText.toLowerCase(Locale.US).indexOf(filter.toLowerCase(Locale.US));
                     int endPos = startPos + filter.length();
-                    todoText.setTextColor(textColor);
+                    todoText.setTextColor(textColorSetting);
                     todoText.setTextSize(TypedValue.COMPLEX_UNIT_SP,textSize);
                     if (startPos != -1) // This should always be true, just a sanity check
                     {
@@ -898,7 +898,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                             },
                             new int[] {
                                     Color.DKGRAY//disabled
-                                    ,themeColor //enabled
+                                    ,themeColorSetting //enabled
                             }
                     );
                     ////System.out.println("null called");

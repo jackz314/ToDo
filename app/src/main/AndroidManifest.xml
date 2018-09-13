@@ -114,7 +114,7 @@
         </service>
 
         <provider
-            android:name=".AppProvider"
+            android:name=".ToDoContentProvider"
             android:authorities="com.jackz314.todo"
             android:enabled="true"
             android:exported="false" />
@@ -141,6 +141,9 @@
 
         <receiver android:name="com.jackz314.todo.ReminderBroadcastReceiver" android:process=":remote">
         </receiver>
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>

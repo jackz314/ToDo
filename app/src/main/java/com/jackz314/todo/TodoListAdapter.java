@@ -9,7 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.TextView;
-
 import java.util.ArrayList;
 
 /*
@@ -17,24 +16,22 @@ import java.util.ArrayList;
  */
 
  class TodoListAdapter extends CursorRecyclerAdapter<TodoListAdapter.TodoViewHolder> {
-    private Cursor c;
     //Context mContext;
     private ArrayList<Long> itemChecked = new ArrayList<>();
-    protected int[] mFrom;
-    protected int[] mTo;
 
     LayoutInflater inflater;
 
-
-     TodoListAdapter(Cursor cursor){
-        super(cursor);
-        c = cursor;
-    }
+     TodoListAdapter(){
+         /*since all the usage by now are only populating the cursor in override moves,
+         so I don't require cursor in the default constructor, can add later based on need*/
+         super(null);
+     }
 
     @NonNull
     @Override
     public TodoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todo_list_item,parent,false);
+        //can override at any time to inflate different layouts
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.todo_list_item, parent,false);
         //System.out.println("|cursor created");
         return new TodoViewHolder(view);
     }
@@ -71,7 +68,7 @@ import java.util.ArrayList;
                 }
             }
         });*/
-        //override in main/history activity?
+        //override in main/history activity
     }
 
     static class TodoViewHolder extends RecyclerView.ViewHolder {
@@ -124,7 +121,6 @@ import java.util.ArrayList;
         CheckBox checkBox = view.findViewById(R.id.multiSelectionBox);
         checkBox.setChecked(YN);
     }
-
 
     public ArrayList returnSelected(){
         return itemChecked;

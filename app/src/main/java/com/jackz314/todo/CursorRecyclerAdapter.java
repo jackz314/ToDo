@@ -28,14 +28,6 @@ public abstract class CursorRecyclerAdapter<VH extends RecyclerView.ViewHolder>
         mDataValid = c != null;
         mRowIDColumn = mDataValid ? c.getColumnIndexOrThrow("_id") : -1;
         setHasStableIds(true);
-        setHasStableIds(true);
-
-        setHasStableIds(true);
-
-        setHasStableIds(true);
-
-        setHasStableIds(true);
-
     }
 
     @Override

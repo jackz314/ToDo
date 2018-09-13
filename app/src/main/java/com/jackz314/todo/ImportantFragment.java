@@ -466,7 +466,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                         noInterruption = true;
                         fabProgressBar.setVisibility(View.VISIBLE);
                         fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColorSetting,0.4), PorterDuff.Mode.MULTIPLY);
                         fabProgressBar.setProgress(0);
                         fab.setVisibility(View.VISIBLE);
                         //fabProgressBar.setSecondaryProgress(100);
@@ -608,7 +608,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                 mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                             }
                         }
-                        Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                        Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColorSetting).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
                                 insertData(finishedContent);
@@ -698,7 +698,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                     );
                     //selectAllBox.setBackground(new ColorDrawable(Color.WHITE));
                     selectAllBox.setButtonTintList(colorStateList);//set the color tint list
-                    //selectAllBox.getButtonDrawable().setColorFilter(themeColor, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
+                    //selectAllBox.getButtonDrawable().setColorFilter(themeColorSetting, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -1177,10 +1177,10 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         recognitionProgressView.play();
         LayoutInflater inflater = LayoutInflater.from(getContext());
         //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        //setEdgeColor(todoList,themeColor);
-        //int[] themeColors = {backgroundColor,themeColor};
+        //setEdgeColor(todoList,themeColorSetting);
+        //int[] themeColors = {backgroundColor,themeColorSetting};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
-        //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
+        //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
         //navHeadText.setTextSize(textSize);
         //navHeader.setBackgroundColor(Color.RED);
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
@@ -1232,7 +1232,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             todoList.setLayoutManager(linearLayoutManager);
-            todoListAdapter = (new TodoListAdapter(null){
+            todoListAdapter = (new TodoListAdapter(){
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
@@ -1524,9 +1524,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
-        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );
-        }else {//light themeColor
+        }else {//light themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
         }
         searchView.setQueryHint(hintText);

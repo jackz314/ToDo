@@ -520,7 +520,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         noInterruption = true;
                         fabProgressBar.setVisibility(View.VISIBLE);
                         fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColorSetting,0.4), PorterDuff.Mode.MULTIPLY);
                         fabProgressBar.setProgress(0);
                         fab.setVisibility(View.VISIBLE);
                         //fabProgressBar.setSecondaryProgress(100);
@@ -662,7 +662,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                             }
                         }
-                        Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+                        Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColorSetting).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
                                 insertData(finishedContent);
@@ -760,7 +760,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     );
                     //selectAllBox.setBackground(new ColorDrawable(Color.WHITE));
                     selectAllBox.setButtonTintList(colorStateList);//set the color tint list
-                    //selectAllBox.getButtonDrawable().setColorFilter(themeColor, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
+                    //selectAllBox.getButtonDrawable().setColorFilter(themeColorSetting, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -1009,7 +1009,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             popupRecyclerView.setLayoutManager(linearLayoutManager);
                             if(popupRecyclerView.getAdapter() == null){
                                 System.out.println("CREATING NEW ADAPTER AND POPUP WINDOW");
-                                tagPopupAdapter = (new TodoListAdapter(null){
+                                tagPopupAdapter = (new TodoListAdapter(){
                                     @NonNull
                                     @Override
                                     public TodoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -1046,9 +1046,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         Bundle bundle = new Bundle();
                         bundle.putString("QUERY", queryTag);//query without the first "#"
                         getLoaderManager().restartLoader(TAG_POPUP_LOADER_ID, bundle, MainFragment.this);
+                        tagPopupAdapter.notifyDataSetChanged();
+                        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
                         //popupView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-                        Toast.makeText(getContext(),String.valueOf(popupRecyclerView.getHeight()),Toast.LENGTH_SHORT).show();
-                        popupWindow.showAsDropDown(input, (int) xOffSet, -input.getHeight() - popupRecyclerView.getHeight(), Gravity.TOP);
+                        Toast.makeText(getContext(),String.valueOf(popupWindow.getContentView().getMeasuredHeight()),Toast.LENGTH_SHORT).show();
+                        popupWindow.showAsDropDown(input, (int) xOffSet, -input.getHeight() - popupWindow.getContentView().getMeasuredHeight(), Gravity.TOP);
+                        popupWindow.dismiss();
+                        popupWindow.showAsDropDown(input, (int) xOffSet, -input.getHeight() - popupWindow.getContentView().getMeasuredHeight(), Gravity.TOP);
                         //popupWindow.showAtLocation(getActivity().getWindow().getDecorView(), Gravity.NO_GRAVITY, 0 , a[1]+input.getHeight());
                         //popupWindow = new PopupWindow(popupView, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                         final int finalPopEndPos = popEndPos;
@@ -1067,7 +1071,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                 }else {
                                     completeTag.setSpan(new StyleSpan(Typeface.ITALIC), 0, completeTag.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                                 }
-
                                 editable.replace(finalPopStartPos, finalPopEndPos, completeTag);
                                 tagPopupAdapter = null;
                                 actPopupAdapter = null;
@@ -1508,10 +1511,10 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         recognitionProgressView.setRotationRadiusInDp(12);
         recognitionProgressView.play();
         //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        //setEdgeColor(todoList,themeColor);
-        //int[] themeColors = {backgroundColor,themeColor};
+        //setEdgeColor(todoList,themeColorSetting);
+        //int[] themeColors = {backgroundColor,themeColorSetting};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
-        //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
+        //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
         //navHeadText.setTextSize(textSize);
         //navHeader.setBackgroundColor(Color.RED);
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
@@ -1631,7 +1634,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             todoList.setLayoutManager(linearLayoutManager);
-            todoListAdapter = (new TodoListAdapter(null){
+            todoListAdapter = (new TodoListAdapter(){
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
@@ -1945,9 +1948,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
-        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );
-        }else {//light themeColor
+        }else {//light themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );
         }
         searchView.setQueryHint(hintText);
@@ -2121,7 +2124,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     //store action string orders
                     if(text.contains("@")){//contains @ functions
                         Date currentTime = new Date();//record current time asap
-
                         //get previous data if exist
                         Cursor prevCursor = todoSql.getOneDataInTODO(id);
                         prevCursor.moveToFirst();

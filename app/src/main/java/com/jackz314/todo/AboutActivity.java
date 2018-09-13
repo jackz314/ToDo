@@ -90,7 +90,7 @@ public class AboutActivity extends AppCompatActivity {
         //final SpannableString linkedMsg = new SpannableString(getString(R.string.library_license_txt));
         //Linkify.addLinks(linkedMsg, Linkify.ALL);test
         licensesText.setPaintFlags(licensesText.getPaintFlags()| Paint.UNDERLINE_TEXT_FLAG);
-        licensesText.setTextColor(colorUtils.lighten(textColor,0.4));
+        licensesText.setTextColor(ColorUtils.lighten(textColor,0.4));
         licensesText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -98,7 +98,7 @@ public class AboutActivity extends AppCompatActivity {
                 TextView textView = (TextView) view.findViewById(R.id.message);
                 textView.setMovementMethod(LinkMovementMethod.getInstance());
                 textView.setText(R.string.library_license_txt);
-                textView.setLinkTextColor(colorUtils.lighten(themeColor,0.2));
+                textView.setLinkTextColor(ColorUtils.lighten(themeColor,0.2));
                 final AlertDialog alertDialog = new AlertDialog.Builder(AboutActivity.this)
                         .setView(view)
                         .setTitle(getString(R.string.licenses))

@@ -385,7 +385,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                     );
                     //selectAllBox.setBackground(new ColorDrawable(Color.WHITE));
                     selectAllBox.setButtonTintList(colorStateList);//set the color tint list
-                    //selectAllBox.getButtonDrawable().setColorFilter(themeColor, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
+                    //selectAllBox.getButtonDrawable().setColorFilter(themeColorSetting, PorterDuff.Mode.DST); //API>=23 (Android 6.0)
                     selectAllBox.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -565,7 +565,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         noInterruption = true;
                         fabProgressBar.setVisibility(View.VISIBLE);
                         fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
-                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
+                        //fabProgressBar.getIndeterminateDrawable().setColorFilter(ColorUtils.lighten(themeColorSetting,0.4), PorterDuff.Mode.MULTIPLY);
                         fabProgressBar.setProgress(0);
                         fab.setVisibility(View.VISIBLE);
                         //fabProgressBar.setSecondaryProgress(100);
@@ -1268,7 +1268,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
             LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
             linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
             tagList.setLayoutManager(linearLayoutManager);
-            tagListAdapter = (new TodoListAdapter(null){
+            tagListAdapter = (new TodoListAdapter(){
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
@@ -1431,9 +1431,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
       //  navigationView.setBackgroundColor(backgroundColor);
         View listView = LayoutInflater.from(TagsActivity.this).inflate(R.layout.todo_list_item, null);
         if (ColorUtils.determineBrightness(backgroundColor) < 0.5) {// dark
-           // input.setHintTextColor(ColorUtils.makeTransparent(textColor, 0.5));
+           // input.setHintTextColor(ColorUtils.makeTransparent(textColorSetting, 0.5));
         } else {
-          //  input.setHintTextColor(ColorUtils.makeTransparent(textColor, 0.38));
+          //  input.setHintTextColor(ColorUtils.makeTransparent(textColorSetting, 0.38));
         }
     }
 
@@ -1465,9 +1465,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
-        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColor
+        if(ColorUtils.determineBrightness(themeColor) < 0.5){//dark themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#7FFFFFFF")), 0, hintText.length(), 0 );//material design standard hint text color in dark themed background
-        }else {//light themeColor
+        }else {//light themeColorSetting
             hintText.setSpan( new ForegroundColorSpan(Color.parseColor("#61000000")), 0, hintText.length(), 0 );//material design standard hint text color in light themed background
         }
         searchView.setQueryHint(hintText);

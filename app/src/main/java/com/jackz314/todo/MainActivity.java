@@ -678,7 +678,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
                 }
             }
-            Snackbar.make(main, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
+            Snackbar.make(main, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColorSetting).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     insertData()(deleteContent);
@@ -811,7 +811,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }else {
             navigationView.setItemTextColor(ColorStateList.valueOf(Color.parseColor("#212121")));
         }
-        //setEdgeColor(todoList,themeColor);
+        //setEdgeColor(todoList,themeColorSetting);
         navigationView.setItemIconTintList(ColorStateList.valueOf(themeColor));
         tabLayout.setBackgroundColor(themeColor);
         if(ColorUtils.determineBrightness(themeColor) > 0.9){//if the tab background color is to bright, change tab text color
@@ -821,9 +821,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             tabLayout.setTabTextColors(ColorUtils.makeTransparent(getResources().getColor(R.color.tab_white),0.7),getResources().getColor(R.color.tab_white));
             tabLayout.setSelectedTabIndicatorColor(ColorUtils.lighten(themeColor,0.7));
         }
-        //int[] themeColors = {backgroundColor,themeColor};
+        //int[] themeColors = {backgroundColor,themeColorSetting};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
-        //drawHeadBG.setColorFilter(themeColor, PorterDuff.Mode.DST);
+        //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
         Handler handler = new Handler();
         handler.post(new Runnable() {
             @Override
@@ -1090,7 +1090,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     String cursorText = cursor.getString(cursor.getColumnIndex(TITLE));
                     int startPos = cursorText.toLowerCase(Locale.US).indexOf(filter.toLowerCase(Locale.US));
                     int endPos = startPos + filter.length();
-                    todoText.setTextColor(textColor);
+                    todoText.setTextColor(textColorSetting);
                     todoText.setTextSize(TypedValue.COMPLEX_UNIT_SP,textSize);
                     if (startPos != -1) // This should always be true, just a sanity check
                     {
@@ -1107,7 +1107,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             },
                             new int[] {
                                     Color.DKGRAY//disabled
-                                    ,themeColor //enabled
+                                    ,themeColorSetting //enabled
                             }
                     );
                     if(isInSelectionMode){
@@ -2672,7 +2672,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (id == R.id.todo_search) {
             isInSearchMode = true;
 
-            //todoSearch.setForeground(new ColorDrawable(themeColor));
+            //todoSearch.setForeground(new ColorDrawable(themeColorSetting));
             return true;
         }
 
@@ -2745,7 +2745,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public void onResume(){
-        //setEdgeColor(todoList,themeColor);
+        //setEdgeColor(todoList,themeColorSetting);
         //todoList.setVisibility(View.VISIBLE);
         setColorPreferences();
         int size = menuNav.size();

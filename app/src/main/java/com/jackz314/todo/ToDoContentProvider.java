@@ -31,7 +31,7 @@ import static com.jackz314.todo.DatabaseContract.AUTHORITY;
  * Content provider. The contract between this provider and applications
  * is defined in {@link DatabaseContract}.
  */
-public class AppProvider extends ContentProvider {
+public class ToDoContentProvider extends ContentProvider {
 
     private static final int ITEMS = 1;
     private static final int ITEMS_ID = 2;
@@ -54,7 +54,7 @@ public class AppProvider extends ContentProvider {
 
     private ContentResolver mResolver;
 
-    public AppProvider() {
+    public ToDoContentProvider() {
     }
 
     @Override

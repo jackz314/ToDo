@@ -36,7 +36,7 @@ public class ThemeListPreference extends ListPreference implements AdapterView.O
     public ThemeListPreference(Context context) {
         super(context);
         //sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-        //textColor = sharedPreferences.getInt("text_color_key",Color.parseColor("#121212"));
+        //textColorSetting = sharedPreferences.getInt("text_color_key",Color.parseColor("#121212"));
         mContext = context;
     }
 

@@ -196,6 +196,17 @@
     <string name="txt_size_title">Text Size</string>
     <string name="txt_size_hint">new text size</string>
     <string name="text_size_not_suitable">Are you sure? This text size may not be suitable for you</string>
+    <string name="font_setting_key">font_setting_key</string>
+    <string name="font_setting_title">Font Settings</string>
+    <string name="font_setting_content">Change font settings</string>
+    <string name="font_setting_search_hint">Search for a font</string>
+    <string name="font_provider_disclaimer">Fonts here are provided by <a href="http://fonts.google.com/about">Google Fonts</a>.</string>
+    <string name="font_monospace">Monospace</string>
+    <string name="font_weight">Weight</string>
+    <string name="font_regular_text" >Regular(400)</string>
+    <string name="font_italic">Italic</string>
+    <string name="font_list_load_failed">Failed to load the font list from font provider, please try again later.\nOnly local added fonts will be shown.</string>
+    <string name="font_list_font_load_failed">Failed to load preview of fonts, please try again later.\nThe list will be shown with the default font instead.</string>
     <string name="just_do_it">Just do it!</string>
     <string name="reconsider">I\'ll reconsider</string>
     <string name="storage_permission_refused_explanation_bk">We\'ll need the storage permission to backup your notes</string>
@@ -295,6 +306,16 @@
         <item>1</item>
     </string-array>
 
+    <string-array name="font_list_order">
+        <item>Popular</item>
+        <item>Trend</item>
+        <item>A-Z</item>
+        <item>Z-A</item>
+        <item>Date</item>
+        <item>Style</item>
+    </string-array>
+
+
     <string-array name="theme_entries">
 
         <item>Material Indigo</item>
@@ -379,6 +400,8 @@
     <string name="background_color_key" translatable="false">background_color_key</string>
     <string name="background_color_selector_content">Change the background color</string>
     <string name="reset_appearance_key" translatable="false">reset_appearance_key</string>
+    <string name="font_order_key" translatable="false">font_order_key</string>
+    <string name="font_key" translatable="false">font_key</string>
     <string name="reset_appearance_content">Reset all Appearance settings to default</string>
     <string name="reset_appearance_title">Reset</string>
     <string name="title_activity_history" translatable="false">historyActivity</string>

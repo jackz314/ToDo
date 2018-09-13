@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
 
     <!-- NOTE: EditTextPreference accepts EditText attributes. -->
@@ -80,6 +81,16 @@
             android:defaultValue="true"
             android:key="@string/order_key"
             android:title="@string/list_order_title" />
+        <Preference
+            android:id="@+id/font_setting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:key="@string/font_setting_key"
+            android:summary="@string/font_setting_content"
+            android:title="@string/font_setting_title"
+            android:linksClickable="true"
+            tools:autoLink="web|all"
+            />
         <Preference
             android:id="@+id/text_size"
             android:layout_width="wrap_content"
@@ -183,4 +194,4 @@
         </Preference>
     </com.jackz314.todo.MyPreferenceCategory>
 
-    </PreferenceScreen>
+</PreferenceScreen>

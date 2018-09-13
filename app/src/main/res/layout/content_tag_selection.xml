@@ -23,6 +23,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:listitem="@layout/selection_list" />
+        tools:listitem="@layout/tag_selection_list_item" />
 
 </android.support.constraint.ConstraintLayout>
