@@ -1428,7 +1428,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
         }
         tagList.setBackgroundColor(backgroundColor);
-      //  navigationView.setBackgroundColor(backgroundColor);
+      //  navigationView.setBackgroundColor(backgroundColorSetting);
         View listView = LayoutInflater.from(TagsActivity.this).inflate(R.layout.todo_list_item, null);
         if (ColorUtils.determineBrightness(backgroundColor) < 0.5) {// dark
            // input.setHintTextColor(ColorUtils.makeTransparent(textColorSetting, 0.5));

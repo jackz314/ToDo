@@ -1178,7 +1178,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         LayoutInflater inflater = LayoutInflater.from(getContext());
         //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
         //setEdgeColor(todoList,themeColorSetting);
-        //int[] themeColors = {backgroundColor,themeColorSetting};
+        //int[] themeColors = {backgroundColorSetting,themeColorSetting};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
         //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
         //navHeadText.setTextSize(textSize);

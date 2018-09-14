@@ -207,6 +207,7 @@
     <string name="font_italic">Italic</string>
     <string name="font_list_load_failed">Failed to load the font list from font provider, please try again later.\nOnly local added fonts will be shown.</string>
     <string name="font_list_font_load_failed">Failed to load preview of fonts, please try again later.\nThe list will be shown with the default font instead.</string>
+    <string name="default_font_preview_text">This is a preview of the font.</string>
     <string name="just_do_it">Just do it!</string>
     <string name="reconsider">I\'ll reconsider</string>
     <string name="storage_permission_refused_explanation_bk">We\'ll need the storage permission to backup your notes</string>

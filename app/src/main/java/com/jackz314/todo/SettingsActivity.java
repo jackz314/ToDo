@@ -27,17 +27,18 @@ import android.os.HandlerThread;
 import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
+import android.preference.RingtonePreference;
 import android.preference.SwitchPreference;
 import android.provider.DocumentsContract;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NavUtils;
 import android.support.v4.provider.FontRequest;
 import android.support.v4.provider.FontsContractCompat;
 import android.support.v7.app.ActionBar;
-import android.preference.PreferenceManager;
-import android.preference.RingtonePreference;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -50,7 +51,6 @@ import android.util.Log;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
-import android.support.v4.app.NavUtils;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
@@ -68,11 +68,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
-
 import com.jackz314.colorpicker.ColorPickerView;
 import com.jackz314.colorpicker.builder.ColorPickerClickListener;
 import com.jackz314.colorpicker.builder.ColorPickerDialogBuilder;
 import com.jackz314.todo.utils.ColorUtils;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -85,17 +88,18 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
-import static android.graphics.Color.luminance;
+import static com.jackz314.todo.DatabaseManager.DATABASE_NAME;
 import static com.jackz314.todo.MainActivity.setCursorColor;
+import static com.jackz314.todo.MainActivity.setEditTextHandleColor;
 import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.R.color.colorPrimary;
 import static com.jackz314.todo.R.color.dark_theme_background_default_color;
 import static com.jackz314.todo.R.color.dark_theme_text_default_color;
 import static com.jackz314.todo.R.color.normal_theme_background_default_color;
 import static com.jackz314.todo.R.color.normal_theme_text_default_color;
-import static com.jackz314.todo.DatabaseManager.DATABASE_NAME;
 
 /**
  * A {@link PreferenceActivity} that presents a set of application settings. On
@@ -119,19 +123,20 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     static DatabaseManager DatabaseManager;
     ColorUtils colorUtils;
     static AlertDialog backupDialog, restoreDialog;
-    private Handler fontHandler = null;
-    public static int themeColorNum;
-    public static int textColorNum;
-    public static int backgroundColorNum;
+    public int randomPreviewTextDecision;
+    public static int themeColor;
+    public static int textColor;
+    public static int backgroundColor;
     public static final int BACKUP_PERMISSION_REQUEST = 1, RESTORE_PERMISSION_REQUEST = 2;
     public static final int PATH_SELECTOR_REQUEST_CODE = 3, FILE_SELECTOR_REQUEST_CODE = 4;
     private FirebaseAnalytics mFirebaseAnalytics;
     public SharedPreferences sharedPreferences;
     public boolean storageBackupPerDenied = false, storageRestorePerDenied = false;
     public String pathSelectorPath = "", fileSelected = "";
+    private Handler fontHandler = null;
     SwitchPreference autoClearSwitch, orderSwitch, mainHistorySwitch, darkThemeSwitch, mainOverdueSwitch, normalOverdueSwitch;
     ThemeListPreference themeSelector;
-    Preference wipeButton, themeColorSetting, textColorSetting, backgroundColor, notificationSettings,
+    Preference wipeButton, themeColorSetting, textColorSetting, backgroundColorSetting, notificationSettings,
         resetAppearanceData, textSize, backupData, restoreData, chooseClrFrequency, restorePurchase,
     fontSetting;
     MainActivity mainActivity;
@@ -192,9 +197,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     }
 
     public void setColorPreferencesSettings(){
-        themeColorNum = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorActualPrimary));
-        textColorNum = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
-        backgroundColorNum = sharedPreferences.getInt(getString(R.string.background_color_key), getResources().getColor(normal_theme_background_default_color));
+        themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(colorActualPrimary));
+        textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
+        backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key), getResources().getColor(normal_theme_background_default_color));
         chooseClrFrequency.setSummary(sharedPreferences.getString(getString(R.string.clear_interval_summary_key),getString(R.string.disabled)));
         themeSelector.setSummary(sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.custom)));
         if(sharedPreferences.getBoolean(getString(R.string.custom_theme_key),true)){
@@ -209,7 +214,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         setColorForPref(restoreData);
         setColorForPref(themeColorSetting);
         setColorForPref(textColorSetting);
-        setColorForPref(backgroundColor);
+        setColorForPref(backgroundColorSetting);
         setColorForPref(resetAppearanceData);
         setColorForPref(orderSwitch);
         setColorForPref(textSize);
@@ -220,20 +225,20 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         setColorForPref(notificationSettings);
         setColorForPref(fontSetting);
         Drawable themeColorD = getDrawable(R.drawable.ic_format_color_fill_black_24dp);
-        themeColorD.setColorFilter(themeColorNum, PorterDuff.Mode.SRC);
+        themeColorD.setColorFilter(themeColor, PorterDuff.Mode.SRC);
         Drawable textColorD = getDrawable(R.drawable.ic_text_format_black_24dp);
-        textColorD.setColorFilter(textColorNum, PorterDuff.Mode.SRC);
+        textColorD.setColorFilter(textColor, PorterDuff.Mode.SRC);
         Drawable backgroundColorD = getDrawable(R.drawable.ic_aspect_ratio_black_24dp);
-        backgroundColorD.setColorFilter(backgroundColorNum, PorterDuff.Mode.SRC);
+        backgroundColorD.setColorFilter(backgroundColor, PorterDuff.Mode.SRC);
         themeColorSetting.setIcon(themeColorD);
         textColorSetting.setIcon(textColorD);
-        backgroundColor.setIcon(backgroundColorD);
+        backgroundColorSetting.setIcon(backgroundColorD);
         orderSwitch.setChecked(sharedPreferences.getBoolean(getString(R.string.order_key),true));
         getListView().setBackgroundColor(Color.TRANSPARENT);
-        getListView().setBackgroundColor(backgroundColorNum);
+        getListView().setBackgroundColor(backgroundColor);
         Window window = this.getWindow();
-        window.setStatusBarColor(themeColorNum);
-        window.setNavigationBarColor(themeColorNum);
+        window.setStatusBarColor(themeColor);
+        window.setNavigationBarColor(themeColor);
         setupActionBar();
     }
 
@@ -270,7 +275,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         wipeButton = findPreference(getString(R.string.wipe_history_key));
         themeColorSetting = findPreference(getString(R.string.theme_color_key));
         textColorSetting = findPreference(getString(R.string.text_color_key));
-        backgroundColor = findPreference(getString(R.string.background_color_key));
+        backgroundColorSetting = findPreference(getString(R.string.background_color_key));
         resetAppearanceData = findPreference(getString(R.string.reset_appearance_key));
         orderSwitch = (SwitchPreference)findPreference(getString(R.string.order_key));
         textSize = findPreference(getString(R.string.text_size_key));
@@ -285,8 +290,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setColorPreferencesSettings();
         Window window = this.getWindow();
-        window.setStatusBarColor(themeColorNum);
-        window.setNavigationBarColor(themeColorNum);
+        window.setStatusBarColor(themeColor);
+        window.setNavigationBarColor(themeColor);
         final LayoutInflater inf = LayoutInflater.from(this);
         setupActionBar();
         mainActivity = new MainActivity();
@@ -325,8 +330,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                     Toast.makeText(getApplicationContext(),getString(R.string.err_msg_copied),Toast.LENGTH_SHORT).show();
                                 }
                             }).show();
-                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 }
                 return false;
             }
@@ -349,15 +354,15 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 if(themeSummary.contains("(")){// dark theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(dark_theme_text_default_color));
                     editor.putInt(getString(R.string.background_color_key), getResources().getColor(dark_theme_background_default_color));
-                    textColorNum = getResources().getColor(dark_theme_text_default_color);
-                    backgroundColorNum = getResources().getColor(dark_theme_background_default_color);
+                    textColor = getResources().getColor(dark_theme_text_default_color);
+                    backgroundColor = getResources().getColor(dark_theme_background_default_color);
                 }else {// normal theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(normal_theme_text_default_color));
                     editor.putInt(getString(R.string.background_color_key), getResources().getColor(normal_theme_background_default_color));
-                    textColorNum = getResources().getColor(normal_theme_text_default_color);
-                    backgroundColorNum = getResources().getColor(normal_theme_background_default_color);
+                    textColor = getResources().getColor(normal_theme_text_default_color);
+                    backgroundColor = getResources().getColor(normal_theme_background_default_color);
                 }
-                themeColorNum = Color.parseColor(newValue.toString());
+                themeColor = Color.parseColor(newValue.toString());
                 editor.commit();
                 String themeSelectorSummary = sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.custom));
                 themeSelector.setSummary(themeSelectorSummary);
@@ -401,13 +406,13 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 if(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false)){//if changed to dark theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(dark_theme_text_default_color));
                     editor.putInt(getString(R.string.background_color_key), getResources().getColor(dark_theme_background_default_color));
-                    textColorNum = getResources().getColor(dark_theme_text_default_color);
-                    backgroundColorNum = getResources().getColor(dark_theme_background_default_color);
+                    textColor = getResources().getColor(dark_theme_text_default_color);
+                    backgroundColor = getResources().getColor(dark_theme_background_default_color);
                 }else {//if changed to normal theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(normal_theme_text_default_color));
                     editor.putInt(getString(R.string.background_color_key), getResources().getColor(normal_theme_background_default_color));
-                    textColorNum = getResources().getColor(normal_theme_text_default_color);
-                    backgroundColorNum = getResources().getColor(normal_theme_background_default_color);
+                    textColor = getResources().getColor(normal_theme_text_default_color);
+                    backgroundColor = getResources().getColor(normal_theme_background_default_color);
                 }
                 setColorPreferencesSettings();//refresh UI with new setting
                 return false;
@@ -462,8 +467,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 dialog.dismiss();
                             }
                         }).setCancelable(true).show();
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 dialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(false);
                 intervalChooser.setMinValue(1);
                 intervalChooser.setMaxValue(500);
@@ -578,8 +583,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                                 Log.i("information","canceled");
                                             }
                                         }).show();
-                                        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                                        alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                                        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                                        alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                                     }else {
                                         editor.putInt(getString(R.string.text_size_key),numberPicker.getValue());
                                         editor.commit();
@@ -594,8 +599,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 return;//cancel
                             }
                         }).setCancelable(true).setView(dialogView).show();
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 dialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(false);
                 numberPicker.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
                     @Override
@@ -657,8 +662,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         Log.i("information","canceled");
                     }
                 }).show();
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 return false;
             }
         });
@@ -673,7 +678,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             public boolean onPreferenceClick(Preference preference) {
                AlertDialog colorPicker = ColorPickerDialogBuilder.with(SettingsActivity.this)
                         .setTitle(getString(R.string.theme_color_selector))
-                        .initialColor(themeColorNum)
+                        .initialColor(themeColor)
                         .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
                         .density(12)
                         .setPositiveButton(getString(R.string.finish), new ColorPickerClickListener() {
@@ -689,7 +694,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Theme color:"+Integer.toString(color));
                                 bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "Color int");
                                 mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                                themeColorNum = color;
+                                themeColor = color;
                                 //Toast.makeText(getApplicationContext(),String.valueOf(color),Toast.LENGTH_SHORT).show();
                                 setColorPreferencesSettings();
                             }
@@ -700,10 +705,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
                             }
                         }).showColorEdit(true).showColorPreview(true)
-                        .lightnessSliderOnly().setColorEditTextColor(themeColorNum).build();
+                        .lightnessSliderOnly().setColorEditTextColor(themeColor).build();
                 colorPicker.show();
-                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColor);
+                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColor);
                 return false;
             }
         });
@@ -713,14 +718,14 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             public boolean onPreferenceClick(Preference preference) {
                 AlertDialog colorPicker = ColorPickerDialogBuilder.with(SettingsActivity.this)
                         .setTitle(getString(R.string.text_color_selector))
-                        .initialColor(textColorNum)
+                        .initialColor(textColor)
                         .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
                         .density(12)
                         .setPositiveButton(getString(R.string.finish), new ColorPickerClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, final int color, Integer[] integers) {
                                 final SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-                                if(ColorUtils.colorIsSimilar(sharedPreferences.getInt(getString(R.string.background_color_key),backgroundColorNum),color)){
+                                if(ColorUtils.colorIsSimilar(sharedPreferences.getInt(getString(R.string.background_color_key), backgroundColor),color)){
                                     final AlertDialog dialog = new AlertDialog.Builder(SettingsActivity.this).setTitle(R.string.warning_title)
                                             .setMessage(R.string.color_conflict)
                                             .setPositiveButton(R.string.just_do_it, new DialogInterface.OnClickListener() {
@@ -735,7 +740,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                                     bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Text color:"+Integer.toString(color));
                                                     bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "Color int");
                                                     mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                                                    textColorNum = color;
+                                                    textColor = color;
                                                     setColorPreferencesSettings();
                                                 }
                                             }).setNegativeButton(R.string.reconsider, new DialogInterface.OnClickListener() {
@@ -744,8 +749,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                                     //empty
                                                 }
                                             }).show();
-                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                                 }else{
                                     SharedPreferences.Editor editor = sharedPreferences.edit();
                                     editor.putInt(getString(R.string.text_color_key),color);
@@ -756,7 +761,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                     bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Text color:"+Integer.toString(color));
                                     bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "Color int");
                                     mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                                    textColorNum = color;
+                                    textColor = color;
                                     setColorPreferencesSettings();
                                 }
                             }
@@ -766,28 +771,28 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             public void onClick(DialogInterface dialog, int which) {
 
                             }
-                        }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(textColorNum).build();
+                        }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(textColor).build();
                 colorPicker.show();
-                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColor);
+                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColor);
                 return false;
             }
         });
 
-        backgroundColor.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+        backgroundColorSetting.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {
 
                AlertDialog colorPicker = ColorPickerDialogBuilder.with(SettingsActivity.this)
                         .setTitle(getString(R.string.background_color_selector))
-                        .initialColor(backgroundColorNum)
+                        .initialColor(backgroundColor)
                         .wheelType(ColorPickerView.WHEEL_TYPE.CIRCLE)
                         .density(12)
                         .setPositiveButton(getString(R.string.finish), new ColorPickerClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, final int color, Integer[] integers) {
                                 final SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-                                if(ColorUtils.colorIsSimilar(sharedPreferences.getInt(getString(R.string.text_color_key),textColorNum), color)){
+                                if(ColorUtils.colorIsSimilar(sharedPreferences.getInt(getString(R.string.text_color_key), textColor), color)){
                                     final AlertDialog dialog = new AlertDialog.Builder(SettingsActivity.this).setTitle(R.string.warning_title)
                                             .setMessage(R.string.color_conflict)
                                             .setPositiveButton(R.string.just_do_it, new DialogInterface.OnClickListener() {
@@ -798,11 +803,11 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                                     editor.putBoolean(getString(R.string.custom_theme_key),true);
                                                     editor.commit();
                                                     Bundle bundle = new Bundle();
-                                                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "backgroundColor");
+                                                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "backgroundColorSetting");
                                                     bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Background color:"+Integer.toString(color));
                                                     bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "Color int");
                                                     mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                                                    backgroundColorNum = color;
+                                                    backgroundColor = color;
                                                     setColorPreferencesSettings();
                                                 }
                                             }).setNegativeButton(R.string.reconsider, new DialogInterface.OnClickListener() {
@@ -810,19 +815,19 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                                 public void onClick(DialogInterface dialog, int which) {
                                                 }
                                             }).show();
-                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                                 }else{
                                     SharedPreferences.Editor editor = sharedPreferences.edit();
                                     editor.putInt(getString(R.string.background_color_key),color);
                                     editor.putBoolean(getString(R.string.custom_theme_key),true);
                                     editor.commit();
                                     Bundle bundle = new Bundle();
-                                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "backgroundColor");
+                                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "backgroundColorSetting");
                                     bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "Background color:"+Integer.toString(color));
                                     bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "Color int");
                                     mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                                    backgroundColorNum = color;
+                                    backgroundColor = color;
                                     setColorPreferencesSettings();
                                 }
                             }
@@ -832,10 +837,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             public void onClick(DialogInterface dialog, int which) {
 
                             }
-                        }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(backgroundColorNum).build();
+                        }).showColorEdit(true).showColorPreview(true).lightnessSliderOnly().setColorEditTextColor(backgroundColor).build();
                 colorPicker.show();
-                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                colorPicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeColor);
+                colorPicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeColor);
                 return false;
             }
         });
@@ -864,8 +869,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         Log.i("information","canceled");
                     }
                 }).show();
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 return false;
             }
         });
@@ -893,8 +898,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 View dialogView = inflater.inflate(R.layout.backup_dialog,null);
                 final EditText edt = dialogView.findViewById(R.id.tagText);
-                edt.setBackgroundTintList(ColorStateList.valueOf(themeColorNum));
-                setCursorColor(edt,themeColorNum);
+                edt.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+                setCursorColor(edt, themeColor);
+                setEditTextHandleColor(edt, themeColor);
                 Button editPath = dialogView.findViewById(R.id.path_selector);
                 editPath.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -948,8 +954,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 backupDialog.dismiss();
                             }
                         }).setCancelable(true).setView(dialogView).show();
-                backupDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                backupDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                backupDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                backupDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 if(storageRoot.canWrite()){
 
                 }else{
@@ -1010,8 +1016,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 restoreDialog.dismiss();
                             }
                         }).setView(dialogView).show();
-                restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColorNum);
-                restoreDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColorNum);
+                restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(themeColor);
+                restoreDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(themeColor);
                 restoreDialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(false);
                 if(storageRoot.canRead() && storageRoot.canWrite()){//permission all good to go
 
@@ -1081,23 +1087,24 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      .create();
              fontSettingDialog.show();
              final Spinner fontOrderSpinner = dialogView.findViewById(R.id.font_order_spinner);
+             EditText fontSearchInput = dialogView.findViewById(R.id.font_setting_search_edittext);
              final SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
              final SharedPreferences.Editor editor = sharedPreferences.edit();
-             final String[] fontOrderBy = {sharedPreferences.getString(getString(R.string.font_order_key),"popularity")};
+             final String[] fontOrder = {sharedPreferences.getString(getString(R.string.font_order_key),"popularity")};
              final FontList[] fontList = new FontList[1];
              //select the order from last time/default
              int selectedPos = 0;
-             switch (fontOrderBy[0]){
+             switch (fontOrder[0]){//todo refresh with new ranking
                  case "popularity"://0
                      selectedPos = 0;
                      break;
                  case "trending"://1
                      selectedPos = 1;
                      break;
-                 case "alphabetically"://2
+                 case "alpha"://2
                      selectedPos = 2;
                      break;
-                 case "alphabeticallyZ"://3
+                 case "alphaZ"://3
                      selectedPos = 3;
                      break;
                  case "date"://4
@@ -1108,96 +1115,86 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      break;
              }
              fontOrderSpinner.setSelection(selectedPos);
-
-             //store selected value in shared preference
-             fontOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                 @Override
-                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                     switch (position){
-                         case 0://popular
-                             fontOrderBy[0] = "popularity";
-                             editor.putString(getString(R.string.font_order_key),"popularity");
-                             break;
-                         case 1://trend
-                             fontOrderBy[0] = "trending";
-                             editor.putString(getString(R.string.font_order_key),"trending");
-                             break;
-                         case 2://alphabetically a-z
-                             fontOrderBy[0] = "alphabetically";
-                             editor.putString(getString(R.string.font_order_key),"alphabetically");
-                             break;
-                         case 3://alphabetically z-a
-                             fontOrderBy[0] = "alphabeticallyZ";
-                             editor.putString(getString(R.string.font_order_key),"alphabeticallyZ");
-                             break;
-                         case 4://date
-                             fontOrderBy[0] = "date";
-                             editor.putString(getString(R.string.font_order_key),"date");
-                             break;
-                         case 5://style
-                             fontOrderBy[0] = "style";
-                             editor.putString(getString(R.string.font_order_key),"style");
-                             break;
-                     }
-                     editor.apply();
-                 }
-
-                 @Override
-                 public void onNothingSelected(AdapterView<?> parent) {
-                     fontOrderBy[0] = sharedPreferences.getString(getString(R.string.font_order_key),"popularity");
-                 }
-             });
+             fontSearchInput.setLinkTextColor(themeColor);
+             fontSearchInput.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
+             fontSearchInput.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+             setCursorColor(fontSearchInput, themeColor);
+             setEditTextHandleColor(fontSearchInput, themeColor);
              final ProgressBar fontLoadBar = dialogView.findViewById(R.id.font_list_load_bar);
-             //final FontList[] fontList = new FontList[1];
+             //fontNamesArrayList.add("test");
              final RecyclerView fontListRecyclerView = dialogView.findViewById(R.id.font_list_recycler_view);
-             fontListRecyclerView.setVisibility(View.INVISIBLE);
+             //fontListRecyclerView.setVisibility(View.INVISIBLE);
+             fontLoadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
              fontListRecyclerView.setLayoutManager(new LinearLayoutManager(SettingsActivity.this));
-             fontListRecyclerView.setAdapter(new ArrayListRecyclerViewAdapter(new ArrayList()));//set empty adapter first then update
-             DownloadFontList.FontListCallback fontListCallback = new DownloadFontList.FontListCallback() {
+             final ArrayListRecyclerAdapter[] fontListAdapter = new ArrayListRecyclerAdapter[1];
+             fontListRecyclerView.setAdapter(new ArrayListRecyclerAdapter(null));//set empty adapter first then update
+             final DownloadFontList.FontListCallback fontListCallback = new DownloadFontList.FontListCallback() {
                  @Override
-                 public void onFontListRetrieved(FontList fontListRetrieved) {
+                 public void onFontListRetrieved(FontList fontListRetrieved) {//todo what the hell is going on here
                      //Google font list loaded successfully
                      //fontList[0] = list;
                      fontList[0] = fontListRetrieved;
                      fontLoadBar.setVisibility(View.GONE);
-                     final ArrayList<String> fontNamesArrayList = fontListRetrieved.getFontFamilyList();
-                     if(fontOrderBy[0].equals("alphabeticallyZ")){//reverse the order of the list from a-z to z-a if z-a is chosen
+                     fontListRecyclerView.setVisibility(View.VISIBLE);
+                     final ArrayList<String> fontNamesArrayList = new ArrayList<>(fontListRetrieved.getFontFamilyList());
+                     if(fontOrder[0].equals("alphaZ")){//reverse the order of the list from a-z to z-a if z-a is chosen
                          Collections.reverse(fontNamesArrayList);
                      }
                      fontListRecyclerView.setVisibility(View.VISIBLE);
-                     Toast.makeText(getApplicationContext(),"ASA",Toast.LENGTH_SHORT).show();
-                     fontListRecyclerView.setAdapter(new ArrayListRecyclerViewAdapter(fontNamesArrayList){
+                     System.out.println(fontNamesArrayList.size());
+                     fontListAdapter[0] = new ArrayListRecyclerAdapter(fontNamesArrayList){
                          @Override
-                         public void onBindViewHolder(@NonNull final ArrayListRecyclerViewAdapter.ArrayRecyclerViewHolder holder, int position) {
-                             String fontName = fontNamesArrayList.get(position);
+                         public void onBindViewHolder(@NonNull final ArrayRecyclerViewHolder holder, int position) {
+                             //todo performance improvement and test needed
+                             final String fontName = fontNamesArrayList.get(position);
                              holder.mainText.setText(fontName);
                              //set font here
-                             //build default queryString
-                             String queryString = "name=" + fontName + "&weight=400" + "&italic=0" + "&besteffort=true";
-                             FontRequest request = new FontRequest(
-                                     "com.google.android.gms.fonts",
-                                     "com.google.android.gms",
-                                     queryString,
-                                     R.array.com_google_android_gms_fonts_certs);
-                             FontsContractCompat.FontRequestCallback callback = new FontsContractCompat
-                                     .FontRequestCallback() {
+                             //run font requests in separated threads
+                             Thread thread = new Thread(new Runnable() {
                                  @Override
-                                 public void onTypefaceRetrieved(Typeface typeface) {
-                                     holder.mainText.setTypeface(typeface);
-                                 }
+                                 public void run() {
+                                     FontRequest request = new FontRequest(
+                                             "com.google.android.gms.fonts",
+                                             "com.google.android.gms",
+                                             fontName,
+                                             R.array.com_google_android_gms_fonts_certs);
+                                     System.out.println("Font name: " + fontName);
+                                     FontsContractCompat.FontRequestCallback callback = new FontsContractCompat
+                                             .FontRequestCallback() {
+                                         @Override
+                                         public void onTypefaceRetrieved(Typeface typeface) {
+                                             holder.mainText.setTypeface(typeface);
+                                             System.out.println("Font Set: " + holder.mainText.getText());
+                                         }
 
-                                 @Override
-                                 public void onTypefaceRequestFailed(int reason) {
-                                     Toast.makeText(SettingsActivity.this,
-                                             getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG)
-                                             .show();
+                                         @Override
+                                         public void onTypefaceRequestFailed(int reason) {
+                                             //todo why fail so many times
+                                             System.out.println("Font request failed: " + reason);
+                                     /*Toast.makeText(SettingsActivity.this,
+                                             SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG)
+                                             .show();*/
+                                         }
+                                     };
+                                     FontsContractCompat
+                                             .requestFont(SettingsActivity.this, request, callback,
+                                                     getFontHandlerThreadHandler());
+                                     /*try {
+                                         if (Thread.interrupted()) { throw new InterruptedException();}
+                                         while(!Thread.currentThread().isInterrupted()) {
+                                             // ...
+                                         }
+                                     } catch (InterruptedException consumed){
+
+                                     // Allow thread to exit
+                                     }*/
                                  }
-                             };
-                             FontsContractCompat
-                                     .requestFont(SettingsActivity.this, request, callback,
-                                             getFontHandlerThreadHandler());
+                             });
+                             thread.run();
                          }
-                     });
+                     };
+                     fontListRecyclerView.setAdapter(fontListAdapter[0]);
+                     //System.out.println("adapter size: " + fontListRecyclerView.getAdapter().getItemCount());
                  }
 
                  @Override
@@ -1208,16 +1205,52 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                     //todo load local cached fonts here if can't get the list
                  }
              };
-             if(fontOrderBy[0].equals("alphabeticallyZ")){// as there's no official ranking from z-a, we'll submit request for a-z then adjust by ourselves later.
-                 DownloadFontList.requestDownloadableFontList(fontListCallback, GlobalStrings.GOOGLE_FONT_API_KEY, fontOrderBy[0]);
-             }else {
-                 DownloadFontList.requestDownloadableFontList(fontListCallback, GlobalStrings.GOOGLE_FONT_API_KEY, fontOrderBy[0]);
-             }
+             requestFontList(fontOrder[0], fontListCallback);
+             //store selected value in shared preference
+             fontOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                 @Override
+                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                     switch (position){
+                         case 0://popular
+                             fontOrder[0] = "popularity";
+                             editor.putString(getString(R.string.font_order_key),"popularity");
+                             break;
+                         case 1://trend
+                             fontOrder[0] = "trending";
+                             editor.putString(getString(R.string.font_order_key),"trending");
+                             break;
+                         case 2://alpha a-z
+                             fontOrder[0] = "alpha";
+                             editor.putString(getString(R.string.font_order_key),"alpha");
+                             break;
+                         case 3://alpha z-a
+                             fontOrder[0] = "alphaZ";
+                             editor.putString(getString(R.string.font_order_key),"alphaZ");
+                             break;
+                         case 4://date
+                             fontOrder[0] = "date";
+                             editor.putString(getString(R.string.font_order_key),"date");
+                             break;
+                         case 5://style
+                             fontOrder[0] = "style";
+                             editor.putString(getString(R.string.font_order_key),"style");
+                             break;
+                     }
+                     fontLoadBar.setVisibility(View.VISIBLE);
+                     requestFontList(fontOrder[0], fontListCallback);
+                     editor.apply();
+                 }
+
+                 @Override
+                 public void onNothingSelected(AdapterView<?> parent) {
+                     fontOrder[0] = sharedPreferences.getString(getString(R.string.font_order_key),"popularity");
+                 }
+             });
 
              //disclaimer text part with the ability to click the google font link (fonts.google.com/about).
              TextView disclaimerTxt = dialogView.findViewById(R.id.font_disclaimer_txt);
              disclaimerTxt.setMovementMethod(LinkMovementMethod.getInstance());
-             disclaimerTxt.setLinkTextColor(ColorUtils.lighten(themeColorNum,0.2));
+             disclaimerTxt.setLinkTextColor(ColorUtils.lighten(themeColor,0.2));
 
              //handle specific font settings
              ItemClickSupport.addTo(fontListRecyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
@@ -1225,15 +1258,62 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                  public void onItemClicked(RecyclerView recyclerView, int position, View v) {
                      //switch the dialog's view, maybe switch to activity in the future
                      View fontDialogView = inflater.inflate(R.layout.specific_font_setting_layout,null);
-                     fontSettingDialog.setView(fontDialogView);
-                     ProgressBar loadBar = fontDialogView.findViewById(R.id.specific_font_progress_bar);
-                     loadBar.setVisibility(View.VISIBLE);
+                     fontSettingDialog.setContentView(fontDialogView);
+                     final String fontName = fontListAdapter[0].getItemAtPos(position);
+                     final ProgressBar loadBar = fontDialogView.findViewById(R.id.specific_font_progress_bar);
+                     loadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
                      LinearLayout settingLayout = fontDialogView.findViewById(R.id.specific_font_setting_layout);
-                     settingLayout.setVisibility(View.GONE);//don't show elements until the loading is done
+                     //settingLayout.setVisibility(View.GONE);//don't show elements until the loading is done
                      final CheckBox italicCbox = fontDialogView.findViewById(R.id.font_italic_cbox);
                      CheckBox monoCbox = fontDialogView.findViewById(R.id.fon_mono_cbox);
-                     TextView previewTitle = fontDialogView.findViewById(R.id.font_preview_title);
-                     TextView previewText = fontDialogView.findViewById(R.id.font_preview_text);
+                     final TextView previewTitle = fontDialogView.findViewById(R.id.font_preview_title);
+                     final TextView previewText = fontDialogView.findViewById(R.id.font_preview_text);
+                     previewTitle.setText(fontName);
+
+                     //get random stuff as preview text
+                     GetFromURL.URLCallBack urlCallBack = new GetFromURL.URLCallBack() {
+                         @Override
+                         public void onURLContentReceived(String content) {
+                             //parse json string to normal string
+                             String finalText = "";
+
+                             try{
+                                 JSONObject jsonObj = new JSONObject(content);
+                                 if(randomPreviewTextDecision == 1) {//random quotes from quotesondesign.com
+                                     //this one returns an array directly, not an object
+                                     finalText = new JSONArray().getJSONObject(0).getString("title");
+                                 }else if(randomPreviewTextDecision == 2){//icndb jokes
+                                     finalText = jsonObj.getJSONObject("value").getString("joke");
+                                 }else if(randomPreviewTextDecision == 3){//adviceslip
+                                     finalText = jsonObj.getJSONObject("slip").getString("advice");
+                                 }
+                             }catch (JSONException e){
+                                 finalText = getString(R.string.default_font_preview_text);
+                             }
+                             if(finalText.equals("")) finalText = getString(R.string.default_font_preview_text);
+                             previewText.setText(finalText);
+                             loadBar.setVisibility(View.GONE);
+                         }
+
+                         @Override
+                         public void onRequestError(Exception e) {
+                             previewText.setText(getString(R.string.default_font_preview_text));
+                         }
+                     };
+                     Random random = new Random();
+                     randomPreviewTextDecision = random.nextInt(2) + 1;//1 - 3
+                     String randURL = "";
+                     if(randomPreviewTextDecision == 1){//random quotes from quotesondesign.com
+                         randURL = "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand&filter[posts_per_page]=1";
+                     }else if(randomPreviewTextDecision == 2){//icndb jokes
+                         randURL = "http://api.icndb.com/jokes/random/";
+                     }else if(randomPreviewTextDecision == 3){//adviceslip
+                         randURL = "http://api.adviceslip.com/advice";
+                     }
+                     GetFromURL.getFromURL(urlCallBack, randURL);
+
+                     //get and set font
+
                      italicCbox.setEnabled(false);//just to make sure it's disabled at the beginning
                      Spinner weightSpinner = fontDialogView.findViewById(R.id.font_weight_spinner);
                      Font font = fontList[0].getFontByPosition(position);
@@ -1324,9 +1404,12 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
                          @Override
                          public void onNothingSelected(AdapterView<?> parent) {
-
+                             //no op
                          }
                      });
+
+                     //todo continue here
+
                  }
              });
              return false;
@@ -1334,6 +1417,69 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
      });
 
      //end of settings
+    }
+
+    public Typeface requestFont(final String fontName, int weight, boolean italic, boolean mono){
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                FontRequest request = new FontRequest(
+                        "com.google.android.gms.fonts",
+                        "com.google.android.gms",
+                        fontName,
+                        R.array.com_google_android_gms_fonts_certs);
+                System.out.println("Getting Font : " + fontName);
+                FontsContractCompat.FontRequestCallback callback = new FontsContractCompat
+                        .FontRequestCallback() {
+                    @Override
+                    public void onTypefaceRetrieved(Typeface typeface) {
+                        previewTitle.setTypeface(typeface);
+
+                        System.out.println("Font Set: " + holder.mainText.getText());
+                    }
+
+                    @Override
+                    public void onTypefaceRequestFailed(int reason) {
+                        //todo why fail so many times
+                        System.out.println("Font request failed: " + reason);
+                                     /*Toast.makeText(SettingsActivity.this,
+                                             SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG)
+                                             .show();*/
+                    }
+                };
+                FontsContractCompat
+                        .requestFont(SettingsActivity.this, request, callback,
+                                getFontHandlerThreadHandler());
+                                     /*try {
+                                         if (Thread.interrupted()) { throw new InterruptedException();}
+                                         while(!Thread.currentThread().isInterrupted()) {
+                                             // ...
+                                         }
+                                     } catch (InterruptedException consumed){
+
+                                     // Allow thread to exit
+                                     }*/
+            }
+        });
+        thread.run();
+
+    }
+
+    private void requestFontList(String order, DownloadFontList.FontListCallback fontListCallback){
+        if(order.equals("alphaZ")){// as there's no official ranking from z-a, we'll submit request for a-z then adjust by ourselves later.
+            DownloadFontList.requestDownloadableFontList(fontListCallback, GlobalStrings.GOOGLE_FONT_API_KEY, "alpha");
+        }else {
+            DownloadFontList.requestDownloadableFontList(fontListCallback, GlobalStrings.GOOGLE_FONT_API_KEY, order);
+        }
+    }
+
+    private Handler getFontHandlerThreadHandler() {
+        if (fontHandler == null) {
+            HandlerThread handlerThread = new HandlerThread("fonts");
+            handlerThread.start();
+            fontHandler = new Handler(handlerThread.getLooper());
+        }
+        return fontHandler;
     }
 
     public boolean restoreDataFromBackup(String filePath){
@@ -1376,14 +1522,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         return false;
     }
 
-    private Handler getFontHandlerThreadHandler() {
-        if (fontHandler == null) {
-            HandlerThread handlerThread = new HandlerThread("fonts");
-            handlerThread.start();
-            fontHandler = new Handler(handlerThread.getLooper());
-        }
-        return fontHandler;
-    }
+
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         //if (resultCode != RESULT_OK) return;
@@ -1480,8 +1619,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
      */
     private void setupActionBar() {
         ActionBar actionBar = getSupportActionBar();
-        Drawable actionBarColor = new ColorDrawable(themeColorNum);
-        actionBarColor.setColorFilter(themeColorNum, PorterDuff.Mode.DST);
+        Drawable actionBarColor = new ColorDrawable(themeColor);
+        actionBarColor.setColorFilter(themeColor, PorterDuff.Mode.DST);
         actionBar.setBackgroundDrawable(actionBarColor);
         if (actionBar != null) {
             // Show the Up button in the action bar.
@@ -1518,11 +1657,11 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         Spannable coloredTitle = new SpannableString (title);
         Spannable coloredSummary = new SpannableString (summary);
         if(pref.isEnabled()){
-            coloredTitle.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredTitle.length(), 0 );
-            coloredSummary.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredSummary.length(), 0 );
+            coloredTitle.setSpan( new ForegroundColorSpan(textColor), 0, coloredTitle.length(), 0 );
+            coloredSummary.setSpan( new ForegroundColorSpan(textColor), 0, coloredSummary.length(), 0 );
         }else {
-            coloredTitle.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColorNum,0.5)), 0, coloredTitle.length(), 0 );
-            coloredSummary.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColorNum,0.5)), 0, coloredSummary.length(), 0 );
+            coloredTitle.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColor,0.5)), 0, coloredTitle.length(), 0 );
+            coloredSummary.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColor,0.5)), 0, coloredSummary.length(), 0 );
         }
         pref.setTitle(coloredTitle);
         pref.setSummary(coloredSummary);
@@ -1532,8 +1671,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         String summary = pref.getSummary().toString();
         Spannable coloredTitle = new SpannableString (title);
         Spannable coloredSummary = new SpannableString (summary);
-        coloredTitle.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredTitle.length(), 0 );
-        coloredSummary.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredSummary.length(), 0 );
+        coloredTitle.setSpan( new ForegroundColorSpan(textColor), 0, coloredTitle.length(), 0 );
+        coloredSummary.setSpan( new ForegroundColorSpan(textColor), 0, coloredSummary.length(), 0 );
         pref.setTitle(coloredTitle);
         pref.setSummary(coloredSummary);
     }
@@ -1547,7 +1686,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 },
                 new int[] {
                         getResources().getColor(normal_theme_background_default_color)//disabled
-                        ,ColorUtils.lighten(themeColorNum,0.32) //enabled
+                        ,ColorUtils.lighten(themeColor,0.32) //enabled
                 }
         );
         if(pref.isEnabled()){
@@ -1567,19 +1706,19 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                     }
             );
             customRealSwitch.setButtonTintList(buttonStates);
-            coloredTitle.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredTitle.length(), 0 );
+            coloredTitle.setSpan( new ForegroundColorSpan(textColor), 0, coloredTitle.length(), 0 );
             if(pref.getSummary()!= null){
                 String summary = pref.getSummary().toString();
                 Spannable coloredSummary = new SpannableString (summary);
-                coloredSummary.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredSummary.length(), 0 );
+                coloredSummary.setSpan( new ForegroundColorSpan(textColor), 0, coloredSummary.length(), 0 );
                 pref.setSummary(coloredSummary);
             }
         }else {
-            coloredTitle.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColorNum,0.5)), 0, coloredTitle.length(), 0 );
+            coloredTitle.setSpan( new ForegroundColorSpan(ColorUtils.lighten(textColor,0.5)), 0, coloredTitle.length(), 0 );
             if(pref.getSummary()!= null){
                 String summary = pref.getSummary().toString();
                 Spannable coloredSummary = new SpannableString (summary);
-                coloredSummary.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredSummary.length(), 0 );
+                coloredSummary.setSpan( new ForegroundColorSpan(textColor), 0, coloredSummary.length(), 0 );
                 pref.setSummary(coloredSummary);
             }
         }
@@ -1606,15 +1745,15 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         if(themeSummary.contains("(")){// dark theme
             editor.putInt(getString(R.string.text_color_key), getResources().getColor(dark_theme_text_default_color));
             editor.putInt(getString(R.string.background_color_key), getResources().getColor(dark_theme_background_default_color));
-            textColorNum = getResources().getColor(dark_theme_text_default_color);
-            backgroundColorNum = getResources().getColor(dark_theme_background_default_color);
+            textColor = getResources().getColor(dark_theme_text_default_color);
+            backgroundColor = getResources().getColor(dark_theme_background_default_color);
         }else {// normal theme
             editor.putInt(getString(R.string.text_color_key), getResources().getColor(normal_theme_text_default_color));
             editor.putInt(getString(R.string.background_color_key), getResources().getColor(normal_theme_background_default_color));
-            textColorNum = getResources().getColor(normal_theme_text_default_color);
-            backgroundColorNum = getResources().getColor(normal_theme_background_default_color);
+            textColor = getResources().getColor(normal_theme_text_default_color);
+            backgroundColor = getResources().getColor(normal_theme_background_default_color);
         }
-        themeColorNum = Color.parseColor(newValue);
+        themeColor = Color.parseColor(newValue);
         editor.commit();
         String themeSelectorSummary = sharedPreferences.getString(getString(R.string.theme_selector_summary_key),getString(R.string.custom));
         themeSelector.setSummary(themeSelectorSummary);
@@ -1625,7 +1764,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public void setColorForPref(ThemeListPreference pref){
         String title = pref.getTitle().toString();
         Spannable coloredCancelText = new SpannableString(pref.getNegativeButtonText());
-        coloredCancelText.setSpan(new ForegroundColorSpan(themeColorNum),0,coloredCancelText.length(),0);
+        coloredCancelText.setSpan(new ForegroundColorSpan(themeColor),0,coloredCancelText.length(),0);
         pref.setNegativeButtonText(coloredCancelText);
         ArrayList<CharSequence> entries = new ArrayList<>(Arrays.asList(pref.getEntries()));
         ArrayList<CharSequence> valaues = new ArrayList<>(Arrays.asList(pref.getEntryValues()));
@@ -1640,7 +1779,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
         CharSequence[] coloredEntriesArray = coloredEntries.toArray(new CharSequence[coloredEntries.size()]);
         Spannable coloredTitle = new SpannableString (title);
-        coloredTitle.setSpan( new ForegroundColorSpan(textColorNum), 0, coloredTitle.length(), 0 );
+        coloredTitle.setSpan( new ForegroundColorSpan(textColor), 0, coloredTitle.length(), 0 );
         pref.setTitle(coloredTitle);
         pref.setEntries(coloredEntriesArray);
     }

@@ -821,7 +821,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             tabLayout.setTabTextColors(ColorUtils.makeTransparent(getResources().getColor(R.color.tab_white),0.7),getResources().getColor(R.color.tab_white));
             tabLayout.setSelectedTabIndicatorColor(ColorUtils.lighten(themeColor,0.7));
         }
-        //int[] themeColors = {backgroundColor,themeColorSetting};
+        //int[] themeColors = {backgroundColorSetting,themeColorSetting};
         //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
         //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
         Handler handler = new Handler();
@@ -1112,7 +1112,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     );
                     if(isInSelectionMode){
                         multiSelectionBox.setVisibility(View.VISIBLE);
-                        multiSelectionBox.setBackgroundColor(backgroundColor);
+                        multiSelectionBox.setBackgroundColor(backgroundColorSetting);
                         multiSelectionBox.setButtonTintList(colorStateList);
                         multiSelectionBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                             @Override

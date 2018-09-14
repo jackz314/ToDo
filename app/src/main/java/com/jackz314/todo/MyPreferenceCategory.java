@@ -1,17 +1,10 @@
 package com.jackz314.todo;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.os.Bundle;
 import android.preference.PreferenceCategory;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.TextView;
-
-import static android.content.Context.MODE_PRIVATE;
 
 /**
  * Created by zhang on 2017/6/29.
@@ -35,8 +28,8 @@ public class MyPreferenceCategory extends PreferenceCategory {
     @Override
     protected void onBindView(View view) {
         super.onBindView(view);
-        int textColorNum=settingsActivity.themeColorNum;
-        //textColorNum=settingsActivity.getTextColor();
+        int textColorNum= SettingsActivity.themeColor;
+        //textColor=settingsActivity.getTextColor();
         //view.setBackgroundColor(Color.YELLOW);
         if(view instanceof TextView){
             TextView tv = (TextView)view;

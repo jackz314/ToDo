@@ -27,7 +27,7 @@ public class DownloadFontList {
     }
 
     public void setCallback(FontListCallback callback) {
-        this.callback = callback;
+        DownloadFontList.callback = callback;
     }
 
     public static void requestDownloadableFontList(FontListCallback fontListCallback, String yourAPIKey, String fontListOrder) {
@@ -65,7 +65,8 @@ public class DownloadFontList {
 
             BufferedReader reader;
             try {
-                URL url = new URL("https://www.googleapis.com/webfonts/v1/webfonts?sort" + fontListOrder + "&key=" + yourAPIKey);
+                URL url = new URL("https://www.googleapis.com/webfonts/v1/webfonts?sort=" + fontListOrder + "&key=" + yourAPIKey);
+                //System.out.println("FONT LIST ORDER: " + fontListOrder);
                 reader = new BufferedReader(new InputStreamReader(url.openStream()));
                 StringBuilder urlResultBuilder = new StringBuilder();
                 int read;
