@@ -395,6 +395,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
+        overrideFont(getApplicationContext());//make sure that all resources are overriden by doing this at the very beginning
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
@@ -758,6 +759,63 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         this.onClipboardBackPressedListener = onBackPressedListener;
     }
 
+    /**
+     * Using reflection to override default typeface
+     * NOTICE: DO NOT FORGET TO SET TYPEFACE FOR APP THEME AS DEFAULT TYPEFACE WHICH WILL BE OVERRIDDEN
+     * @param context to work with assets and get shared preference
+     */
+    //used for getting fonts from google fonts and shared preference
+    public static void overrideFont(Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
+        String fontQueryString = sharedPreferences.getString(context.getString(R.string.google_font_query_key), null);
+        try {
+            final String defaultFontNameToOverride = "SERIF";// maybe changed later
+            if (fontQueryString != null){
+                //get google font
+                GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                    @Override
+                    public void onFontRetrieved(Typeface typeface) {
+                        //set font with reflection method
+                        try {
+                            Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
+                            defaultFontTypefaceField.setAccessible(true);
+                            defaultFontTypefaceField.set(null, typeface);
+                            //set for default as well
+                            //defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
+                            //defaultFontTypefaceField.setAccessible(true);
+                            //defaultFontTypefaceField.set(null, typeface);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public void onFontRequestError(int errorCode) {
+
+                    }
+                };
+                GetGoogleFont.requestGoogleFont(googleFontCallback, fontQueryString, context);
+
+
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to set custom font with query: " + fontQueryString);
+        }
+    }
+
+    //override with a typeface parameter, not in use for now
+    /*public static void overrideFont(Context context, String defaultFontNameToOverride, Typeface typeface) {
+        try {
+            //final Typeface customFontTypeface = Typeface.createFromAsset(context.getAssets(), customFontFileNameInAssets);
+
+            final Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
+            defaultFontTypefaceField.setAccessible(true);
+            defaultFontTypefaceField.set(null, typeface);
+        } catch (Exception e) {
+            System.out.println("Can not set custom font " + typeface + " instead of " + defaultFontNameToOverride);
+        }
+    }*/
+
     boolean verifyDeveloperPayload(Purchase p) {
         if(p.getDeveloperPayload() != null && p.getDeveloperPayload().contains("0x397821dc97276")){
             return p.getDeveloperPayload().equals(
@@ -844,6 +902,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         window.setStatusBarColor(themeColor);
         window.setNavigationBarColor(themeColor);
         navigationView.setBackgroundColor(backgroundColor);
+    }
+
+    public static ColorStateList getColoredCheckBoxColorStateList(int color){
+        return new ColorStateList(
+                new int[][]{
+                        new int[]{-android.R.attr.state_checked}, //disabled
+                        new int[]{android.R.attr.state_checked} //enabled
+                },
+                new int[] {
+                        Color.DKGRAY//disabled
+                        ,color //enabled, usually set theme color here
+                }
+        );
     }
 
     public static void setCursorColor(EditText view, int color) {//REFLECTION METHOD USED
@@ -2747,6 +2818,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public void onResume(){
         //setEdgeColor(todoList,themeColorSetting);
         //todoList.setVisibility(View.VISIBLE);
+        if(sharedPreferences != null && sharedPreferences.getBoolean(getString(R.string.recreate_main_key), false)){
+            recreate();
+            sharedPreferences.edit().putBoolean(getString(R.string.recreate_main_key), false).apply();
+        }
         setColorPreferences();
         int size = menuNav.size();
         Intent voiceIntent = getIntent();

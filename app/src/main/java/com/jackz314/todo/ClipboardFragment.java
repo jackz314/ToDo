@@ -1,8 +1,11 @@
 package com.jackz314.todo;
 
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.GravityCompat;
@@ -11,6 +14,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 
 /**
@@ -79,12 +83,12 @@ public class ClipboardFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         ((MainActivity)getActivity()).setOnClipboardBackPressedListener(new ClipboardBackPressedListener(getActivity()){
             @Override
-            public void doBack() {//todo handle back press here
+            public void doBack() {//handle back press here
                 DrawerLayout drawer = getActivity().findViewById(R.id.drawer_layout);
                 if (drawer.isDrawerOpen(GravityCompat.START)) {
                     drawer.closeDrawer(GravityCompat.START);
@@ -93,6 +97,7 @@ public class ClipboardFragment extends Fragment {
                 }
             }
         });
+
         return inflater.inflate(R.layout.fragment_clipboard, container, false);
     }
 
@@ -118,6 +123,25 @@ public class ClipboardFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         mListener = null;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        final TextView clipboardText = view.findViewById(R.id.clipboard_text);
+        final ClipboardManager clipboardManager = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboardManager != null) {
+            clipboardText.setText(clipboardManager.getPrimaryClip().getItemAt(0).getText().toString());
+            clipboardManager.addPrimaryClipChangedListener(new ClipboardManager.OnPrimaryClipChangedListener() {
+                @Override
+                public void onPrimaryClipChanged() {
+                    clipboardText.setText(clipboardManager.getPrimaryClip().getItemAt(0).getText().toString());
+                }
+            });
+        }else {
+            clipboardText.setText(getString(R.string.clipboard_is_empty));
+        }
+
     }
 
     /**

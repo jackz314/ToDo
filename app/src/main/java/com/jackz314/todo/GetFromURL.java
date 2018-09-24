@@ -15,10 +15,6 @@ public class GetFromURL{
         return callBack;
     }
 
-    public static void setCallBack(URLCallBack callBack) {
-        GetFromURL.callBack = callBack;
-    }
-
     public static void getFromURL(URLCallBack urlCallBack, String URL){
         callBack = urlCallBack;
         new GetURLAsyncTask(callBack, URL).execute();

@@ -1588,7 +1588,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        //setColorPreferences();
+        //setAppearancePreferences();
         //determine order of the list
         String sort = IMPORTANCE + " DESC, " + REMIND_TIMES + " ASC";
         String selectionAddOn = "";

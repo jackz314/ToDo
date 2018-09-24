@@ -22,8 +22,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
@@ -36,15 +34,15 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NavUtils;
-import android.support.v4.provider.FontRequest;
-import android.support.v4.provider.FontsContractCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
@@ -54,7 +52,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -92,6 +89,8 @@ import java.util.Random;
 import java.util.Set;
 
 import static com.jackz314.todo.DatabaseManager.DATABASE_NAME;
+import static com.jackz314.todo.MainActivity.getColoredCheckBoxColorStateList;
+import static com.jackz314.todo.MainActivity.overrideFont;
 import static com.jackz314.todo.MainActivity.setCursorColor;
 import static com.jackz314.todo.MainActivity.setEditTextHandleColor;
 import static com.jackz314.todo.R.color.colorActualPrimary;
@@ -116,12 +115,12 @@ import static com.jackz314.todo.R.color.normal_theme_text_default_color;
 //todo migrate the entire settings activity to PreferenceFragment based
 //todo add parse date interpretation settings (next XX (week, month...) e.g. as next week this time or monday...) and date interpretation rules
 public class SettingsActivity extends AppCompatPreferenceActivity {
+    //todo solve framework injection...
     /**
      * A preference value change listener that updates the preference's summary
      * to reflect its new value.
      */
     static DatabaseManager DatabaseManager;
-    ColorUtils colorUtils;
     static AlertDialog backupDialog, restoreDialog;
     public int randomPreviewTextDecision;
     public static int themeColor;
@@ -133,7 +132,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public SharedPreferences sharedPreferences;
     public boolean storageBackupPerDenied = false, storageRestorePerDenied = false;
     public String pathSelectorPath = "", fileSelected = "";
-    private Handler fontHandler = null;
     SwitchPreference autoClearSwitch, orderSwitch, mainHistorySwitch, darkThemeSwitch, mainOverdueSwitch, normalOverdueSwitch;
     ThemeListPreference themeSelector;
     Preference wipeButton, themeColorSetting, textColorSetting, backgroundColorSetting, notificationSettings,
@@ -987,6 +985,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 LayoutInflater inflater = LayoutInflater.from(SettingsActivity.this);
                 View dialogView = inflater.inflate(R.layout.restore_dialog,null);
                 final CheckBox replaceCheck = dialogView.findViewById(R.id.replace_current_checkbox);
+                replaceCheck.setButtonTintList(getColoredCheckBoxColorStateList(themeColor));
                 Button selectBackup = dialogView.findViewById(R.id.select_backup_file_btn);
                 selectBackup.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1086,15 +1085,17 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      .setCancelable(true)
                      .create();
              fontSettingDialog.show();
+             final ProgressBar fontLoadBar = dialogView.findViewById(R.id.font_list_load_bar);
+             final RecyclerView fontListRecyclerView = dialogView.findViewById(R.id.font_list_recycler_view);
              final Spinner fontOrderSpinner = dialogView.findViewById(R.id.font_order_spinner);
              EditText fontSearchInput = dialogView.findViewById(R.id.font_setting_search_edittext);
              final SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-             final SharedPreferences.Editor editor = sharedPreferences.edit();
+             final SharedPreferences.Editor sharedPrefEditor = sharedPreferences.edit();
              final String[] fontOrder = {sharedPreferences.getString(getString(R.string.font_order_key),"popularity")};
              final FontList[] fontList = new FontList[1];
              //select the order from last time/default
              int selectedPos = 0;
-             switch (fontOrder[0]){//todo refresh with new ranking
+             switch (fontOrder[0]){
                  case "popularity"://0
                      selectedPos = 0;
                      break;
@@ -1114,17 +1115,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      selectedPos = 5;
                      break;
              }
-             fontOrderSpinner.setSelection(selectedPos);
-             fontSearchInput.setLinkTextColor(themeColor);
-             fontSearchInput.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
-             fontSearchInput.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-             setCursorColor(fontSearchInput, themeColor);
-             setEditTextHandleColor(fontSearchInput, themeColor);
-             final ProgressBar fontLoadBar = dialogView.findViewById(R.id.font_list_load_bar);
-             //fontNamesArrayList.add("test");
-             final RecyclerView fontListRecyclerView = dialogView.findViewById(R.id.font_list_recycler_view);
-             //fontListRecyclerView.setVisibility(View.INVISIBLE);
-             fontLoadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+             //set font list stuff
              fontListRecyclerView.setLayoutManager(new LinearLayoutManager(SettingsActivity.this));
              final ArrayListRecyclerAdapter[] fontListAdapter = new ArrayListRecyclerAdapter[1];
              fontListRecyclerView.setAdapter(new ArrayListRecyclerAdapter(null));//set empty adapter first then update
@@ -1133,15 +1124,15 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                  public void onFontListRetrieved(FontList fontListRetrieved) {//todo what the hell is going on here
                      //Google font list loaded successfully
                      //fontList[0] = list;
-                     fontList[0] = fontListRetrieved;
                      fontLoadBar.setVisibility(View.GONE);
+                     fontList[0] = fontListRetrieved;
                      fontListRecyclerView.setVisibility(View.VISIBLE);
                      final ArrayList<String> fontNamesArrayList = new ArrayList<>(fontListRetrieved.getFontFamilyList());
                      if(fontOrder[0].equals("alphaZ")){//reverse the order of the list from a-z to z-a if z-a is chosen
                          Collections.reverse(fontNamesArrayList);
                      }
                      fontListRecyclerView.setVisibility(View.VISIBLE);
-                     System.out.println(fontNamesArrayList.size());
+                     //System.out.println("Font list size: " + fontNamesArrayList.size());
                      fontListAdapter[0] = new ArrayListRecyclerAdapter(fontNamesArrayList){
                          @Override
                          public void onBindViewHolder(@NonNull final ArrayRecyclerViewHolder holder, int position) {
@@ -1150,47 +1141,23 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                              holder.mainText.setText(fontName);
                              //set font here
                              //run font requests in separated threads
-                             Thread thread = new Thread(new Runnable() {
+                             GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
                                  @Override
-                                 public void run() {
-                                     FontRequest request = new FontRequest(
-                                             "com.google.android.gms.fonts",
-                                             "com.google.android.gms",
-                                             fontName,
-                                             R.array.com_google_android_gms_fonts_certs);
-                                     System.out.println("Font name: " + fontName);
-                                     FontsContractCompat.FontRequestCallback callback = new FontsContractCompat
-                                             .FontRequestCallback() {
-                                         @Override
-                                         public void onTypefaceRetrieved(Typeface typeface) {
-                                             holder.mainText.setTypeface(typeface);
-                                             System.out.println("Font Set: " + holder.mainText.getText());
-                                         }
-
-                                         @Override
-                                         public void onTypefaceRequestFailed(int reason) {
-                                             //todo why fail so many times
-                                             System.out.println("Font request failed: " + reason);
-                                     /*Toast.makeText(SettingsActivity.this,
-                                             SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG)
-                                             .show();*/
-                                         }
-                                     };
-                                     FontsContractCompat
-                                             .requestFont(SettingsActivity.this, request, callback,
-                                                     getFontHandlerThreadHandler());
-                                     /*try {
-                                         if (Thread.interrupted()) { throw new InterruptedException();}
-                                         while(!Thread.currentThread().isInterrupted()) {
-                                             // ...
-                                         }
-                                     } catch (InterruptedException consumed){
-
-                                     // Allow thread to exit
-                                     }*/
+                                 public void onFontRetrieved(Typeface typeface) {
+                                     if(typeface != null){
+                                         holder.mainText.setTypeface(typeface);
+                                         System.out.println("Font Set: " + holder.mainText.getText());
+                                     }else {
+                                         System.out.println("TYPEFACE IS NULL");
+                                     }
                                  }
-                             });
-                             thread.run();
+                                 @Override
+                                 public void onFontRequestError(int errorCode) {
+                                     System.out.println("Font request failed, error code: " + errorCode);
+                                     //Toast.makeText(SettingsActivity.this, SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG).show();
+                                 }
+                             };
+                             GetGoogleFont.requestGoogleFont(googleFontCallback, fontName,400,false,false, SettingsActivity.this);
                          }
                      };
                      fontListRecyclerView.setAdapter(fontListAdapter[0]);
@@ -1199,13 +1166,47 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
                  @Override
                  public void onFontListRequestError(Exception e) {
-                     Toast.makeText(SettingsActivity.this,
-                             getString(R.string.font_list_load_failed), Toast.LENGTH_LONG)
-                             .show();
+                     runOnUiThread(new Runnable() {
+                         @Override
+                         public void run() {
+                             Toast.makeText(SettingsActivity.this, getString(R.string.font_list_load_failed), Toast.LENGTH_LONG).show();
+                         }
+                     });
+
                     //todo load local cached fonts here if can't get the list
                  }
              };
              requestFontList(fontOrder[0], fontListCallback);
+
+             //set colors
+             fontOrderSpinner.setSelection(selectedPos);
+             fontSearchInput.setLinkTextColor(themeColor);
+             fontSearchInput.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
+             fontSearchInput.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+             setCursorColor(fontSearchInput, themeColor);
+             setEditTextHandleColor(fontSearchInput, themeColor);
+             fontLoadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+             //colors set
+
+             //search fonts
+             fontSearchInput.addTextChangedListener(new TextWatcher() {
+                 @Override
+                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                 }
+
+                 @Override
+                 public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    //filter results here
+                     fontListAdapter[0].getFilter().filter(s);
+                 }
+
+                 @Override
+                 public void afterTextChanged(Editable s) {
+
+                 }
+             });
+
              //store selected value in shared preference
              fontOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                  @Override
@@ -1213,32 +1214,32 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      switch (position){
                          case 0://popular
                              fontOrder[0] = "popularity";
-                             editor.putString(getString(R.string.font_order_key),"popularity");
+                             sharedPrefEditor.putString(getString(R.string.font_order_key),"popularity");
                              break;
                          case 1://trend
                              fontOrder[0] = "trending";
-                             editor.putString(getString(R.string.font_order_key),"trending");
+                             sharedPrefEditor.putString(getString(R.string.font_order_key),"trending");
                              break;
                          case 2://alpha a-z
                              fontOrder[0] = "alpha";
-                             editor.putString(getString(R.string.font_order_key),"alpha");
+                             sharedPrefEditor.putString(getString(R.string.font_order_key),"alpha");
                              break;
                          case 3://alpha z-a
                              fontOrder[0] = "alphaZ";
-                             editor.putString(getString(R.string.font_order_key),"alphaZ");
+                             sharedPrefEditor.putString(getString(R.string.font_order_key),"alphaZ");
                              break;
                          case 4://date
                              fontOrder[0] = "date";
-                             editor.putString(getString(R.string.font_order_key),"date");
+                             sharedPrefEditor.putString(getString(R.string.font_order_key),"date");
                              break;
                          case 5://style
                              fontOrder[0] = "style";
-                             editor.putString(getString(R.string.font_order_key),"style");
+                             sharedPrefEditor.putString(getString(R.string.font_order_key),"style");
                              break;
                      }
                      fontLoadBar.setVisibility(View.VISIBLE);
                      requestFontList(fontOrder[0], fontListCallback);
-                     editor.apply();
+                     sharedPrefEditor.apply();
                  }
 
                  @Override
@@ -1260,16 +1261,25 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      View fontDialogView = inflater.inflate(R.layout.specific_font_setting_layout,null);
                      fontSettingDialog.setContentView(fontDialogView);
                      final String fontName = fontListAdapter[0].getItemAtPos(position);
-                     final ProgressBar loadBar = fontDialogView.findViewById(R.id.specific_font_progress_bar);
-                     loadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+                     final boolean[] mItalic = {false};
+                     final boolean[] mMono = {false};
+                     final int[] mWeight = {400};
                      LinearLayout settingLayout = fontDialogView.findViewById(R.id.specific_font_setting_layout);
                      //settingLayout.setVisibility(View.GONE);//don't show elements until the loading is done
                      final CheckBox italicCbox = fontDialogView.findViewById(R.id.font_italic_cbox);
-                     CheckBox monoCbox = fontDialogView.findViewById(R.id.fon_mono_cbox);
+                     final CheckBox monoCbox = fontDialogView.findViewById(R.id.fon_mono_cbox);
                      final TextView previewTitle = fontDialogView.findViewById(R.id.font_preview_title);
                      final TextView previewText = fontDialogView.findViewById(R.id.font_preview_text);
-                     previewTitle.setText(fontName);
+                     final TextView weightSettingText = fontDialogView.findViewById(R.id.font_setting_weight_txt);
+                     final Button fontSettingConfirmBtn = fontDialogView.findViewById(R.id.font_confirm_btn);
+                     final Spinner weightSpinner = fontDialogView.findViewById(R.id.font_weight_spinner);
+                     final FontSpinnerAdapter weightSpinnerAdapter;
 
+                     //set colors
+                     italicCbox.setButtonTintList(getColoredCheckBoxColorStateList(themeColor));
+                     monoCbox.setButtonTintList(getColoredCheckBoxColorStateList(themeColor));
+
+                     previewTitle.setText(fontName);
                      //get random stuff as preview text
                      GetFromURL.URLCallBack urlCallBack = new GetFromURL.URLCallBack() {
                          @Override
@@ -1292,7 +1302,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                              }
                              if(finalText.equals("")) finalText = getString(R.string.default_font_preview_text);
                              previewText.setText(finalText);
-                             loadBar.setVisibility(View.GONE);
                          }
 
                          @Override
@@ -1307,29 +1316,31 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                          randURL = "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand&filter[posts_per_page]=1";
                      }else if(randomPreviewTextDecision == 2){//icndb jokes
                          randURL = "http://api.icndb.com/jokes/random/";
-                     }else if(randomPreviewTextDecision == 3){//adviceslip
+                     }else if(randomPreviewTextDecision == 3){//advice slip
                          randURL = "http://api.adviceslip.com/advice";
                      }
                      GetFromURL.getFromURL(urlCallBack, randURL);
 
                      //get and set font
-
                      italicCbox.setEnabled(false);//just to make sure it's disabled at the beginning
-                     Spinner weightSpinner = fontDialogView.findViewById(R.id.font_weight_spinner);
-                     Font font = fontList[0].getFontByPosition(position);
+                     final Font font = fontList[0].getFontByPosition(position);
                      String[] fontVariantRaw = font.getFontVariants();
                      final ArrayList<Pair<Integer, Boolean>> fontVariants = new ArrayList<>();
                      for(String rawVariant : fontVariantRaw){//organize font variants into an ArrayList of pairs
-                         if(rawVariant.equals("regular")){////default italic have a weight of 400
-                             fontVariants.add(new Pair<>(400, false));
-                         }else if(rawVariant.equals("italic")){//default italic have a weight of 400
-                             fontVariants.add(new Pair<>(400, true));
-                         }else {
-                             if(rawVariant.endsWith("italic")){//E.g. 500italic
-                                 fontVariants.add(new Pair<>(Integer.valueOf(rawVariant.substring(0,rawVariant.indexOf("italic"))), true));
-                             }else {//E.g. 100
-                                 fontVariants.add(new Pair<>(Integer.valueOf(rawVariant), false));
-                             }
+                         switch (rawVariant) {
+                             case "regular": //default italic have a weight of 400
+                                 fontVariants.add(new Pair<>(400, false));
+                                 break;
+                             case "italic": //default italic have a weight of 400
+                                 fontVariants.add(new Pair<>(400, true));
+                                 break;
+                             default: // other variants that have specific numbers for weight
+                                 if (rawVariant.endsWith("italic")) {//E.g. 500italic
+                                     fontVariants.add(new Pair<>(Integer.valueOf(rawVariant.substring(0, rawVariant.indexOf("italic"))), true));
+                                 } else {//E.g. 100
+                                     fontVariants.add(new Pair<>(Integer.valueOf(rawVariant), false));
+                                 }
+                                 break;
                          }
                      }
                      Set<String> fontAvailableWeightsList = new HashSet<>();//using hashset so that duplicated items get removed
@@ -1343,14 +1354,13 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      }
 
                      final ArrayList<String> weightsList = new ArrayList<>(fontAvailableWeightsList);
-                     ArrayAdapter<String> weightsSpinnerAdapter = new ArrayAdapter<String>(SettingsActivity.this, android.R.layout.simple_spinner_dropdown_item, fontAvailableWeightsList.toArray(new String[0]));
-                     weightsSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                     weightSpinner.setAdapter(weightsSpinnerAdapter);
+                     weightSpinnerAdapter = new FontSpinnerAdapter(SettingsActivity.this, android.R.layout.simple_spinner_dropdown_item, fontAvailableWeightsList.toArray(new String[0]));
+                     weightSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                     weightSpinner.setAdapter(weightSpinnerAdapter);
                      int selecPos = weightsList.indexOf(getString(R.string.font_regular_text));
                      boolean noReg = false;
-                     int selectedWeight = 400;
-                     if(selecPos == -1){//making sure nothing goes wrong, in case there's no regular one here
-                         selecPos = 0;
+                     if(selecPos == -1){//making sure nothing goes wrong, in case there's no regular one here (noReg)
+                         selecPos = 0;//select the first one by default then
                          noReg = true;
                      }
                      weightSpinner.setSelection(selecPos);//set default to the regular one.
@@ -1364,105 +1374,132 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      italicCbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                          @Override
                          public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                             if(isChecked){//get italic font for current settings of the font
+                             mItalic[0] = isChecked;//update global italic value
 
-                             }else {//get regular
-
-                             }
+                             GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                                 @Override
+                                 public void onFontRetrieved(Typeface typeface) {
+                                     if(typeface != null){
+                                         previewText.setTypeface(typeface);
+                                         previewTitle.setTypeface(typeface);
+                                         weightSpinnerAdapter.setTypeface(typeface);
+                                         fontSettingConfirmBtn.setTypeface(typeface);
+                                         weightSettingText.setTypeface(typeface);
+                                         italicCbox.setTypeface(typeface);
+                                         monoCbox.setTypeface(typeface);
+                                         System.out.println("Specific font Set: " + fontName);
+                                     }else {
+                                         System.out.println("TYPEFACE RETRIEVED IS NULL");
+                                     }
+                                 }
+                                 @Override
+                                 public void onFontRequestError(int errorCode) {
+                                     System.out.println("Typeface request error: code: " + errorCode);
+                                 }
+                             };
+                             GetGoogleFont.requestGoogleFont(googleFontCallback, fontName, mWeight[0], mItalic[0], mMono[0], SettingsActivity.this);
                          }
                      });
 
                      monoCbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                          @Override
                          public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                             if(isChecked){//get monospace font for current settings of the font
-
-                             }else {//get regular
-
-                             }
+                             mMono[0] = isChecked;//update global monospace value
+                             GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                                 @Override
+                                 public void onFontRetrieved(Typeface typeface) {
+                                     if(typeface != null){
+                                         previewText.setTypeface(typeface);
+                                         previewTitle.setTypeface(typeface);
+                                         weightSpinnerAdapter.setTypeface(typeface);
+                                         fontSettingConfirmBtn.setTypeface(typeface);
+                                         weightSettingText.setTypeface(typeface);
+                                         italicCbox.setTypeface(typeface);
+                                         monoCbox.setTypeface(typeface);
+                                         System.out.println("Specific font Set: " + fontName);
+                                     }else {
+                                         System.out.println("TYPEFACE RETRIEVED IS NULL");
+                                     }
+                                 }
+                                 @Override
+                                 public void onFontRequestError(int errorCode) {
+                                     System.out.println("Typeface request error: code: " + errorCode);
+                                 }
+                             };
+                             GetGoogleFont.requestGoogleFont(googleFontCallback, fontName, mWeight[0], mItalic[0], mMono[0], SettingsActivity.this);
                          }
                      });
 
-                     weightSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                         @Override
-                         public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                             String selectedName = weightsList.get(position);
+                     //todo formatting issues
+
+                    weightSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                        @Override
+                        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                            String selectedName = weightsList.get(position);
+                            //update global weight value
                             if(selectedName.equals(getString(R.string.font_regular_text))){//selected the regular one
-                                if(fontVariants.contains(new Pair<>(400, true))){//if contains regular italic variant, set italic checkbox as enabled
-                                    italicCbox.setEnabled(true);
-                                }else {
-                                    italicCbox.setEnabled(false);
-                                }
+                                mWeight[0] = 400;
                             }else {
-                                if(fontVariants.contains(new Pair<>(Integer.valueOf(selectedName),true))){
-                                    italicCbox.setEnabled(true);
-                                }else {
-                                    italicCbox.setEnabled(false);
-                                }
+                                mWeight[0] = Integer.valueOf(selectedName);
                             }
-                         }
+                            if(fontVariants.contains(new Pair<>(mWeight[0],true))){
+                                italicCbox.setEnabled(true);
+                            }else {
+                                italicCbox.setEnabled(false);
+                            }
+
+                            GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                                @Override
+                                public void onFontRetrieved(Typeface typeface) {
+                                    if(typeface != null){
+                                        previewText.setTypeface(typeface);
+                                        previewTitle.setTypeface(typeface);
+                                        weightSpinnerAdapter.setTypeface(typeface);
+                                        fontSettingConfirmBtn.setTypeface(typeface);
+                                        weightSettingText.setTypeface(typeface);
+                                        italicCbox.setTypeface(typeface);
+                                        monoCbox.setTypeface(typeface);
+                                        System.out.println("Specific font Set: " + fontName);
+                                    }else {
+                                        System.out.println("TYPEFACE RETRIEVED IS NULL");
+                                    }
+                                }
+                                @Override
+                                public void onFontRequestError(int errorCode) {
+                                    System.out.println("Typeface request error: code: " + errorCode);
+                                }
+                            };
+                            GetGoogleFont.requestGoogleFont(googleFontCallback, fontName, mWeight[0], mItalic[0], mMono[0], SettingsActivity.this);
+                        }
 
                          @Override
                          public void onNothingSelected(AdapterView<?> parent) {
                              //no op
                          }
-                     });
+                    });
 
-                     //todo continue here
-
+                    fontSettingConfirmBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Toast.makeText(SettingsActivity.this, "Setting font to: " + fontName, Toast.LENGTH_LONG).show();
+                            //store font query string into shared preference
+                            sharedPrefEditor.putString(getString(R.string.google_font_query_key), GetGoogleFont.getFontQueryString(fontName, mWeight[0], mItalic[0], mMono[0]));
+                            sharedPrefEditor.commit();
+                            //adapt the font now
+                            overrideFont(SettingsActivity.this);
+                            fontSettingDialog.dismiss();
+                            recreate();//reload with new font
+                            sharedPrefEditor.putBoolean(getString(R.string.recreate_main_key), true).apply();//recreate main activity as well to apply new font whole app wide
+                        }
+                    });
                  }
              });
+
              return false;
          }
      });
 
      //end of settings
-    }
-
-    public Typeface requestFont(final String fontName, int weight, boolean italic, boolean mono){
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                FontRequest request = new FontRequest(
-                        "com.google.android.gms.fonts",
-                        "com.google.android.gms",
-                        fontName,
-                        R.array.com_google_android_gms_fonts_certs);
-                System.out.println("Getting Font : " + fontName);
-                FontsContractCompat.FontRequestCallback callback = new FontsContractCompat
-                        .FontRequestCallback() {
-                    @Override
-                    public void onTypefaceRetrieved(Typeface typeface) {
-                        previewTitle.setTypeface(typeface);
-
-                        System.out.println("Font Set: " + holder.mainText.getText());
-                    }
-
-                    @Override
-                    public void onTypefaceRequestFailed(int reason) {
-                        //todo why fail so many times
-                        System.out.println("Font request failed: " + reason);
-                                     /*Toast.makeText(SettingsActivity.this,
-                                             SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG)
-                                             .show();*/
-                    }
-                };
-                FontsContractCompat
-                        .requestFont(SettingsActivity.this, request, callback,
-                                getFontHandlerThreadHandler());
-                                     /*try {
-                                         if (Thread.interrupted()) { throw new InterruptedException();}
-                                         while(!Thread.currentThread().isInterrupted()) {
-                                             // ...
-                                         }
-                                     } catch (InterruptedException consumed){
-
-                                     // Allow thread to exit
-                                     }*/
-            }
-        });
-        thread.run();
-
     }
 
     private void requestFontList(String order, DownloadFontList.FontListCallback fontListCallback){
@@ -1473,16 +1510,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         }
     }
 
-    private Handler getFontHandlerThreadHandler() {
-        if (fontHandler == null) {
-            HandlerThread handlerThread = new HandlerThread("fonts");
-            handlerThread.start();
-            fontHandler = new Handler(handlerThread.getLooper());
-        }
-        return fontHandler;
-    }
-
-    public boolean restoreDataFromBackup(String filePath){
+    public boolean restoreDataFromBackup(String filePath){//todo validate backup by hash value or something like that
         if(DatabaseManager.validateBackup(filePath)){
             String result = DatabaseManager.mergeBackup(filePath) ;
             if(result == null){
@@ -1622,10 +1650,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         Drawable actionBarColor = new ColorDrawable(themeColor);
         actionBarColor.setColorFilter(themeColor, PorterDuff.Mode.DST);
         actionBar.setBackgroundDrawable(actionBarColor);
-        if (actionBar != null) {
-            // Show the Up button in the action bar.
-            actionBar.setDisplayHomeAsUpEnabled(true);
-        }
+        actionBar.setTitle(getTitle());
+        // Show the Up button in the action bar.
+        actionBar.setDisplayHomeAsUpEnabled(true);
     }
 
     @Override

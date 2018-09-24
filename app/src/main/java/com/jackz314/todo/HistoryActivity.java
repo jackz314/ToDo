@@ -54,6 +54,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.jackz314.todo.utils.ColorUtils;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.TITLE;
@@ -62,7 +63,7 @@ import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 public class HistoryActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
-    DatabaseManager todosql;
+    DatabaseManager todoSql;
     TextView emptyHistory, selectionTitle;
     RecyclerView historyList;
     int themeColor,textColor,backgroundColor,textSize;
@@ -78,7 +79,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     public String searchText;
-    MenuItem searchViewItem;
     SearchView searchView;
     CheckBox selectAllBox, multiSelectionBox;
     private static final String[] PROJECTION = new String[]{ID, TITLE};
@@ -97,10 +97,10 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         super.onCreate(savedInstanceState);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setContentView(R.layout.activity_history);
-        todosql = new DatabaseManager(this);
+        todoSql = new DatabaseManager(this);
         toolbar = findViewById(R.id.history_selection_toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         historyList = findViewById(R.id.historyList);
         historyList.setHasFixedSize(true);
         emptyHistory = findViewById(R.id.emptyHistory);
@@ -108,6 +108,8 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         historyView = findViewById(R.id.historyView);
         selectionTitle = toolbar.findViewById(R.id.history_selection_toolbar_title);
         selectionTitle.setText(R.string.history_name);
+        selectionTitle.setTextColor(Color.WHITE);
+        Objects.requireNonNull(toolbar.getNavigationIcon()).setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
        //View toolbarView = inflater.inflate(R.layout.app_bar_main,null);
         //toolbar.setBackgroundColor(themeColorSetting);// not working yet!
         setHistoryColorsPreferences();
@@ -153,7 +155,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                     }*/
                     // Toast.makeText(getApplicationContext(),selectedId.toString(),Toast.LENGTH_SHORT).show();
                 }else {
-                    final String restoredContent = todosql.getOneDataInHISTORY(String.valueOf(id));
+                    final String restoredContent = todoSql.getOneDataInHISTORY(String.valueOf(id));
                     restoreData(id);
                     //historyListAdapter.notifyItemChanged(position);
                     //historyListAdapter.notifyItemRangeChanged(position, historyListAdapter.getItemCount());
@@ -161,7 +163,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                         @Override
                         public void onClick(View v) {
                             insertData(restoredContent);
-                            todosql.deleteNote(todosql.getIdOfLatestDataInTODO());
+                            todoSql.deleteNote(todoSql.getIdOfLatestDataInTODO());
                             displayAllNotes();
                         }
                     }).show();
@@ -177,7 +179,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 selectAll = false;
                 if(isInSelectionMode){
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("ToDo", todosql.getOneDataInHISTORY(String.valueOf(id)));
+                    ClipData clip = ClipData.newPlainText("ToDo", todoSql.getOneDataInHISTORY(String.valueOf(id)));
                     clipboard.setPrimaryClip(clip);
                     Snackbar.make(view,getString(R.string.todo_copied),Snackbar.LENGTH_SHORT).show();
                 }else {
@@ -257,12 +259,12 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                                 selectedId.clear();
                                 selectedContent.clear();
                                 //historyList.getAdapter().notifyDataSetChanged();
-                                Cursor cursor = todosql.getHistory();
+                                Cursor cursor = todoSql.getHistory();
                                 cursor.moveToFirst();
                                 do{
                                     id = cursor.getInt(cursor.getColumnIndex(ID));
                                     selectedId.add(0,id);
-                                    String data = todosql.getOneDataInHISTORY(Long.toString(id));
+                                    String data = todoSql.getOneDataInHISTORY(Long.toString(id));
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
@@ -409,7 +411,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                             //System.out.println(tagStartPos + " AND " + tagEndPos);
                             String tag = text.toLowerCase().substring(tagStartPos,tagEndPos + 1);//ignore case in tags//REMEMBER: SUBSTRING SECOND VARIABLE DOESN'T CONTAIN THE CHARACTER AT THAT POSITION
                             //System.out.println("TEXT: " + text + "****" + tag + "********");
-                            String tagColor = todosql.getTagColor(tag);
+                            String tagColor = todoSql.getTagColor(tag);
                             if(tagColor.equals("")){//if tag doesn't exist
                                 tagColor = "#BBBBBC";//set tag color to grey in history
                             }
@@ -504,7 +506,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
             mItemTouchHelper.attachToRecyclerView(historyList);
         }
-        if(todosql.getHistory().getCount()==0){//if database is empty, then clears the listView too
+        if(todoSql.getHistory().getCount()==0){//if database is empty, then clears the listView too
             //////System.out.println("empty history!");
             emptyHistory.setVisibility(View.VISIBLE);
             emptyHistory.setText(R.string.empty_history);
@@ -531,20 +533,20 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         @Override
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             if (direction == ItemTouchHelper.RIGHT) {
-                final String restoredContent = todosql.getOneDataInHISTORY(String.valueOf(viewHolder.getItemId()));
+                final String restoredContent = todoSql.getOneDataInHISTORY(String.valueOf(viewHolder.getItemId()));
                 restoreData(viewHolder.getItemId());
                 Snackbar.make(historyView, getString(R.string.note_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         insertData(restoredContent);
-                        todosql.deleteTheLastCoupleOnesFromToDo(1);
+                        todoSql.deleteTheLastCoupleOnesFromToDo(1);
                         displayAllNotes();
                     }
                 }).show();
             }
 
             if (direction == ItemTouchHelper.LEFT) {
-                final String deletedContent = todosql.getOneDataInHISTORY(String.valueOf(viewHolder.getItemId()));
+                final String deletedContent = todoSql.getOneDataInHISTORY(String.valueOf(viewHolder.getItemId()));
                 deleteData(viewHolder.getItemId());
                 Snackbar.make(historyView, getString(R.string.note_deleted_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                     @Override
@@ -691,7 +693,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         Snackbar.make(historyView, getString(R.string.notes_restored_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                todosql.deleteTheLastCoupleOnesFromToDo(CLONESelectedContent.size());
+                todoSql.deleteTheLastCoupleOnesFromToDo(CLONESelectedContent.size());
                 for(String str : CLONESelectedContent){
                     insertData(str);
                 }
@@ -722,7 +724,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
 
     public void addSelectedId(long id){
         selectedId.add(0,id);
-        String data = todosql.getOneDataInHISTORY(Long.toString(id));
+        String data = todoSql.getOneDataInHISTORY(Long.toString(id));
         selectedContent.add(0,data);
         toolbar = findViewById(R.id.history_selection_toolbar);
         if(selectedId.size() == 1){
@@ -752,7 +754,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         selectAllBox.setChecked(false);
         selectAll = false;
         unSelectAll = true;
-        String data = todosql.getOneDataInHISTORY(Long.toString(id));
+        String data = todoSql.getOneDataInHISTORY(Long.toString(id));
         selectedContent.remove(selectedContent.indexOf(data));
         if (selectedId.size() == 0) {
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
@@ -928,7 +930,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
             displayAllNotes();
         }
         else {//on
-            Cursor cs = todosql.getHistory();
+            Cursor cs = todoSql.getHistory();
             if(cs.getCount()==0) {
                 ////System.out.println();
             }
@@ -937,7 +939,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
                 while(cs.moveToNext()){
                     timestr = cs.getString(cs.getColumnIndex("datetime(deleted_timestamp,'localtime')"));
                     //////System.out.println(String.valueOf(databaseManager.getTimeDifference(timestr)));
-                    if(todosql.getTimeDifference(timestr)>=expireTime){//if bigger than set value, delete it!
+                    if(todoSql.getTimeDifference(timestr)>=expireTime){//if bigger than set value, delete it!
                         deleteData(cs.getInt(cs.getColumnIndex(ID)));
                     }
                 }
@@ -960,7 +962,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
         ContentValues cv = new ContentValues();
-        String data = todosql.getOneDataInHISTORY(Long.toString(id));
+        String data = todoSql.getOneDataInHISTORY(Long.toString(id));
         cv.put(TITLE,data);
         deleteData(id);
         getContentResolver().insert(DatabaseContract.Item.TODO_URI, cv);

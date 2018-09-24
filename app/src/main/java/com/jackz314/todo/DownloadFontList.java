@@ -1,9 +1,5 @@
 package com.jackz314.todo;
 
-/**
- * Created by Firat Karababa on 10.1.2018.
- */
-
 import android.os.AsyncTask;
 
 import org.json.JSONArray;
@@ -19,20 +15,23 @@ public class DownloadFontList {
 
     private static FontListCallback callback;
 
+    /*//not necessary
     public DownloadFontList() {
     }
 
+    //not necessary
     public FontListCallback getCallback() {
         return callback;
     }
 
+    //not necessary
     public void setCallback(FontListCallback callback) {
         DownloadFontList.callback = callback;
-    }
+    }*/
 
     public static void requestDownloadableFontList(FontListCallback fontListCallback, String yourAPIKey, String fontListOrder) {
         callback = fontListCallback;
-        new FontListDownloaderAsyncTask(callback, yourAPIKey, fontListOrder).execute();
+        new FontListDownloadAsyncTask(callback, yourAPIKey, fontListOrder).execute();
     }
 
 
@@ -45,21 +44,22 @@ public class DownloadFontList {
     }
 
 
-    private static class FontListDownloaderAsyncTask extends AsyncTask<String, String, Void> {
+    private static class FontListDownloadAsyncTask extends AsyncTask<String, String, Void> {
 
         String result = "";
         FontListCallback fontListCallback;
         String yourAPIKey, fontListOrder;
 
-        public FontListDownloaderAsyncTask(FontListCallback fontListCallback, String yourAPIKey, String fontListOrder){
+        FontListDownloadAsyncTask(FontListCallback fontListCallback, String yourAPIKey, String fontListOrder){
             this.fontListCallback = fontListCallback;
             this.yourAPIKey = yourAPIKey;
             this.fontListOrder = fontListOrder;
         }
 
+        /*//not necessary
         protected void onPreExecute() {
 
-        }
+        }*/
         @Override
         protected Void doInBackground(String... params) {
 

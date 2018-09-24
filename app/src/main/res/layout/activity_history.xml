@@ -16,7 +16,6 @@
         android:layout_weight="1"
         android:background="?attr/colorPrimary"
         android:minHeight="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
         android:visibility="visible"
         tools:layout_editor_absoluteX="8dp"
         tools:layout_editor_absoluteY="0dp">

@@ -132,6 +132,7 @@ import static com.jackz314.todo.DatabaseManager.TAG_COLOR;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.countOccurrences;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
+import static com.jackz314.todo.MainActivity.getColoredCheckBoxColorStateList;
 import static com.jackz314.todo.MainActivity.getDateString;
 import static com.jackz314.todo.MainActivity.getProperDateString;
 import static com.jackz314.todo.MainActivity.isStringContainAnyOfTheseWords;
@@ -230,6 +231,15 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         args.putInt(ARG_PARAM, position);
         fragment.setArguments(args);
         return fragment;
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if(hidden){
+            setOutOfSearchMode();
+            setOutOfSelectionMode();
+        }
     }
 
     @Override
@@ -368,7 +378,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     //todo implement Travis CI
     @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
         sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
@@ -405,7 +415,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         input.setFocusable(true);
         todoList.setFocusable(true);
         todoList.setFocusableInTouchMode(true);
-        setColorPreferences();
+        setAppearancePreferences();
         displayAllNotes();
         if(!input.getText().toString().equals("")){
             input.setVisibility(View.VISIBLE);
@@ -1469,74 +1479,66 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
             selectionToolBar.getMenu().clear();
         }else {
-            String count = Integer.toString(selectedId.size());
-            selectionTitle.setText(count + getString(R.string.selection_mode_title));
+            String selectionTxt = Integer.toString(selectedId.size()) + getString(R.string.selection_mode_title);
+            selectionTitle.setText(selectionTxt);
         }
     }
 
-    public void setColorPreferences(){
-        sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-        themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
-        textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
-        textSize = sharedPreferences.getInt(getString(R.string.text_size_key),24);
-        backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
+    public void setAppearancePreferences(){
+        if(getContext() != null && getView() != null){// avoid trying set view elements when they're not populated
+            sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+            themeColor = sharedPreferences.getInt(getString(R.string.theme_color_key),getResources().getColor(R.color.colorActualPrimary));
+            textColor = sharedPreferences.getInt(getString(R.string.text_color_key), Color.BLACK);
+            textSize = sharedPreferences.getInt(getString(R.string.text_size_key),24);
+            backgroundColor = sharedPreferences.getInt(getString(R.string.background_color_key),Color.WHITE);
 
-        /*
-        set colors
-         */
-        /*int[] colorsBACKUP = {// logo color
-                ContextCompat.getColor(this, R.color.color1),
-                ContextCompat.getColor(this, R.color.color2),
-                ContextCompat.getColor(this, R.color.color3),
-                ContextCompat.getColor(this, R.color.color4),
-                ContextCompat.getColor(this, R.color.color5)
-        };*/
+            //set colors
+            int[] colors = {// recognition view google logo color
+                    ColorUtils.lighten(themeColor, 0.3),
+                    ColorUtils.lighten(themeColor, 0.2),
+                    ColorUtils.lighten(themeColor, 0.15),
+                    ColorUtils.lighten(themeColor, 0.25),
+                    ColorUtils.lighten(themeColor, 0.4)
+            };
 
-        int[] colors = {// logo color
-                ColorUtils.lighten(themeColor, 0.3),
-                ColorUtils.lighten(themeColor, 0.2),
-                ColorUtils.lighten(themeColor, 0.15),
-                ColorUtils.lighten(themeColor, 0.25),
-                ColorUtils.lighten(themeColor, 0.4)
-        };
-
-        //int[] heights = { 20, 24, 18, 23, 16 };
-        int[] heights = { 30, 36, 27, 35, 24 };
-        recognitionProgressView = getView().findViewById(R.id.recognition_view);
-        recognitionProgressView.setColors(colors);
-        recognitionProgressView.setBarMaxHeightsInDp(heights);
-        recognitionProgressView.setCircleRadiusInDp(3);
-        recognitionProgressView.setSpacingInDp(3);
-        recognitionProgressView.setIdleStateAmplitudeInDp(2);
-        recognitionProgressView.setRotationRadiusInDp(12);
-        recognitionProgressView.play();
-        //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
-        //setEdgeColor(todoList,themeColorSetting);
-        //int[] themeColors = {backgroundColorSetting,themeColorSetting};
-        //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
-        //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
-        //navHeadText.setTextSize(textSize);
-        //navHeader.setBackgroundColor(Color.RED);
-        fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-        input.setTextColor(textColor);
-        input.setTextSize(24);
-        setCursorColor(input,themeColor);//todo not working in Android P (seems like it), find a fix
-        if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
-            emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
-        }else {//bright
-            emptyTextView.setTextColor(Color.parseColor("#61000000"));
+            //int[] heights = { 20, 24, 18, 23, 16 };
+            int[] heights = { 30, 36, 27, 35, 24 };
+            recognitionProgressView = getView().findViewById(R.id.recognition_view);
+            recognitionProgressView.setColors(colors);
+            recognitionProgressView.setBarMaxHeightsInDp(heights);
+            recognitionProgressView.setCircleRadiusInDp(3);
+            recognitionProgressView.setSpacingInDp(3);
+            recognitionProgressView.setIdleStateAmplitudeInDp(2);
+            recognitionProgressView.setRotationRadiusInDp(12);
+            recognitionProgressView.play();
+            //View navMainView = inflater.inflate(R.layout.nav_header_main,null);
+            //setEdgeColor(todoList,themeColorSetting);
+            //int[] themeColors = {backgroundColorSetting,themeColorSetting};
+            //Drawable drawHeadBG = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,themeColors);
+            //drawHeadBG.setColorFilter(themeColorSetting, PorterDuff.Mode.DST);
+            //navHeadText.setTextSize(textSize);
+            //navHeader.setBackgroundColor(Color.RED);
+            fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+            input.setTextColor(textColor);
+            input.setTextSize(24);
+            setCursorColor(input,themeColor);//todo not working in Android P (seems like it), find a fix
+            if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
+                emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
+            }else {//bright
+                emptyTextView.setTextColor(Color.parseColor("#61000000"));
+            }
+            todoList.setBackgroundColor(backgroundColor);
+            if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
+                input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.5));
+            }else {
+                input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.38));
+            }
+            input.setLinkTextColor(themeColor);
+            input.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
+            input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+            //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
+            //todoList.setDividerHeight(2);
         }
-        todoList.setBackgroundColor(backgroundColor);
-        if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
-            input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.5));
-        }else {
-            input.setHintTextColor(ColorUtils.makeTransparent(textColor,0.38));
-        }
-        input.setLinkTextColor(themeColor);
-        input.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
-        input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-        //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TR_BL, colors));
-        //todoList.setDividerHeight(2);
     }
 
     public SpannableStringBuilder colorActsAndTags(String text){
@@ -1789,17 +1791,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                             }
                         }
                     });
-                    ColorStateList colorStateList = new ColorStateList(
-                            new int[][]{
-                                    new int[]{-android.R.attr.state_checked}, //disabled
-                                    new int[]{android.R.attr.state_checked} //enabled
-                            },
-                            new int[] {
-                                    Color.DKGRAY//disabled
-                                    ,themeColor //enabled
-                            }
-                    );
-                    holder.cBox.setButtonTintList(colorStateList);
+                    holder.cBox.setButtonTintList(getColoredCheckBoxColorStateList(themeColor));
                 }
             });
             todoList.setAdapter(todoListAdapter);
@@ -2015,7 +2007,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         switch (id){
             case TODO_LOADER_ID:{
-                setColorPreferences();
+                setAppearancePreferences();
                 //determine order of the list
                 String sort = null;
                 if(sharedPreferences.getBoolean(getString(R.string.order_key),true)){
@@ -2728,7 +2720,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public void onResume() {
         if(!(input.getText().toString().equals("")) && input.getVisibility() == View.VISIBLE) showKeyboard();
         displayAllNotes();
-        setColorPreferences();
+        setAppearancePreferences();
         if(sharedPreferences.getBoolean("first_run",true)){
             Cursor cs = todoSql.getAllData();
             if (cs.getCount()==0){

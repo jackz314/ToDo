@@ -35,8 +35,9 @@
                 android:layout_gravity="center"
                 android:layout_weight="1"
                 android:gravity="start"
-                android:layout_marginRight="0dp"
-                android:visibility="gone" />
+                android:layout_marginEnd="0dp"
+                android:visibility="gone"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/titleText"
@@ -44,7 +45,6 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_weight="11"
-                android:fontFamily="serif"
                 android:gravity="start"
                 android:text=""
                 android:textAppearance="@android:style/TextAppearance.DeviceDefault.Widget.TextView"

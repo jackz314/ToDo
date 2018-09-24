@@ -118,8 +118,8 @@
     <string name="history_name">History</string>
     <string name="about_name">About</string>
     <string name="empty_history">Nothing finished yet…\nYour finished items will be here</string>
-    <string name="empty_todolist">Got nothing to do?</string>
-    <string name="empty_important_todolist">Nothing important found yet, add one now?</string>
+    <string name="empty_todolist">Got nothing ToDo?</string>
+    <string name="empty_important_todolist">Got nothing important?</string>
     <string name="empty_tag_pt1">Tap \"+\" to create a new </string>
     <string name="empty_tag_pt2"> note.</string>
     <string name="empty_tag_selection">No tags used yet, add one now?</string>
@@ -178,7 +178,7 @@
     <string name="note_export_content_header">ToDo\n</string>
     <string name="note_share_via">Share notes via…</string>
     <string name="share_subject">ToDo — An awesome to-do list app</string>
-    <string name="share_content">Hey! Check out ToDo at Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
+    <string name="share_content">Hey! Check out ToDo on Google Play\nhttps://play.google.com/store/apps/details?id=com.jackz314.todo\nToDo — An highly customizable to-do list app that can maximize your efficiency!</string>
     <string name="share_via">Share this app with other people!</string>
     <string name="feedback">Feedback &amp; Report</string>
     <string name="send">Send</string>
@@ -208,6 +208,10 @@
     <string name="font_list_load_failed">Failed to load the font list from font provider, please try again later.\nOnly local added fonts will be shown.</string>
     <string name="font_list_font_load_failed">Failed to load preview of fonts, please try again later.\nThe list will be shown with the default font instead.</string>
     <string name="default_font_preview_text">This is a preview of the font.</string>
+    <string name="clipboard_is_empty">Your clipboard is empty.</string>
+    <string name="recreate_main_key" translatable="false">recreate_main_key</string>
+    <string name="setting_font_to_text">Setting font to: </string>
+    <string name="google_font_query_key" translatable="false">googel_font_name_key</string>
     <string name="just_do_it">Just do it!</string>
     <string name="reconsider">I\'ll reconsider</string>
     <string name="storage_permission_refused_explanation_bk">We\'ll need the storage permission to backup your notes</string>
