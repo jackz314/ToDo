@@ -1087,7 +1087,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                         finalUploadingDialog.dismiss();
                                         Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
                                         // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
-                                        Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                                        Uri downloadUrl = taskSnapshot.getUploadSessionUri();
                                     }
                                 });
                             } catch (UnsupportedEncodingException e) {

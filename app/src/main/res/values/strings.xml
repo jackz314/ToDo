@@ -274,6 +274,7 @@
     <string name="voice_recon_audio_record_err">There\'s a problem when trying to record audio, please try again later!</string>
     <string name="voice_recon_internet_err">Can\'t connect to the server for now, please try again later!</string>
     <string name="voice_recon_busy_client_err">Recognition failed, it could be because you don\'t have google services installed or can\'t connect to the voice recognizer service!</string>
+    <string name="voice_recon_busy_err">Recognition failed, it could be because you don\'t have google services installed or can\'t connect to the voice recognizer service!</string>
     <string name="note_added">Note added to ToDo!</string>
     <string name="google_now_request_code" translatable="false">com.google.android.gm.action.AUTO_SEND</string>
     <string name="purchasing">Purchasing…</string>

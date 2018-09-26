@@ -1272,6 +1272,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      final TextView previewText = fontDialogView.findViewById(R.id.font_preview_text);
                      final TextView weightSettingText = fontDialogView.findViewById(R.id.font_setting_weight_txt);
                      final Button fontSettingConfirmBtn = fontDialogView.findViewById(R.id.font_confirm_btn);
+                     final Button fontSettingCancelBtn = fontDialogView.findViewById(R.id.font_cancel_btn);
                      final Spinner weightSpinner = fontDialogView.findViewById(R.id.font_weight_spinner);
                      final FontSpinnerAdapter weightSpinnerAdapter;
 
@@ -1384,6 +1385,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                          previewTitle.setTypeface(typeface);
                                          weightSpinnerAdapter.setTypeface(typeface);
                                          fontSettingConfirmBtn.setTypeface(typeface);
+                                         fontSettingCancelBtn.setTypeface(typeface);
                                          weightSettingText.setTypeface(typeface);
                                          italicCbox.setTypeface(typeface);
                                          monoCbox.setTypeface(typeface);
@@ -1413,6 +1415,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                          previewTitle.setTypeface(typeface);
                                          weightSpinnerAdapter.setTypeface(typeface);
                                          fontSettingConfirmBtn.setTypeface(typeface);
+                                         fontSettingCancelBtn.setTypeface(typeface);
                                          weightSettingText.setTypeface(typeface);
                                          italicCbox.setTypeface(typeface);
                                          monoCbox.setTypeface(typeface);
@@ -1456,6 +1459,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                         previewTitle.setTypeface(typeface);
                                         weightSpinnerAdapter.setTypeface(typeface);
                                         fontSettingConfirmBtn.setTypeface(typeface);
+                                        fontSettingCancelBtn.setTypeface(typeface);
                                         weightSettingText.setTypeface(typeface);
                                         italicCbox.setTypeface(typeface);
                                         monoCbox.setTypeface(typeface);
@@ -1476,6 +1480,13 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                          public void onNothingSelected(AdapterView<?> parent) {
                              //no op
                          }
+                    });
+
+                    fontSettingCancelBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            fontSettingDialog.dismiss();
+                        }
                     });
 
                     fontSettingConfirmBtn.setOnClickListener(new View.OnClickListener() {

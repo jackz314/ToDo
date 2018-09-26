@@ -33,7 +33,6 @@
             android:layout_weight="1"
             android:background="?attr/colorPrimary"
             android:minHeight="?attr/actionBarSize"
-            android:theme="?attr/actionBarTheme"
             android:visibility="gone" >
             <LinearLayout
                 android:layout_width="match_parent"
@@ -51,9 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/selection_toolbar_title"
-                    android:layout_gravity="center_vertical"
-                    android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title"
-                    />
+                    android:layout_gravity="center_vertical" />
             </LinearLayout>
 
         </android.support.v7.widget.Toolbar>
