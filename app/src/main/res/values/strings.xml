@@ -117,6 +117,7 @@
     <string name="input_hint_text">What\'s on your mind?</string>
     <string name="history_name">History</string>
     <string name="about_name">About</string>
+    <string name="tags_selec_name">Tags</string>
     <string name="empty_history">Nothing finished yet…\nYour finished items will be here</string>
     <string name="empty_todolist">Got nothing ToDo?</string>
     <string name="empty_important_todolist">Got nothing important?</string>
@@ -164,11 +165,12 @@
     <string name="finish_all_notes">Finish All Notes</string>
     <string name="banner_ad_unit_id" translatable="false">ca-app-pub-7337506680436750/2602834629</string>
     <string name="press_again_to_exit">Press again to exit</string>
-    <string name="support_me">Support Me!</string>
-    <string name="rate_this">Rate this!</string>
+    <string name="support_me">Support!</string>
+    <string name="rate_this">Rate!</string>
     <string name="select_all">Select All</string>
-    <string name="contact_me">"If you have any questions, suggestions or anything else you want, please contact me via</string>
-    <string name="email">my email</string>
+    <string name="contact_me_first_part">"If you have any questions, suggestions or anything else you want, please contact me via my" "</string>
+    <string name="email">Email</string>
+    <string name="contact_me_second_part">.</string>
     <string name="impossible_text">Something completely wrong happened @_@</string>
     <string name="delete_menu_text">Delete</string>
     <string name="modify_menu_text">Modify</string>
@@ -207,9 +209,11 @@
     <string name="font_italic">Italic</string>
     <string name="font_list_load_failed">Failed to load the font list from font provider, please try again later.\nOnly local added fonts will be shown.</string>
     <string name="font_list_font_load_failed">Failed to load preview of fonts, please try again later.\nThe list will be shown with the default font instead.</string>
+    <string name="font_test_hint">Test out the font here…</string>
     <string name="default_font_preview_text">This is a preview of the font.</string>
     <string name="clipboard_is_empty">Your clipboard is empty.</string>
     <string name="recreate_main_key" translatable="false">recreate_main_key</string>
+\    <string name="font_overriden_key" translatable="false">font_overriden_key</string>
     <string name="setting_font_to_text">Setting font to: </string>
     <string name="google_font_query_key" translatable="false">googel_font_name_key</string>
     <string name="just_do_it">Just do it!</string>

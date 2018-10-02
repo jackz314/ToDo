@@ -65,8 +65,6 @@ import android.widget.Toast;
 import com.android.vending.billing.IInAppBillingService;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.analytics.FirebaseAnalytics;
-import com.google.firebase.crash.FirebaseCrash;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -95,9 +93,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -114,7 +114,6 @@ import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_FINISH;
 import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_SNOOZE;
 import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_SNOOZE_TIME;
 import static com.jackz314.todo.ReminderBroadcastReceiver.ACTION_START_REMINDER;
-import static com.jackz314.todo.ReminderBroadcastReceiver.OVERDUE_REMINDER;
 import static com.jackz314.todo.ReminderBroadcastReceiver.SNOOZE_TIME;
 
 //   ┏┓　　　┏┓
@@ -147,6 +146,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     //paused ad//static int REMOVE_REQUEST_ID =1022;
     static int PURCHASE_PREMIUM_REQUEST_ID = 1025;
     public static String REMINDER_NOTIFICATION_ID = "reminder_notification_id";
+    public static String REMINDER_NOTIFICATION_SET_TIME = "reminder_notification_set_time";
     public static String REMINDER_NOTIFICATION_GROUP = "reminder_notification_group";
     public static String NORMAL_CHANNEL_ID = "10101", IMPORTANT_CHANNEL_ID = "10102", URGENT_CHANNEL_ID = "10103";
     public boolean isInSearchMode = false, isInSelectionMode = false;
@@ -157,7 +157,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean iapsetup = true;
     //paused ad//public boolean isAdRemoved = false;
     public boolean isPremium = false;
-    private FirebaseAnalytics mFirebaseAnalytics;
     private String todoTableId = "HAHA! this is the real one, gotcha";
     protected MainFragment.OnMainBackPressedListener onMainBackPressedListener;
     protected ImportantFragment.OnImportantBackPressedListener onImportantBackPressedListener;
@@ -167,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     IabHelper mHelper;
     int exit=0;
-    boolean justex = false;
+    boolean recreated = false;
     DatabaseManager todosql;
     boolean selectAll = false, unSelectAll = false;
     SharedPreferences sharedPreferences;
@@ -395,11 +394,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
-        overrideFont(getApplicationContext());//make sure that all resources are overriden by doing this at the very beginning
+        sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+//        System.out.println(sharedPreferences.contains(getString(R.string.font_overriden_key)));
+//        System.out.println(sharedPreferences.getBoolean(getString(R.string.font_overriden_key), false));
+        if(!sharedPreferences.contains(getString(R.string.font_overriden_key)) || !sharedPreferences.getBoolean(getString(R.string.font_overriden_key), false)){//if app never launched before or font's not overriden yet
+            overrideFontForMain();//make sure that all resources are overriden by doing this at the very beginning
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         //paused ad//final AdRequest adRequest = new AdRequest.Builder().build();
         mDrawerLayout =  findViewById(R.id.drawer_layout);
         //LayoutInflater layoutInflater = LayoutInflater.from(this);
@@ -408,7 +411,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
        // FirebaseCrash.report(new Exception("MainActivity created"));
         //FirebaseCrash.log("MainActivity created log");
         //Fragment currentFragment = getFragmentManager().findFragmentByTag("android:switcher:" + R.id.pager + ":" + viewPager.getCurrentItem);
-        sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         navigationView = findViewById(R.id.nav_view);
         //speechRecognizer.setRecognitionListener(new speechListener());
         toolbar = findViewById(R.id.toolbar);
@@ -431,6 +433,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         historySettingPref += "BIjAN" + bep.substring(2,bep.length());
         //setMargins(fab,8,16,16,16);
         menuNav = navigationView.getMenu();
+
+        //reschedule alarms to not miss them
+        scheduleAllReminder(getApplicationContext());
 
         //create notification channels
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -765,8 +770,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * @param context to work with assets and get shared preference
      */
     //used for getting fonts from google fonts and shared preference
-    public static void overrideFont(Context context) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
+    public static void overrideFont(final Context context) {
+        final SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
         String fontQueryString = sharedPreferences.getString(context.getString(R.string.google_font_query_key), null);
         try {
             final String defaultFontNameToOverride = "SERIF";// maybe changed later
@@ -774,9 +779,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 //get google font
                 GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
                     @Override
-                    public void onFontRetrieved(Typeface typeface) {
+                    public void onFontRetrieved(final Typeface typeface) {
                         //set font with reflection method
-                        try {
+                        /*try {
                             Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
                             defaultFontTypefaceField.setAccessible(true);
                             defaultFontTypefaceField.set(null, typeface);
@@ -784,6 +789,26 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             //defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
                             //defaultFontTypefaceField.setAccessible(true);
                             //defaultFontTypefaceField.set(null, typeface);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }*/
+                        final Map<String, Typeface> newMap = new HashMap<>();
+                        newMap.put(defaultFontNameToOverride.toLowerCase(), typeface);
+                        try {
+                            //set system controlled fonts (not supposed to be controlled by themes)
+                            final Field staticField = Typeface.class.getDeclaredField("sSystemFontMap");
+                            staticField.setAccessible(true);
+                            staticField.set(null, newMap);
+
+                            //override theme font
+                            Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
+                            defaultFontTypefaceField.setAccessible(true);
+                            defaultFontTypefaceField.set(null, typeface);
+                            defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
+                            defaultFontTypefaceField.setAccessible(true);
+                            defaultFontTypefaceField.set(null, typeface);
+
+                            staticField.set(null, newMap);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -795,8 +820,69 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }
                 };
                 GetGoogleFont.requestGoogleFont(googleFontCallback, fontQueryString, context);
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to set custom font with query: " + fontQueryString);
+        }
+    }/**
+     * Using reflection to override default typeface
+     * NOTICE: DO NOT FORGET TO SET TYPEFACE FOR APP THEME AS DEFAULT TYPEFACE WHICH WILL BE OVERRIDDEN
+     */
+    //used for getting fonts from google fonts and shared preference
+    public void overrideFontForMain() {
+        System.out.println("FONT OVERRIDING");
+        final Context context = getApplicationContext();
+        final SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
+        String fontQueryString = sharedPreferences.getString(context.getString(R.string.google_font_query_key), null);
+        try {
+            final String defaultFontNameToOverride = "SERIF";// maybe changed later
+            if (fontQueryString != null){
+                //get google font
+                GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                    @Override
+                    public void onFontRetrieved(final Typeface typeface) {
+                        //set font with reflection method
+                        /*try {
+                            Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
+                            defaultFontTypefaceField.setAccessible(true);
+                            defaultFontTypefaceField.set(null, typeface);
+                            //set for default as well
+                            //defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
+                            //defaultFontTypefaceField.setAccessible(true);
+                            //defaultFontTypefaceField.set(null, typeface);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }*/
+                        final Map<String, Typeface> newMap = new HashMap<>();
+                        newMap.put(defaultFontNameToOverride.toLowerCase(), typeface);
+                        try {
+                            //set system controlled fonts (not supposed to be controlled by themes)
+                            final Field staticField = Typeface.class.getDeclaredField("sSystemFontMap");
+                            staticField.setAccessible(true);
+                            staticField.set(null, newMap);
 
+                            //override theme font
+                            Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
+                            defaultFontTypefaceField.setAccessible(true);
+                            defaultFontTypefaceField.set(null, typeface);
+                            defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
+                            defaultFontTypefaceField.setAccessible(true);
+                            defaultFontTypefaceField.set(null, typeface);
 
+                            staticField.set(null, newMap);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        sharedPreferences.edit().putBoolean(context.getString(R.string.font_overriden_key), true).apply();
+                        recreate();
+                    }
+
+                    @Override
+                    public void onFontRequestError(int errorCode) {
+
+                    }
+                };
+                GetGoogleFont.requestGoogleFont(googleFontCallback, fontQueryString, context);
             }
         } catch (Exception e) {
             System.out.println("Failed to set custom font with query: " + fontQueryString);
@@ -917,28 +1003,51 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         );
     }
 
-    public static void setCursorColor(EditText view, int color) {//REFLECTION METHOD USED
+    //REFLECTION METHOD USED
+    public static void setEditTextCursorColor(EditText editText, int color) {
         try {
             // Get the cursor resource id
-            Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
-            field.setAccessible(true);
-            int drawableResId = field.getInt(view);
+            if(Build.VERSION.SDK_INT >= 28){//set differently in Android P and above (API 28+)
+                Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
+                field.setAccessible(true);
+                int drawableResId = field.getInt(editText);
 
-            // Get the editor
-            field = TextView.class.getDeclaredField("mEditor");
-            field.setAccessible(true);
-            Object editor = field.get(view);
+                // Get the editor
+                field = TextView.class.getDeclaredField("mEditor");
+                field.setAccessible(true);
+                Object editor = field.get(editText);
 
-            // Get the drawable and set a color filter
-            Drawable drawable = ContextCompat.getDrawable(view.getContext(), drawableResId);
-            drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-            Drawable[] drawables = {drawable, drawable};
+                // Get the drawable and set a color filter
+                Drawable drawable = ContextCompat.getDrawable(editText.getContext(), drawableResId);
+                if (drawable != null) {
+                    drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+                }
 
-            // Set the drawables
-            field = editor.getClass().getDeclaredField("mCursorDrawable");
-            field.setAccessible(true);
-            field.set(editor, drawables);
-            setEditTextHandleColor(view, color);
+                // Set the drawables
+                field = editor.getClass().getDeclaredField("mDrawableForCursor");
+                field.setAccessible(true);
+                field.set(editor, drawable);
+            }else {
+                Field field = TextView.class.getDeclaredField("mCursorDrawableRes");
+                field.setAccessible(true);
+                int drawableResId = field.getInt(editText);
+
+                // Get the editor
+                field = TextView.class.getDeclaredField("mEditor");
+                field.setAccessible(true);
+                Object editor = field.get(editText);
+
+                // Get the drawable and set a color filter
+                Drawable drawable = ContextCompat.getDrawable(editText.getContext(), drawableResId);
+                drawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+                Drawable[] drawables = {drawable, drawable};
+
+                // Set the drawables
+                field = editor.getClass().getDeclaredField("mCursorDrawable");
+                field.setAccessible(true);
+                field.set(editor, drawables);
+            }
+            setEditTextHandleColor(editText, color);
         } catch (Exception ignored) {
         }
     }
@@ -1027,7 +1136,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         edt.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         edt.setTextColor(textColor);
         edt.setHighlightColor(ColorUtils.lighten(themeColor,0.2));
-        setCursorColor(edt,themeColor);
+        setEditTextCursorColor(edt,themeColor);
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.feedback_title))
                 .setMessage(getString(R.string.feedback_message))
@@ -1037,7 +1146,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             FirebaseStorage storage = FirebaseStorage.getInstance();
                             StorageReference storageRef = storage.getReference();// Create a storage reference from our app
                             //FirebaseCrash.report(new Exception(edt.getText().toString()));
-                            FirebaseCrash.log(edt.getText().toString());
+                            //FirebaseCrash.log(edt.getText().toString());
                             ProgressDialog uploadingDialog = null;
                             try {
                                 String systemInfo ="";
@@ -1336,7 +1445,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
 
         StringBuilder dateString = new StringBuilder();
-        dateString.append("");//avoid null
         for(Object groupF : groups) {
             DateGroup group = (DateGroup)groupF;
             String matchingValue = group.getText();
@@ -1362,7 +1470,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         if(suffix.startsWith("!")){
             int impIndicatorCount = countContinuousOccurrences(suffix,"!");
-            dateString.append(suffix.substring(0,impIndicatorCount));
+            dateString.append(suffix, 0, impIndicatorCount);
         }
 
         //System.out.println("ORIGINAL STR:" + str + "\n" + "DATESTRING:" + dateString);
@@ -2376,7 +2484,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         snoozeTimeIntent.setAction(ACTION_SNOOZE_TIME);
         snoozeTimeIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
         String snoozeButtonTxt;
-        if(previouslySnoozedTime.length > 0){//snooze actions are considerd prior to overdue procedures
+        if(previouslySnoozedTime.length > 0){//snooze actions are considered prior to overdue procedures
             String[] snoozeTimeIntervalStats = getSmartRoughDateDiffMills(previouslySnoozedTime[0] * 2);
             snoozeButtonTxt = snoozeTimeIntervalStats[1] + " " + capitalize(snoozeTimeIntervalStats[0].toLowerCase());//e.g. 1 Hour
             if(snoozeTimeIntervalStats[1].equals("1")){
@@ -2397,7 +2505,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         PendingIntent finishPendingIntent = PendingIntent.getBroadcast(context, 0, finishIntent, 0);
 
         reminderNotifBuilder.setSmallIcon(R.mipmap.ic_launcher);
-        reminderNotifBuilder.setContentTitle(formatNotificationToDoText(title,context));
+        reminderNotifBuilder.setContentTitle(formatNotificationText(title,context));
         reminderNotifBuilder.setContentText(notificationContent);
         reminderNotifBuilder.setGroup(REMINDER_NOTIFICATION_GROUP);
         reminderNotifBuilder.setContentIntent(defaultClickPendingIntent);
@@ -2532,7 +2640,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-    public static Spannable formatNotificationToDoText(String text, Context context){
+    public static Spannable formatNotificationText(String text, Context context){
         SpannableStringBuilder spannable = new SpannableStringBuilder(text);
         DatabaseManager todoSql = new DatabaseManager(context);
         int themeColor = context.getSharedPreferences("settings_data",MODE_PRIVATE).getInt(context.getString(R.string.theme_color_key),context.getResources().getColor(R.color.colorActualPrimary));
@@ -2546,7 +2654,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }else {
                     text = removeCharAt(text, boldStartPos);//delete "*" after marked
                     text = removeCharAt(text, boldEndPos - 1);//this doesn't work....
-                    System.out.println(text);
+                    //System.out.println(text);
                     spannable.setSpan(new StyleSpan(Typeface.BOLD), boldStartPos, boldEndPos - 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);//set marked text to bold
                     boldStartPos = text.indexOf("*", boldEndPos - 2);
                 }
@@ -2614,7 +2722,40 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return spannable;
     }
 
-    public static boolean scheduleReminder(int id, Context context) {
+
+    public static boolean deleteReminder(long id, Context context){
+        Intent notificationIntent = new Intent(context, ReminderBroadcastReceiver.class);
+        notificationIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
+        notificationIntent.setAction(ACTION_START_REMINDER);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, (int)id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager != null) {
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
+            return true;
+        }else {
+            pendingIntent.cancel();
+            return false;
+        }
+    }
+
+    public static void scheduleAllReminder(final Context context){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    DatabaseManager todoSql = new DatabaseManager(context);
+                    Cursor cursor = todoSql.getAllToDoWithReminders();
+                    cursor.moveToFirst();
+                    while (cursor.moveToNext()){
+                        scheduleReminder(cursor.getInt(cursor.getColumnIndex(ID)), context);
+                    }
+                }catch (Exception ignored){}
+            }
+        }).run();
+    }
+
+    public static boolean scheduleReminder(long id, Context context) {
         SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
         DatabaseManager todoSql = new DatabaseManager(context);
         Cursor cursor = todoSql.getOneDataInTODO(id);
@@ -2632,28 +2773,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 e.printStackTrace();
                 return false;
             }
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
             AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
             if(alarmManager != null){
+                notificationIntent.putExtra(REMINDER_NOTIFICATION_SET_TIME, remindTime.getTime());
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, (int)id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
                 System.out.println("ALARM SET at " + remindTime + ", current time: " + new Date() + ", time difference: " + ((remindTime.getTime() - System.currentTimeMillis()) / 1000) + " seconds");
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
-            }else return false;
-            if(sharedPreferences.getBoolean(context.getString(R.string.main_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here
-                Intent notificationOverdueIntent = new Intent(context, ReminderBroadcastReceiver.class);
-                notificationOverdueIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
-                notificationOverdueIntent.putExtra(OVERDUE_REMINDER, true);
-                notificationOverdueIntent.setAction(ACTION_START_REMINDER);
-                PendingIntent overduePendingIntent = PendingIntent.getBroadcast(context, id, notificationOverdueIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-                if(sharedPreferences.getBoolean(context.getString(R.string.normal_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime() + 3600 * 1000, overduePendingIntent);//overdue reminder set at 1 hour later
-                }else if (cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) > 0){
-                    if(cursor.getInt(cursor.getColumnIndex(IMPORTANCE)) < 3){//normal level overdue remind
-                        alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime() + 3600 * 1000, overduePendingIntent);//overdue reminder set at 1 hour later
-                    }else {//high level overdue remind
-                        alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime() + 1800 * 1000, overduePendingIntent);//overdue reminder set at 1 hour later
-                    }
+                System.out.println(pendingIntent.toString());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
+                }else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
                 }
-            }
+            }else return false;
         }
         return true;
     }

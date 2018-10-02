@@ -57,6 +57,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListAdapter;
 import android.widget.NumberPicker;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
@@ -91,8 +92,7 @@ import java.util.Set;
 import static com.jackz314.todo.DatabaseManager.DATABASE_NAME;
 import static com.jackz314.todo.MainActivity.getColoredCheckBoxColorStateList;
 import static com.jackz314.todo.MainActivity.overrideFont;
-import static com.jackz314.todo.MainActivity.setCursorColor;
-import static com.jackz314.todo.MainActivity.setEditTextHandleColor;
+import static com.jackz314.todo.MainActivity.setEditTextCursorColor;
 import static com.jackz314.todo.R.color.colorActualPrimary;
 import static com.jackz314.todo.R.color.colorPrimary;
 import static com.jackz314.todo.R.color.dark_theme_background_default_color;
@@ -897,8 +897,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 View dialogView = inflater.inflate(R.layout.backup_dialog,null);
                 final EditText edt = dialogView.findViewById(R.id.tagText);
                 edt.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-                setCursorColor(edt, themeColor);
-                setEditTextHandleColor(edt, themeColor);
+                setEditTextCursorColor(edt, themeColor);
                 Button editPath = dialogView.findViewById(R.id.path_selector);
                 editPath.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -1181,10 +1180,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
              //set colors
              fontOrderSpinner.setSelection(selectedPos);
              fontSearchInput.setLinkTextColor(themeColor);
-             fontSearchInput.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
+             fontSearchInput.setHighlightColor(ColorUtils.lighten(themeColor,0.4));
              fontSearchInput.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-             setCursorColor(fontSearchInput, themeColor);
-             setEditTextHandleColor(fontSearchInput, themeColor);
+             setEditTextCursorColor(fontSearchInput, themeColor);
              fontLoadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
              //colors set
 
@@ -1269,7 +1267,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      final CheckBox italicCbox = fontDialogView.findViewById(R.id.font_italic_cbox);
                      final CheckBox monoCbox = fontDialogView.findViewById(R.id.fon_mono_cbox);
                      final TextView previewTitle = fontDialogView.findViewById(R.id.font_preview_title);
-                     final TextView previewText = fontDialogView.findViewById(R.id.font_preview_text);
+                     final EditText testFontPreviewInput = fontDialogView.findViewById(R.id.font_preview_text);
                      final TextView weightSettingText = fontDialogView.findViewById(R.id.font_setting_weight_txt);
                      final Button fontSettingConfirmBtn = fontDialogView.findViewById(R.id.font_confirm_btn);
                      final Button fontSettingCancelBtn = fontDialogView.findViewById(R.id.font_cancel_btn);
@@ -1279,7 +1277,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      //set colors
                      italicCbox.setButtonTintList(getColoredCheckBoxColorStateList(themeColor));
                      monoCbox.setButtonTintList(getColoredCheckBoxColorStateList(themeColor));
-
+                     testFontPreviewInput.setHighlightColor(ColorUtils.lighten(themeColor,0.4));
+                     testFontPreviewInput.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+                     setEditTextCursorColor(testFontPreviewInput, themeColor);
                      previewTitle.setText(fontName);
                      //get random stuff as preview text
                      GetFromURL.URLCallBack urlCallBack = new GetFromURL.URLCallBack() {
@@ -1302,12 +1302,12 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                  finalText = getString(R.string.default_font_preview_text);
                              }
                              if(finalText.equals("")) finalText = getString(R.string.default_font_preview_text);
-                             previewText.setText(finalText);
+                             testFontPreviewInput.setText(finalText);
                          }
 
                          @Override
                          public void onRequestError(Exception e) {
-                             previewText.setText(getString(R.string.default_font_preview_text));
+                             testFontPreviewInput.setText(getString(R.string.default_font_preview_text));
                          }
                      };
                      Random random = new Random();
@@ -1381,7 +1381,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                  @Override
                                  public void onFontRetrieved(Typeface typeface) {
                                      if(typeface != null){
-                                         previewText.setTypeface(typeface);
+                                         testFontPreviewInput.setTypeface(typeface);
                                          previewTitle.setTypeface(typeface);
                                          weightSpinnerAdapter.setTypeface(typeface);
                                          fontSettingConfirmBtn.setTypeface(typeface);
@@ -1411,7 +1411,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                  @Override
                                  public void onFontRetrieved(Typeface typeface) {
                                      if(typeface != null){
-                                         previewText.setTypeface(typeface);
+                                         testFontPreviewInput.setTypeface(typeface);
                                          previewTitle.setTypeface(typeface);
                                          weightSpinnerAdapter.setTypeface(typeface);
                                          fontSettingConfirmBtn.setTypeface(typeface);
@@ -1455,7 +1455,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                                 @Override
                                 public void onFontRetrieved(Typeface typeface) {
                                     if(typeface != null){
-                                        previewText.setTypeface(typeface);
+                                        testFontPreviewInput.setTypeface(typeface);
                                         previewTitle.setTypeface(typeface);
                                         weightSpinnerAdapter.setTypeface(typeface);
                                         fontSettingConfirmBtn.setTypeface(typeface);
@@ -1486,6 +1486,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                         @Override
                         public void onClick(View view) {
                             fontSettingDialog.dismiss();
+                            openPreference(fontSetting.getKey());
                         }
                     });
 
@@ -1499,8 +1500,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             //adapt the font now
                             overrideFont(SettingsActivity.this);
                             fontSettingDialog.dismiss();
+                            sharedPrefEditor.putBoolean(getString(R.string.recreate_main_key), true).commit();//recreate main activity as well to apply new font whole app wide
                             recreate();//reload with new font
-                            sharedPrefEditor.putBoolean(getString(R.string.recreate_main_key), true).apply();//recreate main activity as well to apply new font whole app wide
                         }
                     });
                  }
@@ -1511,6 +1512,20 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
      });
 
      //end of settings
+    }
+
+    private void openPreference(String key) {
+        PreferenceScreen preferenceScreen = getPreferenceScreen();
+        final ListAdapter listAdapter = preferenceScreen.getRootAdapter();
+
+        final int itemsCount = listAdapter.getCount();
+        int itemNumber;
+        for (itemNumber = 0; itemNumber < itemsCount; ++itemNumber) {
+            if (listAdapter.getItem(itemNumber).equals(findPreference(key))) {
+                preferenceScreen.onItemClick(null, null, itemNumber, 0);
+                break;
+            }
+        }
     }
 
     private void requestFontList(String order, DownloadFontList.FontListCallback fontListCallback){
@@ -1694,7 +1709,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         String summary = pref.getSummary().toString();
         Spannable coloredTitle = new SpannableString (title);
         Spannable coloredSummary = new SpannableString (summary);
-        if(pref.isEnabled()){
+        if(pref.isEnabled() && pref.isSelectable()){
             coloredTitle.setSpan( new ForegroundColorSpan(textColor), 0, coloredTitle.length(), 0 );
             coloredSummary.setSpan( new ForegroundColorSpan(textColor), 0, coloredSummary.length(), 0 );
         }else {

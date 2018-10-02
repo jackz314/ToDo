@@ -72,7 +72,7 @@
     <string name="nav_remove_ad">去除广告！</string>
     <string name="nav_settings">设置</string>
     <string name="nav_share">分享</string>
-    <string name="contact_me">如果您有任何详细的问题，建议或这任何其他您想获得的帮助，请用电子邮件联系我</string>
+    <string name="contact_me_first_part">如果您有任何详细的问题，建议或这任何其他您想获得的帮助，请用电子邮件联系我</string>
     <string name="feedback_message">请描述您遇到的问题，或者尽管向我提其他意见 :) 如果您有其他更详细的信息想要告诉我，请在\"关于\"中通过电子邮件联系我！</string>
     <string name="aboutAct_name">关于</string>
     <string name="about">这是一个轻量级但高度定制化的待办事项应用。请随意支持我或在应用商店里为我打分支持</string>
@@ -136,7 +136,7 @@
     <string name="dark_theme_title">暗色主题</string>
     <string name="delete">删除</string>
     <string name="disabled">已禁用</string>
-    <string name="email">我的电子邮件</string>
+    <string name="email">电子邮件</string>
     <string name="email_content">请在此输入反馈，如果您发现了bug，请尽可能详细的描述您所遇到的情况以便我们尽快解决该问题</string>
     <string name="email_subject">为ToDo发送反馈</string>
     <string name="empty_search_result">没有匹配的结果</string>

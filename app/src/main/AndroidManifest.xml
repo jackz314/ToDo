@@ -100,6 +100,7 @@
         <activity
             android:name=".AboutActivity"
             android:label="@string/aboutAct_name"
+            android:theme="@style/AppTheme.NoActionBar"
             android:parentActivityName=".MainActivity" />
 
         <service android:name=".firebase.MyFirebaseMessagingService">
@@ -139,7 +140,7 @@
                 android:value="com.jackz314.todo.MainActivity" />
         </activity>
 
-        <receiver android:name="com.jackz314.todo.ReminderBroadcastReceiver" android:process=":remote">
+        <receiver android:name="ReminderBroadcastReceiver" android:process=":remote">
         </receiver>
         <meta-data
             android:name="preloaded_fonts"

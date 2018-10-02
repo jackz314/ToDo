@@ -42,7 +42,6 @@ import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TextAppearanceSpan;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -104,7 +103,7 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         historyList = findViewById(R.id.historyList);
         historyList.setHasFixedSize(true);
         emptyHistory = findViewById(R.id.emptyHistory);
-        LayoutInflater inflater =this.getLayoutInflater();
+        //LayoutInflater inflater =this.getLayoutInflater();
         historyView = findViewById(R.id.historyView);
         selectionTitle = toolbar.findViewById(R.id.history_selection_toolbar_title);
         selectionTitle.setText(R.string.history_name);
@@ -671,7 +670,6 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportLoaderManager().restartLoader(234,null,this);
         displayAllNotes();
-        toolbar = findViewById(R.id.history_selection_toolbar);
         //toolbar.setVisibility(View.GONE);
         if(selectAllBox != null){
             selectAllBox.setChecked(false);
@@ -750,12 +748,12 @@ public class HistoryActivity extends AppCompatActivity implements LoaderManager.
     }
 
     public void removeSelectedId(long id){
-        selectedId.remove(selectedId.indexOf(id));
+        selectedId.remove(id);
         selectAllBox.setChecked(false);
         selectAll = false;
         unSelectAll = true;
         String data = todoSql.getOneDataInHISTORY(Long.toString(id));
-        selectedContent.remove(selectedContent.indexOf(data));
+        selectedContent.remove(data);
         if (selectedId.size() == 0) {
             selectionTitle.setText(getString(R.string.selection_mode_empty_title));
             toolbar = findViewById(R.id.history_selection_toolbar);

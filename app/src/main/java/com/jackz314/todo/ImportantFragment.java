@@ -112,7 +112,7 @@ import static com.jackz314.todo.DatabaseManager.REMIND_TIMES;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
-import static com.jackz314.todo.MainActivity.setCursorColor;
+import static com.jackz314.todo.MainActivity.setEditTextCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 
@@ -1124,9 +1124,9 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     }
 
     public void removeSelectedId(long id){
-        selectedId.remove(selectedId.indexOf(id));
+        selectedId.remove(id);
         String data = databaseManager.getOneTitleInTODO(id);
-        selectedContent.remove(selectedContent.indexOf(data));
+        selectedContent.remove(data);
         if(selectedId.size() < databaseManager.getAllData().getCount()){
             selectAllBox.setChecked(false);
         }
@@ -1186,7 +1186,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
         input.setTextColor(textColor);
         input.setTextSize(24);
-        setCursorColor(input,themeColor);
+        setEditTextCursorColor(input,themeColor);
         if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
             emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
         }else {//bright
@@ -1520,7 +1520,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
         EditText searchViewTextField = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
-        MainActivity.setCursorColor(searchViewTextField,Color.WHITE);
+        MainActivity.setEditTextCursorColor(searchViewTextField,Color.WHITE);
         LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));

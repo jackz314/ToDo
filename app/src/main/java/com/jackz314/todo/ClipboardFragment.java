@@ -130,7 +130,7 @@ public class ClipboardFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         final TextView clipboardText = view.findViewById(R.id.clipboard_text);
         final ClipboardManager clipboardManager = (ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboardManager != null) {
+        if (clipboardManager != null && clipboardManager.getPrimaryClip() != null) {
             clipboardText.setText(clipboardManager.getPrimaryClip().getItemAt(0).getText().toString());
             clipboardManager.addPrimaryClipChangedListener(new ClipboardManager.OnPrimaryClipChangedListener() {
                 @Override

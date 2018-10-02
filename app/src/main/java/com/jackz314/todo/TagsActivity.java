@@ -90,7 +90,7 @@ import static com.jackz314.todo.DatabaseManager.ID;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.removeCharAt;
-import static com.jackz314.todo.MainActivity.setCursorColor;
+import static com.jackz314.todo.MainActivity.setEditTextCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
@@ -769,9 +769,9 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     public void removeSelectedId(long id){
-        selectedId.remove(selectedId.indexOf(id));
+        selectedId.remove(id);
         String data = todosql.getOneTitleInTODO(id);
-        selectedContent.remove(selectedContent.indexOf(data));
+        selectedContent.remove(data);
         if(selectedId.size() < todosql.getAllData().getCount()){
             selectAllBox.setChecked(false);
         }
@@ -1416,7 +1416,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         input.setLinkTextColor(themeColor);
         input.setHighlightColor(ColorUtils.lighten(themeColor,0.3));
         input.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-        setCursorColor(input, themeColor);
+        setEditTextCursorColor(input, themeColor);
         main.setBackgroundColor(backgroundColor);
         Window window = this.getWindow();
         window.setStatusBarColor(themeColor);

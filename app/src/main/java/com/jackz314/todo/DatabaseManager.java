@@ -579,12 +579,16 @@ public class DatabaseManager extends SQLiteOpenHelper{
         return recentReminderCount;
     }
 
-    public int getReminderCount(){
+    public Cursor getAllToDoWithReminders(){
         SQLiteDatabase database = this.getWritableDatabase();
-        Cursor cs = database.query(false,TODO_TABLE, new String[]{ID, REMIND_TIMES}, REMIND_TIMES + " IS NOT NULL", null,null,null,null,null );//filter for recent reminders
-        int recentReminderCount = cs.getCount();
-        cs.close();
-        return recentReminderCount;
+        return database.query(false,TODO_TABLE, new String[]{ID, REMIND_TIMES}, REMIND_TIMES + " IS NOT NULL", null,null,null,null,null );
+    }
+
+    public boolean hasReminder(long id){
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cursor = database.rawQuery("SELECT rowid _id,* FROM "+ TODO_TABLE + " WHERE "+ ID + " = " + id, null);
+        cursor.moveToFirst();
+        return cursor.getString(cursor.getColumnIndex(REMIND_TIMES)) != null && !cursor.getString(cursor.getColumnIndex(REMIND_TIMES)).isEmpty();
     }
 
     public void finishReminder(long id, Date... fromDate){

@@ -6,8 +6,7 @@
     android:layout_height="match_parent"
     app:title="History"
     android:id="@+id/historyView"
-    tools:context="com.jackz314.todo.HistoryActivity"
-    >
+    tools:context="com.jackz314.todo.HistoryActivity">
 
     <android.support.v7.widget.Toolbar
         android:id="@+id/history_selection_toolbar"
@@ -39,6 +38,7 @@
                 android:id="@+id/history_selection_toolbar_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:textSize="22sp"
                 android:layout_gravity="center_vertical"
                 android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title" />
         </LinearLayout>
@@ -62,7 +62,7 @@
         android:id="@+id/emptyHistory"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="EMPTY HISTORY"
+        android:text="@string/empty_history"
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
         android:textColor="@android:color/darker_gray"

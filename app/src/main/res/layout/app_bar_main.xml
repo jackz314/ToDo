@@ -5,8 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.jackz314.todo.MainActivity"
-    android:id="@+id/total_main_bar"
-    >
+    android:id="@+id/total_main_bar">
     <include
         android:id="@+id/include"
         layout="@layout/content_main"
@@ -50,7 +49,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/selection_toolbar_title"
-                    android:layout_gravity="center_vertical" />
+                    android:layout_gravity="center_vertical"
+                    android:textSize="20sp"
+                    android:textColor="@color/tab_white"/>
             </LinearLayout>
 
         </android.support.v7.widget.Toolbar>
@@ -58,9 +59,28 @@
         <android.support.v7.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:background="?attr/colorPrimary"
-            app:popupTheme="@style/AppTheme.PopupOverlay" />
+            android:minHeight="?attr/actionBarSize">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/toolbar_title"
+                    android:layout_gravity="center_vertical"
+                    android:typeface="serif"
+                    android:textSize="22sp"
+                    android:text="@string/app_name"
+                    android:textColor="@color/tab_white"/>
+            </LinearLayout>
+
+        </android.support.v7.widget.Toolbar>
+
 
         <android.support.design.widget.TabLayout
             android:id="@+id/tabs_layout"
@@ -68,6 +88,7 @@
             android:layout_height="?attr/actionBarSize"
             app:layout_collapseMode="pin"
             app:tabMode="fixed"
+            app:tabTextAppearance="@style/tab_text"
             app:tabGravity="fill" />
 
     </android.support.design.widget.AppBarLayout>

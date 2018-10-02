@@ -131,6 +131,7 @@ import static com.jackz314.todo.DatabaseManager.TAG;
 import static com.jackz314.todo.DatabaseManager.TAG_COLOR;
 import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.countOccurrences;
+import static com.jackz314.todo.MainActivity.deleteReminder;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
 import static com.jackz314.todo.MainActivity.getColoredCheckBoxColorStateList;
 import static com.jackz314.todo.MainActivity.getDateString;
@@ -138,7 +139,7 @@ import static com.jackz314.todo.MainActivity.getProperDateString;
 import static com.jackz314.todo.MainActivity.isStringContainAnyOfTheseWords;
 import static com.jackz314.todo.MainActivity.removeCharAt;
 import static com.jackz314.todo.MainActivity.scheduleReminder;
-import static com.jackz314.todo.MainActivity.setCursorColor;
+import static com.jackz314.todo.MainActivity.setEditTextCursorColor;
 import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 //todo add possible side bar and date labels
@@ -237,6 +238,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         if(hidden){
+            Toast.makeText(getContext(), "HIDDEN", Toast.LENGTH_SHORT).show();
             setOutOfSearchMode();
             setOutOfSelectionMode();
         }
@@ -518,15 +520,13 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }
                 }
                 oldResult = "";
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
+                new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         recognitionProgressView.setVisibility(View.GONE);
                         proFab.setVisibility(View.VISIBLE);
                         recognitionProgressView.stop();
                         recognitionProgressView.play();
-                        Handler delayHandler = new Handler();
                         noInterruption = true;
                         fabProgressBar.setVisibility(View.VISIBLE);
                         fabProgressBar.getProgressDrawable().setColorFilter(ColorUtils.lighten(themeColor,0.4), PorterDuff.Mode.MULTIPLY);
@@ -535,7 +535,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         fab.setVisibility(View.VISIBLE);
                         //fabProgressBar.setSecondaryProgress(100);
                         fakeProgress(1200);//fake progress bar for 2000ms
-                        delayHandler.postDelayed(new Runnable() {
+                        new Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 if(noInterruption && fab.getVisibility() == View.VISIBLE){
@@ -1154,11 +1154,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 }else{
 
                     if (!modifyId.getText().toString().equals("")){
-                        Bundle bundle = new Bundle();
+                     /* Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "update_notes");
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "updated notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
-                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);*/
                         updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
                         insertData(input.getText().toString());
@@ -1166,11 +1166,11 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         //todoList.setDivider(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors));
                         //todoList.setDividerHeight(2);
                         todoList.smoothScrollToPosition(0);
-                        Bundle bundle = new Bundle();
+                        /* Bundle bundle = new Bundle();
                         bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "new_notes");
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "new notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
-                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+                        mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);*/
                     }
                     hideKeyboard();
                     displayAllNotes();
@@ -1276,20 +1276,20 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             @Override
             public void onClick(View v) {
                 doubleClickCount++;
-                Handler handler = new Handler();
-                Runnable r = new Runnable() {
+                new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         doubleClickCount = 0;
                     }
-                };
-                handler.postDelayed(r,250);
+                },250);
                 if (doubleClickCount == 2) {//double clicked
                     doubleClickCount = 0;
                     todoList.smoothScrollToPosition(0);//smooth scroll to top
                 }
             }
         });
+                sharedPreferences.edit().putBoolean(getContext().getString(R.string.font_overriden_key), false).apply();//prepare for the next launch o the app to override the font again
+
     }
 
     @Override
@@ -1468,9 +1468,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     }
 
     public void removeSelectedId(long id){
-        selectedId.remove(selectedId.indexOf(id));
+        selectedId.remove(id);
         String data = todoSql.getOneTitleInTODO(id);
-        selectedContent.remove(selectedContent.indexOf(data));
+        selectedContent.remove(data);
         selectAll = false;
         if(selectedId.size() < todoSql.getAllData().getCount()){
             selectAllBox.setChecked(false);
@@ -1521,7 +1521,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             fab.setBackgroundTintList(ColorStateList.valueOf(themeColor));
             input.setTextColor(textColor);
             input.setTextSize(24);
-            setCursorColor(input,themeColor);//todo not working in Android P (seems like it), find a fix
+            setEditTextCursorColor(input,themeColor);//todo not working in Android P (seems like it), find a fix
             if(ColorUtils.determineBrightness(backgroundColor) < 0.5){// dark
                 emptyTextView.setTextColor(Color.parseColor("#7FFFFFFF"));
             }else {//bright
@@ -1936,7 +1936,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         searchView.setIconifiedByDefault(true);
         searchView.setMaxWidth(Integer.MAX_VALUE);
         EditText searchViewTextField = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
-        MainActivity.setCursorColor(searchViewTextField,Color.WHITE);
+        MainActivity.setEditTextCursorColor(searchViewTextField,Color.WHITE);
         LinearLayout searchBar = searchView.findViewById(R.id.search_bar);
         searchBar.setLayoutTransition(new LayoutTransition());
         Spannable hintText = new SpannableString(getString(R.string.search_hint));
@@ -2390,6 +2390,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     }
                     Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
                     getActivity().getContentResolver().update(uri, values, null, null);
+                    scheduleReminder(id, getContext());
                 }
             }
         }).start();//end of thread
@@ -2690,6 +2691,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         String note = todoSql.getOneTitleInTODO(id);
         getActivity().getContentResolver().delete(uri, null, null);
         ArrayList<String> tags = determineContainedTags(note);
+
+        //remove set reminders for it
+        if(todoSql.hasReminder(id)){
+            deleteReminder(id,getContext());
+        }
+
         if(!(tags == null)){//if contains tags
             for(String tag : tags){
                 if(!todoSql.isTagInUse(tag)){//if the deleted note is the last one containing the tag, delete the tag from tag database
