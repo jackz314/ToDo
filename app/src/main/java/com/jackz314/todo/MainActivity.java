@@ -1550,8 +1550,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }
                     recurFinalStr += " (" + exactTime + ")";
                     break;
-                }case "WEEK":{//week use normal mon,tue,wed until it's more than every week (like every 2 weeks), then use x weeks (mon/tue/wed)
-                    SimpleDateFormat format = new SimpleDateFormat("EEEEE", Locale.getDefault());
+                }case "WEEK":{//week use normal monday,tuesday,wednesday until it's more than every week (like every 2 weeks), then use x weeks (mon/tue/wed)
+                    SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
                     recurFinalStr = format.format(recentRecurrenceDate);
                     if(!recurValue.equals("1")){
                         recurFinalStr = recurValue + " weeks";
@@ -1590,7 +1590,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     recurFinalStr = format.format(recentRecurrenceDate);
                     break;
                 }case "DAY_OF_WEEK":{//day of a week
-                    SimpleDateFormat format = new SimpleDateFormat("EEEEE", Locale.getDefault());
+                    SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
                     recurFinalStr = format.format(recentRecurrenceDate);
                     if(!recurValue.equals("1")){
                         recurFinalStr = recurValue + " " + format.format(recentRecurrenceDate) + "s";
@@ -1669,7 +1669,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return recurFinalStr;
     }
 
-    public static String generateSimpleRecurrenceStr(ArrayList<String> recurStat, boolean... containWeekDayIndicator){
+    //context used to get string
+    public static String generateSimpleRecurrenceStr(Context context, ArrayList<String> recurStat, boolean... containWeekDayIndicator){
         String recurFinalStr = "";
         if(recurStat != null && recurStat.size() == 3){
             String recurUnit = recurStat.get(0);
@@ -1720,7 +1721,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                             recurFinalStr = recurValue + " weeks";
                         }
                     }else {//add weekday indicator(default)
-                        SimpleDateFormat format = new SimpleDateFormat("EEEEE", Locale.getDefault());
+                        SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
                         recurFinalStr = format.format(recentRecurrenceDate);
                         if(!recurValue.equals("1")){
                             recurFinalStr = recurValue + " weeks";
@@ -1748,7 +1749,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     recurFinalStr = "day";
                     break;
                 }case "DAY_OF_WEEK":{//day of a week
-                    SimpleDateFormat format = new SimpleDateFormat("EEEEE", Locale.getDefault());
+                    SimpleDateFormat format = new SimpleDateFormat("EEEE", Locale.getDefault());
                     recurFinalStr = format.format(recentRecurrenceDate);
                     if(!recurValue.equals("1")){
                         recurFinalStr = recurValue + " " + format.format(recentRecurrenceDate) + "s";
@@ -1765,11 +1766,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     recurFinalStr = format.format(recentRecurrenceDate);
                     break;
                 }case "MONTH_OF_YEAR|DAY_OF_MONTH":{//day of a year
-                    recurFinalStr = "year on this day";
+                    recurFinalStr = context.getString(R.string.every_year_this_day);
                     break;
                 }case "MONTH_OF_YEAR|DAY_OF_MONTH|HOURS_OF_DAY|MINUTES_OF_HOUR":
                 case "MONTH_OF_YEAR|DAY_OF_MONTH|HOURS_OF_DAY|MINUTES_OF_HOUR|SECONDS_OF_MINUTE":{
-                    recurFinalStr = "year on this day at this time";
+                    recurFinalStr = context.getString(R.string.every_year_this_time);
                     break;
                 }default:{
                     if(recurUnit.isEmpty()){//no unit stored then use default parse method
@@ -1778,7 +1779,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         recurFinalStr = recurUnit.replace("_", " ").toLowerCase();
                         recurFinalStr = MainActivity.capitalize(recurFinalStr);
                         if(recurFinalStr.contains("Mothers") || recurFinalStr.contains("Fathers")){
-                            recurFinalStr = insertToString(recurFinalStr,"'",5);//insert "'" to Mothers/Fathers
+                            recurFinalStr = insertToString(recurFinalStr,"'",5);//insert "'" to Mothers/Fathers (Mothers -> Mother's)
                         }
                     }
                     break;
@@ -2154,9 +2155,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 thenUpRemindTime = remindDates.get(2);
             }
         }
-        SimpleDateFormat timeNotificationDateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        SimpleDateFormat timeNotificationDateFormat;
+        SimpleDateFormat wholeTimeDateFormat;
+        //24 hr mode
+        if(context.getSharedPreferences("settings_data", MODE_PRIVATE).getBoolean(context.getString(R.string.twenty_four_hour_mode_key), true)){
+            timeNotificationDateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            wholeTimeDateFormat = timeNotificationDateFormat;//same pattern for 24 hr's format
+        } else {//12 hr mode
+            timeNotificationDateFormat = new SimpleDateFormat("hh:mm aa", Locale.getDefault());
+            wholeTimeDateFormat = new SimpleDateFormat("h aa",Locale.getDefault());
+        }
         SimpleDateFormat dateNotificationDateFormat = new SimpleDateFormat("MMM d",Locale.getDefault());
-        SimpleDateFormat wholeTimeDateFormat = new SimpleDateFormat("hh aa",Locale.getDefault());
         SpannableStringBuilder notificationContent = new SpannableStringBuilder();
         SpannableStringBuilder nowUpTimeStr;
         StringBuilder nextUpTimeStr, thenUpTimeStr;
@@ -2188,7 +2197,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             int coincideCount = 0;
             StringBuilder nowUpRecurStrBuilder = new StringBuilder();
             for(ArrayList<String> recurStat : recurrenceStats){
-                Date recurDate = null;
+                Date recurDate;
                 try {
                     recurDate = dateFormat.parse(recurStat.get(2));
                 } catch (ParseException e) {
@@ -2198,10 +2207,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 if(recurDate.equals(nowRemindTime)){
                     coincideCount++;
                     if(coincideCount != 4){
-                        nowUpRecurStrBuilder.append(generateSimpleRecurrenceStr(recurStat));
+                        nowUpRecurStrBuilder.append(generateSimpleRecurrenceStr(context, recurStat));
                         nowUpRecurStrBuilder.append(" & ");
                     }else {
-                        nowUpRecurStrBuilder.replace(nowUpRecurStrBuilder.length() - 3,nowUpRecurStrBuilder.length(),"…");//replace " & " with "…"
+                        nowUpRecurStrBuilder.replace(nowUpRecurStrBuilder.length() - 3, nowUpRecurStrBuilder.length(),"…");//replace " & " with "…"
                         break;
                     }
                 }
@@ -2227,7 +2236,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 Date genRecurDate = generateNextRecurDate(recurrenceStats.get(i));
 
                 if(i < recurrenceStats.size() - 1){//if the current loop is not the last one, support nextRecurDate
-                    Date recurDate2 = null;
+                    Date recurDate2;
                     try {
                         recurDate2 = dateFormat.parse(recurrenceStats.get(i + 1).get(2));
                     } catch (ParseException e) {
@@ -2288,7 +2297,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             //determine thenUpDate
             for(int i = 0; i < recurrenceStats.size(); i++){
-                Date recurDate = null;
+                Date recurDate;
                 try {
                     recurDate = dateFormat.parse(recurrenceStats.get(i).get(2));
 
@@ -2306,12 +2315,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }
                     if(recurDate.compareTo(thenUpRemindTime) <= 0){
                         Date genRecurDate = recurDate;
-                        while (true){//use while loop to get a closest one after nextUp
-                            genRecurDate = generateNextRecurDate(updateRecurStatWithNewDate(recurrenceStats.get(i),genRecurDate));
-                            if(genRecurDate == null || genRecurDate.after(nextUpRemindTime)){//if detected should be terminated or met requirement, break from loop to let other parts handle
-                                break;
-                            }
-                        }
+                        //if detected should be terminated or met requirement, break from loop to let other parts handle
+                        do {//use while loop to get a closest one after nextUp
+                            genRecurDate = generateNextRecurDate(updateRecurStatWithNewDate(recurrenceStats.get(i), genRecurDate));
+                        } while (genRecurDate != null && !genRecurDate.after(nextUpRemindTime));
                         if(recurDate2.after(nextUpRemindTime)){//only compare if the next base date is after nextUp, which only then would be valid for thenUp
                             if(genRecurDate != null){
                                 if(genRecurDate.compareTo(recurDate2) <= 0){
@@ -2355,17 +2362,22 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
         }
+
+        //build notification content
         notificationContent.append(nowUpTimeStr);//start with the most recent reminder time
+        SpannableStringBuilder bigNotificationContent = new SpannableStringBuilder(nowUpTimeStr);
         if(isOverdue) notificationContent.append("\n");
+        bigNotificationContent.append("\n");
         if(nextUpRemindTime != null && nextUpRemindTime.getTime() != Long.MAX_VALUE){
             if(!isOverdue) notificationContent.append(context.getString(R.string.reminder_notification_splitter));
             notificationContent.append(context.getString(R.string.reminder_notification_next_up));
+            bigNotificationContent.append(context.getString(R.string.reminder_notification_next_up));
             if(isToday(nextUpRemindTime)){
                 nextUpTimeStr = new StringBuilder(timeNotificationDateFormat.format(nextUpRemindTime));
             }else if(isTomorrow(nextUpRemindTime)){
                 nextUpTimeStr = new StringBuilder(context.getString(R.string.tomorrow) + " " + timeNotificationDateFormat.format(nextUpRemindTime));//tomorrow + time
             }else if(isInThisWeek(nextUpRemindTime) || isInNextWeek(nextUpRemindTime)){
-                SimpleDateFormat weekDayFormat = new SimpleDateFormat("EEEEE '('MMM d')' HH:mm",Locale.getDefault());
+                SimpleDateFormat weekDayFormat = new SimpleDateFormat("EEEE '('MMM d')' HH:mm",Locale.getDefault());
                 nextUpTimeStr = new StringBuilder(weekDayFormat.format(nextUpRemindTime));
                 if(isInNextWeek(nextUpRemindTime)){
                     nextUpTimeStr.insert(0, context.getString(R.string.next));
@@ -2385,7 +2397,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     if(i > 0 && i < nextUpRecurStats.size()){//add " & " in between
                         nextUpTimeStr.append(" & ");
                     }
-                    nextUpTimeStr.append(generateSimpleRecurrenceStr(nextUpRecurStat, containsWeekDayIndicator));
+                    nextUpTimeStr.append(generateSimpleRecurrenceStr(context, nextUpRecurStat, containsWeekDayIndicator));
                 }
                 nextUpTimeStr.append(")");
             }
@@ -2398,16 +2410,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
             notificationContent.append(nextUpTimeStr);
+            bigNotificationContent.append(nextUpTimeStr);
         }
         if(thenUpRemindTime != null && thenUpRemindTime.getTime() != Long.MAX_VALUE){
             notificationContent.append(context.getString(R.string.reminder_notification_splitter));
             notificationContent.append(context.getString(R.string.reminder_notification_then));
+            bigNotificationContent.append("\n");
+            bigNotificationContent.append(context.getString(R.string.reminder_notification_then));
             if(isToday(thenUpRemindTime)){
                 thenUpTimeStr = new StringBuilder(timeNotificationDateFormat.format(thenUpRemindTime));
             }else if(isTomorrow(thenUpRemindTime)){
                 thenUpTimeStr = new StringBuilder(context.getString(R.string.tomorrow) + " " + timeNotificationDateFormat.format(thenUpRemindTime));//tomorrow + time
             }else if(isInThisWeek(thenUpRemindTime) || isInNextWeek(thenUpRemindTime)){
-                SimpleDateFormat weekDayFormat = new SimpleDateFormat("EEEEE '('MMM d')' HH:mm",Locale.getDefault());
+                SimpleDateFormat weekDayFormat = new SimpleDateFormat("EEEE '('MMM d')' HH:mm",Locale.getDefault());
                 thenUpTimeStr = new StringBuilder(weekDayFormat.format(thenUpRemindTime));
                 if(isInNextWeek(thenUpRemindTime)){
                     thenUpTimeStr.insert(0, context.getString(R.string.next));
@@ -2428,7 +2443,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     if(i > 0 && i < nextUpRecurStats.size()){//add " & " in between
                         thenUpTimeStr.append(" & ");
                     }
-                    thenUpTimeStr.append(generateSimpleRecurrenceStr(thenUpRecurStat, containsWeekDayIndicator));
+                    thenUpTimeStr.append(generateSimpleRecurrenceStr(context, thenUpRecurStat, containsWeekDayIndicator));
                 }
                 thenUpTimeStr.append(")");
             }
@@ -2441,6 +2456,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
             notificationContent.append(thenUpTimeStr);
+            bigNotificationContent.append(thenUpTimeStr);
         }
 
                 /*if(recentRecurDate.compareTo(nowRemindTime) == 0 || recentRecurDate.compareTo(nextUpRemindTime) == 0 || recentRecurDate.compareTo(thenUpRemindTime) == 0){
@@ -2452,6 +2468,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //} //unnecessary
 
         //generate notification
+        //set notification priorities
         Notification.Builder reminderNotifBuilder = new Notification.Builder(context);//set different notification importance level based on the reminder's importance level
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             reminderNotifBuilder = new Notification.Builder(context,NORMAL_CHANNEL_ID);
@@ -2471,6 +2488,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         }
 
+        //set notification intents
         //default click notification action intent
         // Create an Intent for the activity you want to start
         Intent resultIntent = new Intent(context, MainActivity.class);
@@ -2511,9 +2529,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         finishIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
         PendingIntent finishPendingIntent = PendingIntent.getBroadcast(context, 0, finishIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
+        //set notification properties
         reminderNotifBuilder.setSmallIcon(R.mipmap.ic_launcher);
         reminderNotifBuilder.setContentTitle(formatNotificationText(title,context));
         reminderNotifBuilder.setContentText(notificationContent);
+        reminderNotifBuilder.setStyle(new Notification.BigTextStyle()
+                .bigText(bigNotificationContent));//add ability to expand notification
         reminderNotifBuilder.setGroup(REMINDER_NOTIFICATION_GROUP);
         reminderNotifBuilder.setContentIntent(defaultClickPendingIntent);
         reminderNotifBuilder.setCategory(CATEGORY_REMINDER);
@@ -2523,6 +2544,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         reminderNotifBuilder.addAction(new Notification.Action(R.drawable.ic_done_black_24dp,context.getString(R.string.finish),finishPendingIntent));
         //snooze action (choose snooze to time)
         reminderNotifBuilder.addAction(new Notification.Action(R.drawable.ic_snooze_black_24dp,context.getString(R.string.later),snoozePendingIntent));
+
         return reminderNotifBuilder.build();
     }
 
@@ -2635,7 +2657,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 if(dateDiffValue.equals("-1") && dateDiffUnit.equals("DAY")){
                     return context.getString(R.string.yesterday);
                 }
-                return dateDiffValue + " " + capitalize(dateDiffUnit.toLowerCase()) + " " + context.getString(R.string.ago);
+                //remove the negative sign
+                return dateDiffValue.substring(1) + " " + capitalize(dateDiffUnit.toLowerCase()) + " " + context.getString(R.string.ago);
             }else {//in VV UU
                 if(dateDiffValue.equals("1") && dateDiffUnit.equals("DAY")){
                     return context.getString(R.string.tomorrow);

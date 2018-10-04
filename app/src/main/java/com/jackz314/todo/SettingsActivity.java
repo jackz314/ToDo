@@ -130,7 +130,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public SharedPreferences sharedPreferences;
     public boolean storageBackupPerDenied = false, storageRestorePerDenied = false;
     public String pathSelectorPath = "", fileSelected = "";
-    SwitchPreference autoClearSwitch, orderSwitch, mainHistorySwitch, darkThemeSwitch, mainOverdueSwitch, normalOverdueSwitch;
+    SwitchPreference autoClearSwitch, orderSwitch, mainHistorySwitch, darkThemeSwitch, mainOverdueSwitch, normalOverdueSwitch, twentyFourHourSwitch;
     ThemeListPreference themeSelector;
     Preference wipeButton, themeColorSetting, textColorSetting, backgroundColorSetting, notificationSettings,
         resetAppearanceData, textSize, backupData, restoreData, chooseClrFrequency, restorePurchase,
@@ -220,6 +220,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         setColorForPref(normalOverdueSwitch);
         setColorForPref(notificationSettings);
         setColorForPref(fontSetting);
+        setColorForPref(twentyFourHourSwitch);
         Drawable themeColorD = getDrawable(R.drawable.ic_format_color_fill_black_24dp);
         themeColorD.setColorFilter(themeColor, PorterDuff.Mode.SRC);
         Drawable textColorD = getDrawable(R.drawable.ic_text_format_black_24dp);
@@ -283,6 +284,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         normalOverdueSwitch = (SwitchPreference)findPreference(getString(R.string.normal_overdue_switch));
         notificationSettings = findPreference(getString(R.string.notification_settings));
         fontSetting = findPreference(getString(R.string.font_setting_key));
+        twentyFourHourSwitch = (SwitchPreference) findPreference(getString(R.string.twenty_four_hour_mode_key));
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setColorPreferencesSettings();
         Window window = this.getWindow();
@@ -393,13 +395,14 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
         darkThemeSwitch.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
-            public boolean onPreferenceChange(Preference preference, Object o) {
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
                 SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putBoolean(getString(R.string.dark_theme_key),(boolean)o);
-                editor.commit();
-                darkThemeSwitch.setChecked(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false));
-                if(sharedPreferences.getBoolean(getString(R.string.dark_theme_key),false)){//if changed to dark theme
+                boolean switchState = (boolean)newValue;
+                editor.putBoolean(getString(R.string.dark_theme_key), switchState);
+                editor.apply();
+                darkThemeSwitch.setChecked(switchState);
+                if(switchState){//if changed to dark theme
                     editor.putInt(getString(R.string.text_color_key), getResources().getColor(dark_theme_text_default_color));
                     editor.putInt(getString(R.string.background_color_key), getResources().getColor(dark_theme_background_default_color));
                     textColor = getResources().getColor(dark_theme_text_default_color);
@@ -1491,6 +1494,21 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
              return false;
          }
      });
+
+//     twentyFourHourSwitch.setSwitchTextOff(getString(R.string.twenty_four_hour_mode_content_off));
+//     twentyFourHourSwitch.setSwitchTextOn(getString(R.string.twenty_four_hour_mode_content_on));
+     /*twentyFourHourSwitch.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+         @Override
+         public boolean onPreferenceChange(Preference preference, Object newValue) {
+             SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
+             SharedPreferences.Editor editor = sharedPreferences.edit();
+             boolean switchState = (boolean)newValue;
+             editor.putBoolean(getString(R.string.twenty_four_key), switchState);
+             editor.apply();
+             //twentyFourHourSwitch.setChecked(switchState);
+             return true;
+         }
+     });*/
 
      //end of settings
     }

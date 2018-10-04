@@ -65,7 +65,7 @@
             android:title="@string/notification_light_title" />
         <com.jackz314.todo.ColorSwitchPreference
             android:defaultValue="true"
-            android:key="@string/twenty_four_hour_mode"
+            android:key="@string/twenty_four_hour_mode_key"
             android:summaryOn="@string/twenty_four_hour_mode_content_on"
             android:summaryOff="@string/twenty_four_hour_mode_content_off"
             android:title="@string/twenty_four_hour_mode_title" />

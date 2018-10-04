@@ -149,7 +149,7 @@
     <string name="notification_light_title">Enable Reminder Blink Light</string>
     <string name="notification_light_content_on">Blink the device\'s LED when receives a reminder</string>
     <string name="notification_light_content_off">LED indicator turned off for reminder notifications</string>
-    <string name="twenty_four_hour_mode">twenty_four_hour_mode</string>
+    <string name="twenty_four_hour_mode_key">twenty_four_hour_mode_key</string>
     <string name="twenty_four_hour_mode_title">Use 24-hour format</string>
     <string name="twenty_four_hour_mode_content_on">13:00</string>
     <string name="twenty_four_hour_mode_content_off">1:00 PM</string>
@@ -287,7 +287,7 @@
     <string name="thanks_for_purchase">Thanks for your purchase!\nEnjoy your Ad free experience ;)</string>
     <string name="thanks_for_support">Thanks for your support! :-)</string>
     <string name="reminder_notification_next_up">"Next Up: "</string>
-    <string name="reminder_notification_splitter"> • </string>
+    <string name="reminder_notification_splitter">" • "</string>
     <string name="reminder_notification_then">"Then: "</string>
     <string name="reminder_notification_every">"Every "</string>
     <string name="next_year">Next year</string>
@@ -304,6 +304,8 @@
     <string name="hours">hours</string>
     <string name="ago">ago</string>
     <string name="in">in</string>
+    <string name="every_year_this_day">year on this day</string>
+    <string name="every_year_this_time">year at this time</string>
     <string name="reminder_snoozed">Reminder Snoozed!</string>
     <string name="normal_channel_name">Normal</string>
     <string name="important_channel_name">Important</string>
