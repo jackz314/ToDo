@@ -95,7 +95,7 @@ import static com.jackz314.todo.SetEdgeColor.setEdgeColor;
 
 public class TagsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 //todo selectall got data from wrong parameter, fix it.
-    public ArrayList<Long> selectedId = new ArrayList<>();
+    public ArrayList<Integer> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     private static final String[] PROJECTION = new String[]{ID, TITLE};//    private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
@@ -105,7 +105,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
     RecyclerView tagList;
     int themeColor,textColor,backgroundColor,textSize;
     int doubleClickCount = 0;
-    long selectedItemID;
+    int selectedItemID;
     SharedPreferences sharedPreferences;
     FloatingActionButton fab;
     ProgressFloatingActionButton proFab;
@@ -201,7 +201,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "updated notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-                        successModify = updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
+                        successModify = updateData(Integer.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
                         success = insertData(input.getText().toString());
                         int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
@@ -305,7 +305,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         ItemClickSupport.addTo(tagList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
-                long id = tagListAdapter.getItemId(position);
+                int id = (int)tagListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
                 if(isInSearchMode){
@@ -344,7 +344,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         ItemClickSupport.addTo(tagList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
-                long id = tagListAdapter.getItemId(position);
+                int id = (int)tagListAdapter.getItemId(position);
               //  Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
               //  v.vibrate(30);
                 if (isInSelectionMode) {
@@ -423,7 +423,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                                         }
                                     });
                                 }
-                                long id;
+                                int id;
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectAll = true;
@@ -669,17 +669,17 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
-            if (isInSelectionMode && selectedId.contains(viewHolder.getItemId())) {
-                removeSelectedId(viewHolder.getItemId());
+            if (isInSelectionMode && selectedId.contains((int)viewHolder.getItemId())) {
+                removeSelectedId((int)viewHolder.getItemId());
             }
-            final String finishedContent = todosql.getOneTitleInTODO(viewHolder.getItemId());
-            finishData(viewHolder.getItemId());
+            final String finishedContent = todosql.getOneTitleInTODO((int)viewHolder.getItemId());
+            finishData((int)viewHolder.getItemId());
             Snackbar.make(main, getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     insertData(finishedContent);
-                    long lastHistoryId = todosql.getIdOfLatestDataInHistory();
-                    todosql.deleteFromHistory(String.valueOf(lastHistoryId));
+                    int lastHistoryId = todosql.getIdOfLatestDataInHistory();
+                    todosql.deleteFromHistory(lastHistoryId);
                     displayAllNotes();
                 }
             }).show();
@@ -740,7 +740,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }*/
 
-    public void addSelectedId(long id){
+    public void addSelectedId(int id){
         selectedId.add(0,id);
         String data = todosql.getOneTitleInTODO(id);
         selectedContent.add(0,data);
@@ -768,7 +768,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         selectionTitle.setText(count + getString(R.string.selection_mode_title));
     }
 
-    public void removeSelectedId(long id){
+    public void removeSelectedId(int id){
         selectedId.remove(id);
         String data = todosql.getOneTitleInTODO(id);
         selectedContent.remove(data);
@@ -788,7 +788,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
         CLONESelectedContent.clear();
 
-        for(long id : selectedId){
+        for(int id : selectedId){
             finishData(id);
         }
         final int size = selectedId.size();
@@ -809,7 +809,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
 
     public void deleteSetOfData(){
         CLONESelectedContent.clear();
-        for(long id : selectedId){
+        for(int id : selectedId){
             deleteData(id);
         }
         CLONESelectedContent = new ArrayList<>(selectedContent);
@@ -841,7 +841,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         } else return null;
     }
 
-    public void finishData(long id){
+    public void finishData(int id){
         ContentValues cv = new ContentValues();
         String data = todosql.getOneTitleInTODO(id);
         cv.put(TITLE,data);
@@ -850,7 +850,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         getContentResolver().insert(DatabaseContract.Item.HISTORY_URI, cv);
     }
 
-    public void deleteData(long id){
+    public void deleteData(int id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         String note = todosql.getOneTitleInTODO(id);
         getContentResolver().delete(uri, null, null);
@@ -909,7 +909,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
         getSupportLoaderManager().restartLoader(1234, bundle, TagsActivity.this);
     }
 
-    public int updateData(long id, String title){
+    public int updateData(int id, String title){
         if (!title.isEmpty()) {
             ContentValues values = new ContentValues();
             values.put(TITLE, title);
@@ -1272,7 +1272,7 @@ public class TagsActivity extends AppCompatActivity implements LoaderManager.Loa
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    final int id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
                     String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));

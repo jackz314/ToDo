@@ -31,7 +31,6 @@ import android.preference.RingtonePreference;
 import android.preference.SwitchPreference;
 import android.provider.DocumentsContract;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBar;
@@ -56,7 +55,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.NumberPicker;
 import android.widget.ProgressBar;
@@ -1087,7 +1085,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
              final ProgressBar fontLoadBar = dialogView.findViewById(R.id.font_list_load_bar);
              final RecyclerView fontListRecyclerView = dialogView.findViewById(R.id.font_list_recycler_view);
              final Spinner fontOrderSpinner = dialogView.findViewById(R.id.font_order_spinner);
-             EditText fontSearchInput = dialogView.findViewById(R.id.font_setting_search_edittext);
+             final EditText fontSearchInput = dialogView.findViewById(R.id.font_setting_search_edittext);
+             final TextView emptyFontSearch = dialogView.findViewById(R.id.empty_font_list_search);
              final SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
              final SharedPreferences.Editor sharedPrefEditor = sharedPreferences.edit();
              final String[] fontOrder = {sharedPreferences.getString(getString(R.string.font_order_key),"popularity")};
@@ -1117,7 +1116,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
              //set font list stuff
              fontListRecyclerView.setLayoutManager(new LinearLayoutManager(SettingsActivity.this));
              final ArrayListRecyclerAdapter[] fontListAdapter = new ArrayListRecyclerAdapter[1];
-             fontListRecyclerView.setAdapter(new ArrayListRecyclerAdapter(null));//set empty adapter first then update
+             fontListRecyclerView.setAdapter(new ArrayListRecyclerAdapter(null,SettingsActivity.this));//set empty adapter first then update
              final DownloadFontList.FontListCallback fontListCallback = new DownloadFontList.FontListCallback() {
                  @Override
                  public void onFontListRetrieved(FontList fontListRetrieved) {//todo what the hell is going on here
@@ -1132,35 +1131,36 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      }
                      fontListRecyclerView.setVisibility(View.VISIBLE);
                      //System.out.println("Font list size: " + fontNamesArrayList.size());
-                     fontListAdapter[0] = new ArrayListRecyclerAdapter(fontNamesArrayList){
-                         @Override
-                         public void onBindViewHolder(@NonNull final ArrayRecyclerViewHolder holder, int position) {
-                             //todo performance improvement and test needed
-                             final String fontName = fontNamesArrayList.get(position);
-                             holder.mainText.setText(fontName);
-                             //set font here
-                             //run font requests in separated threads
-                             GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
-                                 @Override
-                                 public void onFontRetrieved(Typeface typeface) {
-                                     if(typeface != null){
-                                         holder.mainText.setTypeface(typeface);
-                                         System.out.println("Font Set: " + holder.mainText.getText());
-                                     }else {
-                                         System.out.println("TYPEFACE IS NULL");
-                                     }
-                                 }
-                                 @Override
-                                 public void onFontRequestError(int errorCode) {
-                                     System.out.println("Font request failed, error code: " + errorCode);
-                                     //Toast.makeText(SettingsActivity.this, SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG).show();
-                                 }
-                             };
-                             GetGoogleFont.requestGoogleFont(googleFontCallback, fontName,400,false,false, SettingsActivity.this);
-                         }
-                     };
+                     fontListAdapter[0] = new ArrayListRecyclerAdapter(fontNamesArrayList,SettingsActivity.this);
+
                      fontListRecyclerView.setAdapter(fontListAdapter[0]);
                      //System.out.println("adapter size: " + fontListRecyclerView.getAdapter().getItemCount());
+
+                     //search fonts
+                     fontSearchInput.addTextChangedListener(new TextWatcher() {
+                         @Override
+                         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                         }
+
+                         @Override
+                         public void onTextChanged(CharSequence s, int start, int before, int count) {
+                             //filter results here
+                             ((ArrayListRecyclerAdapter)fontListRecyclerView.getAdapter()).getFilter().filter(s);
+                         }
+
+                         @Override
+                         public void afterTextChanged(Editable s) {
+                            if(fontListAdapter[0].getFilteredItemCount() == 0){
+                                emptyFontSearch.setVisibility(View.VISIBLE);
+                                fontListRecyclerView.setVisibility(View.INVISIBLE);
+                            }else {
+                                emptyFontSearch.setVisibility(View.GONE);
+                                fontListRecyclerView.setVisibility(View.VISIBLE);
+                            }
+                         }
+                     });
+
                  }
 
                  @Override
@@ -1185,25 +1185,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
              setEditTextCursorColor(fontSearchInput, themeColor);
              fontLoadBar.getIndeterminateDrawable().setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
              //colors set
-
-             //search fonts
-             fontSearchInput.addTextChangedListener(new TextWatcher() {
-                 @Override
-                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-                 }
-
-                 @Override
-                 public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    //filter results here
-                     fontListAdapter[0].getFilter().filter(s);
-                 }
-
-                 @Override
-                 public void afterTextChanged(Editable s) {
-
-                 }
-             });
 
              //store selected value in shared preference
              fontOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -1262,7 +1243,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                      final boolean[] mItalic = {false};
                      final boolean[] mMono = {false};
                      final int[] mWeight = {400};
-                     LinearLayout settingLayout = fontDialogView.findViewById(R.id.specific_font_setting_layout);
+                     //LinearLayout settingLayout = fontDialogView.findViewById(R.id.specific_font_setting_layout);
                      //settingLayout.setVisibility(View.GONE);//don't show elements until the loading is done
                      final CheckBox italicCbox = fontDialogView.findViewById(R.id.font_italic_cbox);
                      final CheckBox monoCbox = fontDialogView.findViewById(R.id.fon_mono_cbox);

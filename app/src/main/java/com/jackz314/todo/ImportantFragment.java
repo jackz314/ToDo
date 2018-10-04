@@ -131,7 +131,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
     private static final String SELECTION = IMPORTANCE + " > 0";//ignore markdown signs when handling displaying notes //1 in sqlite means TRUE for boolean values
     private static final String SELECTION_WITH_QUERY = "REPLACE (title, '*', '')" + " LIKE ?" + " AND (" + SELECTION;//ignore markdown signs whe handling displaying notes
     public boolean isInSearchMode = false, isInSelectionMode = false;
-    public ArrayList<Long> selectedId = new ArrayList<>();
+    public ArrayList<Integer> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     public String searchText;
@@ -554,7 +554,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
-                long id = todoListAdapter.getItemId(position);
+                int id = (int)todoListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
                 if(isInSearchMode){
@@ -657,7 +657,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         ItemClickSupport.addTo(todoList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
-                long id = todoListAdapter.getItemId(position);
+                int id = (int)todoListAdapter.getItemId(position);
                 Vibrator v = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                 //v.vibrate(30);
                 if(isInSelectionMode){
@@ -737,7 +737,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                         }
                                     });
                                 }
-                                long id;
+                                int id;
                                 selectedId.clear();
                                 selectedContent.clear();
                                 selectAll = true;
@@ -751,7 +751,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                                     selectedContent.add(0,data);
                                 }while (cursor.moveToNext());
                                 String count = Integer.toString(selectedId.size());
-                                selectionTitle.setText(count + getString(R.string.selection_mode_title));
+                                String titleText = count + getString(R.string.selection_mode_title);
+                                selectionTitle.setText(titleText);
                             }
                         }
                     });
@@ -1008,17 +1009,18 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
-            if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
-                removeSelectedId(viewHolder.getItemId());
+            int id = (int)viewHolder.getItemId();
+            if(isInSelectionMode && selectedId.contains(id)){
+                removeSelectedId(id);
             }
-            final String finishedContent = databaseManager.getOneTitleInTODO(viewHolder.getItemId());
-            finishData(viewHolder.getItemId());
+            final String finishedContent = databaseManager.getOneTitleInTODO(id);
+            finishData(id);
             Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     insertData(finishedContent);
-                    long lastHistoryId = databaseManager.getIdOfLatestDataInHistory();
-                    databaseManager.deleteFromHistory(String.valueOf(lastHistoryId));
+                    int lastHistoryId = databaseManager.getIdOfLatestDataInHistory();
+                    databaseManager.deleteFromHistory(lastHistoryId);
                     displayAllNotes();
                 }
             }).show();
@@ -1095,7 +1097,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         todoList.requestFocus();
     }
 
-    public void addSelectedId(long id){
+    public void addSelectedId(int id){
         selectedId.add(0,id);
         String data = databaseManager.getOneTitleInTODO(id);
         selectedContent.add(0,data);
@@ -1123,7 +1125,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         selectionTitle.setText(count + getString(R.string.selection_mode_title));
     }
 
-    public void removeSelectedId(long id){
+    public void removeSelectedId(int id){
         selectedId.remove(id);
         String data = databaseManager.getOneTitleInTODO(id);
         selectedContent.remove(data);
@@ -1135,7 +1137,8 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             selectionToolBar.getMenu().clear();
         }else {
             String count = Integer.toString(selectedId.size());
-            selectionTitle.setText(count + getString(R.string.selection_mode_title));
+            String titleText = count + getString(R.string.selection_mode_title);
+            selectionTitle.setText(titleText);
         }
     }
 
@@ -1236,7 +1239,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    final int id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
                     String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
@@ -1399,7 +1402,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
         CLONESelectedContent.clear();
 
-        for(long id : selectedId){
+        for(int id : selectedId){
             finishData(id);
         }
         final int size = selectedId.size();
@@ -1420,7 +1423,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
 
     public void deleteSetOfData(){
         CLONESelectedContent.clear();
-        for(long id : selectedId){
+        for(int id : selectedId){
             deleteData(id);
         }
         CLONESelectedContent = new ArrayList<>(selectedContent);
@@ -1633,7 +1636,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
             emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(getString(R.string.empty_search_result));
         }else if(data.getCount() == 0 && !isInSearchMode){
-            System.out.println("EMPTY_IMPORTANT");
+            //System.out.println("EMPTY_IMPORTANT");
             emptyTextView.setVisibility(View.VISIBLE);
             emptyTextView.setText(R.string.empty_important_todolist);
         }else {
@@ -1666,7 +1669,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         } else return null;
     }
 
-    public void finishData(long id){
+    public void finishData(int id){
         ContentValues cv = new ContentValues();
         String data = databaseManager.getOneTitleInTODO(id);
         cv.put(TITLE,data);
@@ -1675,7 +1678,7 @@ public class ImportantFragment extends Fragment implements LoaderManager.LoaderC
         getActivity().getContentResolver().insert(DatabaseContract.Item.HISTORY_URI, cv);
     }
 
-    public void deleteData(long id){
+    public void deleteData(int id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
         String note = databaseManager.getOneTitleInTODO(id);

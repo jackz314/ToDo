@@ -2,6 +2,8 @@ package com.jackz314.todo;
 
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -91,7 +93,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dmitrymalkovich.android.ProgressFloatingActionButton;
-import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jackz314.dateparser.DateGroup;
@@ -133,6 +134,7 @@ import static com.jackz314.todo.DatabaseManager.TITLE;
 import static com.jackz314.todo.MainActivity.countOccurrences;
 import static com.jackz314.todo.MainActivity.deleteReminder;
 import static com.jackz314.todo.MainActivity.determineContainedTags;
+import static com.jackz314.todo.MainActivity.generateReminderNotification;
 import static com.jackz314.todo.MainActivity.getColoredCheckBoxColorStateList;
 import static com.jackz314.todo.MainActivity.getDateString;
 import static com.jackz314.todo.MainActivity.getProperDateString;
@@ -150,16 +152,16 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     private static final String SELECTION = "REPLACE (title, '*', '')" + " LIKE ?";
     public static final int TODO_LOADER_ID = 123, TAG_POPUP_LOADER_ID = 234, ACT_POPUP_LOADER_ID = 345;
     public boolean isInSearchMode = false, isInSelectionMode = false;
-    public ArrayList<Long> selectedId = new ArrayList<>();
+    public ArrayList<Integer> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public String searchText;
     private OnFragmentInteractionListener mListener;
-    private FirebaseAnalytics mFirebaseAnalytics;
-    private String todoTableId = "HAHA! this is the real one, gotcha";
+    //private FirebaseAnalytics mFirebaseAnalytics;
+    //private String todoTableId = "HAHA! this is the real one, gotcha";
     DatabaseManager todoSql;
     EditText input;
     FloatingActionButton fab;
-    TextView modifyId;
+    TextView modifyId;// avoid configuration change resets
     RecyclerView todoList, popupRecyclerView;
     View popupView = null;
     PopupWindow popupWindow;
@@ -382,7 +384,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
+        //mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
         sharedPreferences = getContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         input = getView().findViewById(R.id.input);
         modifyId = getView().findViewById(R.id.modify_id);
@@ -411,7 +413,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         });
         //speechRecognizer.setRecognitionListener(new speechListener());
         todoSql = new DatabaseManager(getContext());
-        todoTableId = "0x397821dc97276";
+        //todoTableId = "0x397821dc97276";
         //set tabs
         input.setTextIsSelectable(true);
         input.setFocusable(true);
@@ -618,7 +620,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         ItemClickSupport.addTo(todoList).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, final int position, final View view) {
-                long id = todoListAdapter.getItemId(position);
+                int id = (int)todoListAdapter.getItemId(position);
                 unSelectAll = false;
                 selectAll = false;
                 if(isInSearchMode){
@@ -721,7 +723,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         ItemClickSupport.addTo(todoList).setOnItemLongClickListener(new ItemClickSupport.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClicked(RecyclerView recyclerView, int position, final View view) {
-                long id = todoListAdapter.getItemId(position);
+                int id = (int)todoListAdapter.getItemId(position);
                 //Vibrator v = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                 //v.vibrate(30);
 
@@ -810,7 +812,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                         }
                                     });
                                 }
-                                long id;
+                                int id;
                                 selectedId.clear();
                                 selectedContent.clear();
                                 todoList.getAdapter().notifyDataSetChanged();
@@ -857,29 +859,38 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             }
 
             @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            public void onTextChanged(CharSequence charSequence, final int i, int i1, int i2) {
                 if(beforeText != null && (beforeText.substring(i, i + i1).contains("@") || beforeText.substring(i, i + i1).contains("#"))){//if one of the action/tag indicator has been deleted, delete the following spans as well
                     //Toast.makeText(getContext(),String.valueOf(i) + "|" + String.valueOf(i1) + "|" + String.valueOf(i2) + "|" + beforeText,Toast.LENGTH_SHORT).show();
-                    input.removeTextChangedListener(this);
-                    Editable editable = input.getText();
-                    int actPos1 = beforeText.indexOf("@", i);
-                    int tagPos1 = beforeText.indexOf("#", i);
-                    actPos1 = actPos1 == -1 ? Integer.MAX_VALUE : actPos1;
-                    tagPos1 = tagPos1 == -1 ? Integer.MAX_VALUE : tagPos1;
-                    int deletionStartPos = Math.min(actPos1, tagPos1);
-                    int actPos2 = beforeText.indexOf("@", deletionStartPos);
-                    int tagPos2 = beforeText.indexOf("#", deletionStartPos);
-                    actPos2 = actPos2 == -1 ? Integer.MAX_VALUE : actPos2;
-                    tagPos2 = tagPos2 == -1 ? Integer.MAX_VALUE : tagPos2;
-                    int deletionEndPos = Math.min(actPos2, tagPos2);
-                    TextAppearanceSpan[] spans = editable.getSpans(deletionStartPos, deletionEndPos, TextAppearanceSpan.class);
-                    for (TextAppearanceSpan span : spans) editable.removeSpan(span);
-                    input.addTextChangedListener(this);
+                    final TextWatcher textWatcher = this;
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            //coloring stuff in the background
+                            input.removeTextChangedListener(textWatcher);
+                            Editable editable = input.getText();
+                            int actPos1 = beforeText.indexOf("@", i);
+                            int tagPos1 = beforeText.indexOf("#", i);
+                            actPos1 = actPos1 == -1 ? Integer.MAX_VALUE : actPos1;
+                            tagPos1 = tagPos1 == -1 ? Integer.MAX_VALUE : tagPos1;
+                            int deletionStartPos = Math.min(actPos1, tagPos1);
+                            int actPos2 = beforeText.indexOf("@", deletionStartPos);
+                            int tagPos2 = beforeText.indexOf("#", deletionStartPos);
+                            actPos2 = actPos2 == -1 ? Integer.MAX_VALUE : actPos2;
+                            tagPos2 = tagPos2 == -1 ? Integer.MAX_VALUE : tagPos2;
+                            int deletionEndPos = Math.min(actPos2, tagPos2);
+                            TextAppearanceSpan[] spans = editable.getSpans(deletionStartPos, deletionEndPos, TextAppearanceSpan.class);
+                            for (TextAppearanceSpan span : spans) editable.removeSpan(span);
+                            input.addTextChangedListener(textWatcher);
+                        }
+                    });
+
                 }
             }
 
             @Override
             public void afterTextChanged(final Editable editable) {
+                //todo holidays take too long to process, improve speed, check if seperate thread is possible
                 String text = editable.toString();
                 beforeText = text;
                 //Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
@@ -1070,7 +1081,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         ItemClickSupport.addTo(popupRecyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
                             @Override
                             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
-                                long id = tagPopupAdapter.getItemId(position);
+                                int id = (int)tagPopupAdapter.getItemId(position);
                                 String tagColor = todoSql.getTagColor(typedTag);
                                 SpannableString completeTag = new SpannableString(todoSql.getTag(id));
                                 if(!tagColor.isEmpty()){
@@ -1159,7 +1170,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "updated notes"+input.getText().toString());
                         bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "function");
                         mFirebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);*/
-                        updateData(Long.valueOf(modifyId.getText().toString()),input.getText().toString());
+                        updateData(Integer.valueOf(modifyId.getText().toString()),input.getText().toString());
                     } else {
                         insertData(input.getText().toString());
                         int[] colors = {0, ColorUtils.lighten(textColor,0.6), 0};
@@ -1319,24 +1330,46 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         public void onSwiped(final RecyclerView.ViewHolder viewHolder, int direction) {
             unSelectAll = false;
             selectAll = false;
-            //if(isInSelectionMode && selectedId.contains(viewHolder.getItemId())){
-            //    removeSelectedId(viewHolder.getItemId());
+            //if(isInSelectionMode && selectedId.contains((int)viewHolder.getItemId())){
+            //    removeSelectedId((int)viewHolder.getItemId());
             //}
             if(direction == ItemTouchHelper.LEFT){
-                final String finishedContent = todoSql.getOneTitleInTODO(viewHolder.getItemId());
-                final long id = viewHolder.getItemId();
-                finishData(viewHolder.getItemId());
+                final String finishedContent = todoSql.getOneTitleInTODO((int)viewHolder.getItemId());
+                final int id = (int)viewHolder.getItemId();
+                finishData(id);
                 Snackbar.make(getView(), getString(R.string.note_finished_snack_text), Snackbar.LENGTH_LONG).setActionTextColor(themeColor).setAction(getString(R.string.snack_undo_text), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         insertData(finishedContent, id);
-                        long lastHistoryId = todoSql.getIdOfLatestDataInHistory();
-                        todoSql.deleteFromHistory(String.valueOf(lastHistoryId));
+                        int lastHistoryId = todoSql.getIdOfLatestDataInHistory();
+                        todoSql.deleteFromHistory(lastHistoryId);
                         displayAllNotes();
                     }
                 }).show();
             }else if(direction == ItemTouchHelper.RIGHT){
-
+                //todo temp test
+                int id = (int)viewHolder.getItemId();
+                if(todoSql.hasReminder(id)){
+                    Context context = getContext();
+                    NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+                    Notification reminderNotification;
+                    DatabaseManager todoSql = new DatabaseManager(context);
+                    reminderNotification = generateReminderNotification(context,todoSql.getOneDataInTODO(id));
+                    if (notificationManager != null && reminderNotification != null) {
+                        System.out.println("REMINDER NOTIFICATION FIRED");
+                        notificationManager.notify(id, reminderNotification);//fire notification
+                    }else if(reminderNotification == null){//unlikely to happen but will still notify user of such events happening as the matters needed to be reminded might be crucial to user
+                        Notification.Builder notificationBuilder = new Notification.Builder(context);
+                        notificationBuilder.setSmallIcon(R.mipmap.ic_launcher);
+                        notificationBuilder.setContentTitle(context.getString(R.string.failed_to_create_reminder));
+                        notificationBuilder.setContentText(context.getString(R.string.failed_to_create_reminder_detail));
+                        if (notificationManager != null) {
+                            notificationManager.notify(id, notificationBuilder.build());
+                        }else {
+                            Toast.makeText(context,"FAILED TO CREATE NotificationManager",Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
             }
         }
 
@@ -1358,7 +1391,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 if(dX < itemWidth * (-0.7)) {//short swipe section
                     Rect finishBond = new Rect();
                     textPaint.getTextBounds(getString(R.string.finish),0,getString(R.string.finish).length(), finishBond);
-                    Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_black_24dp);//draw finish icon
+                    Drawable finishIcon = ContextCompat.getDrawable(getContext(), R.drawable.ic_done_white_24dp);//draw finish icon
                     finishIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_ATOP);
                     int finishIconMargin = 40;
                     int intrinsicWidth = finishIcon.getIntrinsicWidth();
@@ -1388,7 +1421,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     int finishIconRight = itemView.getLeft() + iconMargin + intrinsicWidthFinish;
                     int finishIconTop = itemView.getTop() + (itemHeight - intrinsicHeightFinish)/2;
                     int finishIconBottom = finishIconTop + intrinsicHeightFinish;
-                    finishIcon.setBounds(finishIconLeft,finishIconTop,finishIconRight,finishIconBottom);
+                    finishIcon.setBounds(finishIconLeft, finishIconTop, finishIconRight, finishIconBottom);
                     finishIcon.draw(c);
                     c.drawText(getString(R.string.finish),itemView.getLeft() + iconMargin +finishIconRight,(((finishIconTop + finishIconBottom)/2) - (textPaint.descent()+textPaint.ascent())/2), textPaint );
                 }else{//long swipe section
@@ -1438,7 +1471,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         todoList.requestFocus();
     }
 
-    public void addSelectedId(long id){
+    public void addSelectedId(int id){
         selectedId.add(0,id);
         String data = todoSql.getOneTitleInTODO(id);
         selectedContent.add(0,data);
@@ -1467,7 +1500,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         selectionTitle.setText(count + getString(R.string.selection_mode_title));
     }
 
-    public void removeSelectedId(long id){
+    public void removeSelectedId(int id){
         selectedId.remove(id);
         String data = todoSql.getOneTitleInTODO(id);
         selectedContent.remove(data);
@@ -1640,7 +1673,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 @Override
                 public void onBindViewHolder(TodoViewHolder holder, Cursor cursor) {
                     super.onBindViewHolder(holder, cursor);
-                    final long id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
+                    final int id = cursor.getInt(cursor.getColumnIndex(DatabaseManager.ID));
                     String text = cursor.getString(cursor.getColumnIndex(DatabaseManager.TITLE));//get the text of the note
                     holder.todoText.setTextColor(textColor);
                     holder.cardView.setCardBackgroundColor(ColorUtils.darken(backgroundColor,0.01));
@@ -1810,8 +1843,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     public void finishSetOfData(){
         final ArrayList<String> cloneSelectedContent = new ArrayList<>(selectedContent);
-        final ArrayList<Long> cloneSelectedId = new ArrayList<>(selectedId);
-        for(long id : selectedId){
+        final ArrayList<Integer> cloneSelectedId = new ArrayList<>(selectedId);
+        for(int id : selectedId){
             finishData(id);
         }
         final int size = selectedId.size();
@@ -1821,7 +1854,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             public void onClick(View v) {
                 for (int i = 0; i < cloneSelectedId.size(); i++){
                     String content = cloneSelectedContent.get(i);
-                    long id = cloneSelectedId.get(i);
+                    int id = cloneSelectedId.get(i);
                     insertData(content, id);
                 }
                 todoSql.deleteTheLastCoupleOnesFromHistory(size);
@@ -1832,8 +1865,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     public void deleteSetOfData(){
         final ArrayList<String> cloneSelectedContent = new ArrayList<>(selectedContent);
-        final ArrayList<Long> cloneSelectedId = new ArrayList<>(selectedId);
-        for(long id : selectedId){
+        final ArrayList<Integer> cloneSelectedId = new ArrayList<>(selectedId);
+        for(int id : selectedId){
             deleteData(id);
         }
         setOutOfSelectionMode();
@@ -1843,7 +1876,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
             public void onClick(View v) {
                 for (int i = 0; i < cloneSelectedId.size(); i++){
                     String content = cloneSelectedContent.get(i);
-                    long id = cloneSelectedId.get(i);
+                    int id = cloneSelectedId.get(i);
                     insertData(content, id);
                 }
                 displayAllNotes();
@@ -2052,7 +2085,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     emptyTextView.setVisibility(View.VISIBLE);
                     emptyTextView.setText(getString(R.string.empty_search_result));
                 }else if(data.getCount() == 0 && !isInSearchMode){
-                    System.out.println("EMPTY_MAIN");
+                    //System.out.println("EMPTY_MAIN");
                     emptyTextView.setVisibility(View.VISIBLE);
                     emptyTextView.setText(R.string.empty_todolist);
                 }else {
@@ -2104,7 +2137,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
     //todo work on customized edittext, with clickable actions, tags, and links
 
     @SafeVarargs
-    public final void updateData(final long id, final String text, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr){
+    public final void updateData(final int id, final String text, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr){
         new Thread(new Runnable() {
 
             @Override
@@ -2113,6 +2146,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     ContentValues values = new ContentValues();
                     values.put(TITLE, text);
                     values.put(ID, id);
+                    Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
+                    //update to improve user experience
+                    getActivity().getContentResolver().update(uri, values, null, null);
                     //store action string orders
                     if(text.contains("@")){//contains @ functions
                         Date currentTime = new Date();//record current time asap
@@ -2213,14 +2249,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                     if(group.isRecurring()){
                                         String recurringUnit = "", recurringValue = "";
                                         Tree tree = group.getSyntaxTree();
-                                        while (true){
-                                            if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
-                                            if(tree.getChild(0).getText().equals("DATE_TIME")){
+                                        while (tree.getChildCount() > 0 && tree.getChild(0) != null) {
+                                            if (tree.getChild(0).getText().equals("DATE_TIME")) {
                                                 Tree parentTree = tree;
                                                 for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
                                                     tree = parentTree.getChild(i);
-                                                    while(true){//loop through a tree longitudinal (parent to child, units)
-                                                        if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                                    while (tree.getChildCount() > 0 && tree.getChild(0) != null) {//loop through a tree longitudinal (parent to child, units)
                                                         System.out.println("Tree getText: " + tree.getText());
                                                         StringBuilder unitTemp = new StringBuilder(tree.getText());
                                                         if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
@@ -2265,7 +2299,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                                         recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
                                                                     }
                                                                 }
-                                                            }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
+                                                            } else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
                                                                 recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
                                                                 if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
                                                                     recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
@@ -2276,46 +2310,45 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                         tree = tree.getChild(0);//continue to next loop
                                                     }
                                                     //todo check if all dates are covered and stored properly with debug
-                                                    //todo this doesn't run
                                                     ArrayList<String> recurringStat = new ArrayList<>();
-                                                    for(int j = 0; j < dates.size(); j++){
-                                                        if(dates.get(i).before(new Date())){//deal with past dates in recurring stats
+                                                    for (int j = 0; j < dates.size(); j++) {
+                                                        if (dates.get(i).before(new Date())) {//deal with past dates in recurring stats
                                                             //if explicitly indicated a past time, warn that stupid person/troll :)
                                                             String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
-                                                            if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                            if (isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)) {
                                                                 //BZZZZZZZZZZZZZZZZZZZZZZZ!!
                                                                 Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                                                     if (vibrator != null) {
-                                                                        vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                                        vibrator.vibrate(VibrationEffect.createWaveform(new long[]{200, 20, 20, 20, 30, 13, 12, 59, 100, 29, 20, 39, 250}, new int[]{255, 10, 255, 20, 253, 14, 255, 68, 255, 0, 255, 0, 255}, 3));
                                                                     }
-                                                                }else {
+                                                                } else {
                                                                     if (vibrator != null) {
-                                                                        vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                                        vibrator.vibrate(new long[]{0, 200, 20, 20, 20, 20, 20, 20, 20, 250}, 3);
                                                                     }
                                                                 }
-                                                                Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                                Toast.makeText(getContext(), getString(R.string.past_time_warning), Toast.LENGTH_LONG).show();
                                                             }//otherwise deal with them by adding time to it
                                                             //not dealing with other past date cases other than the following two
-                                                            if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                            if (recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")) {//increment a year to fix past time bg
                                                                 recurringStat.add(0, recurringUnit);
                                                                 recurringStat.add(1, recurringValue);
                                                                 SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
                                                                 Calendar calendar = Calendar.getInstance();
                                                                 calendar.setTime(dates.get(i));
-                                                                calendar.add(Calendar.YEAR,1);
+                                                                calendar.add(Calendar.YEAR, 1);
                                                                 recurringStat.add(2, dateFormat.format(calendar));
                                                             }
-                                                            if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                            if (recurringUnit.startsWith("HOURS_OF_DAY")) {//add one day
                                                                 recurringStat.add(0, recurringUnit);
                                                                 recurringStat.add(1, recurringValue);
                                                                 SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
                                                                 Calendar calendar = Calendar.getInstance();
                                                                 calendar.setTime(dates.get(i));
-                                                                calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                                calendar.add(Calendar.DAY_OF_YEAR, 1);
                                                                 recurringStat.add(2, dateFormat.format(calendar));
                                                             }
-                                                        }else {
+                                                        } else {
                                                             recurringStat.add(0, recurringUnit);
                                                             recurringStat.add(1, recurringValue);
                                                             SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
@@ -2324,9 +2357,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                         }
                                                     }
                                                     Date untilDate = group.getRecursUntil();//add until date
-                                                    if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
+                                                    if (untilDate.after(new Date())) {//skip if detected past time as untilDate, which is stupid and useless
                                                         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.US);
-                                                        recurringStat.add(3,dateFormat.format(untilDate));
+                                                        recurringStat.add(3, dateFormat.format(untilDate));
                                                     }
                                                     recurringStats.add(recurringStat);
                                                 }
@@ -2335,11 +2368,33 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                         }
                                     }
                                     for(int i = 0; i < dates.size(); i++){//eliminate past dates that are intentional, and correct the past dates to a future date if unintentional judging by input provided date units
-                                        if(dates.get(i).before(new Date())){
+                                        if(dates.get(i).before(new Date())){//deal with all past dates here
+                                            System.out.println("PAST: " + dates.get(i));
                                             Tree tree = group.getSyntaxTree().getChild(i);//gets each DATE_TIME subtree
+                                            //filter out other past times and correct intended future dates
+                                            // keep dates intended for a specific next year date. E.g: INPUT: Oct 1, NOW: Oct 2 2018, ORIGINAL PARSING: Oct 1 2018, INTENDED: Oct 1 2019.
                                             if(tree.getChild(0).getText().equals("EXPLICIT_DATE") && tree.getChild(0).getChild(0).getText().equals("MONTH_OF_YEAR") && !(tree.getChildCount() > 2 && tree.getChild(0).getChild(2).getText().equals("YEAR_OF"))){
-                                                remindDates.add(dates.get(i));
-                                            }//filter out other past times
+                                                System.out.println("add one year");
+                                                Calendar calendar = Calendar.getInstance();
+                                                calendar.setTime(dates.get(i));
+                                                calendar.add(Calendar.YEAR,1);//add one year
+                                                remindDates.add(calendar.getTime());
+                                            }//keep dates intended for a specific next year month (1st day of the month). E.g: INPUT: Sep, NOW: Oct 2018, ORIGINAL PARSING: Sep 1 2018, INTENDED: Sep 1 2019.
+                                            else if(tree.getChild(0).getText().equals("RELATIVE_DATE") && tree.getChild(0).getChild(0).getText().equals("SEEK") && tree.getChild(0).getChild(0).getChild(3).getText().equals("MONTH_OF_YEAR")){
+                                                System.out.println("add one year");
+                                                Calendar calendar = Calendar.getInstance();
+                                                calendar.setTime(dates.get(i));
+                                                calendar.add(Calendar.YEAR,1);//add one year
+                                                remindDates.add(calendar.getTime());
+                                            }//keep dates intended for a specific next day time. E.g: INPUT: 1pm, NOW: 4pm, ORIGINAL PARSING: 1pm today, INTENDED: 1pm tomorrow.
+                                            else if(tree.getChild(0).getText().equals("EXPLICIT_TIME") && tree.getChild(0).getChild(0).getText().equals("HOURS_OF_DAY")){
+                                                System.out.println("add one day");
+                                                Calendar calendar = Calendar.getInstance();
+                                                calendar.setTime(dates.get(i));
+                                                calendar.add(Calendar.DAY_OF_YEAR,1);//add one day
+                                                remindDates.add(calendar.getTime());
+                                            }
+                                            //otherwise discard the date
                                         }else {
                                             remindDates.add(dates.get(i));
                                         }
@@ -2356,7 +2411,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         if(remindDates.size() > 0){
                             Collections.sort(remindDates, new Comparator<Date>() {//sort dates from the most recent to the most distant
                                 @Override
-                                public int compare(Date o1, Date o2) {
+                                public int compare(Date o1, Date o2) {//merge sort
                                     if(o1 == null || o2 == null){
                                         return 0;
                                     }
@@ -2388,7 +2443,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
                         values.put(DATE_STRING_REFERENCES, arrayListToStrGson.toJson(dateStringReferences));//update the existing date string references if changes are made, otherwise this will just put the original references in again
                     }
-                    Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
                     getActivity().getContentResolver().update(uri, values, null, null);
                     scheduleReminder(id, getContext());
                 }
@@ -2407,7 +2461,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
     //todo add "at" as an alternative to "@" when detecting action string starts
     @SafeVarargs
-    public final void insertData(final String text, final long id, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr) {
+    public final void insertData(final String text, final int id, final ArrayList<ArrayList<Object>>... explicitDateReferencesArr) {
         new Thread(new Runnable() {
 
             @Override
@@ -2421,6 +2475,9 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                     if (id != -1) {
                         values.put(ID, id);
                     }
+                    //insert first to improve user experience, update with reminder and other extra data later
+                    Uri uri = getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
+                    int insertID = todoSql.getIdOfLatestDataInTODO();
                     //store action string orders
                     if(text.contains("@")){//contains @ functions
                         String cleanStr = text.replace("*","");
@@ -2476,14 +2533,15 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                         String recurringUnit = "", recurringValue = "";
                                         Tree tree = group.getSyntaxTree();
                                         System.out.println(tree.getChild(0).getText());
-                                        while(true){
-                                            if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
-                                            if(tree.getChild(0).getText().equals("DATE_TIME")) {//todo loop to DATE_TIME first, then do the rest of the work
+                                        while (tree.getChildCount() > 0 && tree.getChild(0) != null) {
+                                            if (tree.getChild(0).getText().equals("DATE_TIME")) {//todo loop to DATE_TIME first, then do the rest of the work
                                                 Tree parentTree = tree;
                                                 for (int i = 0; i <= tree.getChildCount(); i++) {//loop through bigger tree sub date units latitudinal (Date to Date) (Every DATE_TIME "object"/sub tree)
                                                     tree = parentTree.getChild(i);
-                                                    while(true){//loop through a tree longitudinal (parent to child, units)
-                                                        if(tree.getChildCount() <= 0 || tree.getChild(0) == null) break;
+                                                    do
+                                                    {//loop through a tree longitudinal (parent to child, units)
+                                                        if (tree.getChildCount() <= 0 || tree.getChild(0) == null)
+                                                            break;
                                                         System.out.println("Tree getText: " + tree.getText());
                                                         StringBuilder unitTemp = new StringBuilder(tree.getText());
                                                         if (!unitTemp.toString().isEmpty() && (unitTemp.toString().contains("_OF_") || unitTemp.toString().equals("SEEK"))) {//find the child that has the unit indicator
@@ -2528,7 +2586,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                                         recurringValue += "|" + tree.getParent().getParent().getChild(1).getChild(2).getChild(0).getText();//[MONTH]|[DAY]|[HOUR]|[MINUTE]|[SECOND]
                                                                     }
                                                                 }
-                                                            }else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
+                                                            } else if (recurringUnit.equals("HOURS_OF_DAY") && tree.getParent().getChildCount() > 1) {
                                                                 recurringValue = tree.getChild(0).getText() + "|" + tree.getParent().getChild(1).getChild(0).getText();//[HOUR]|[MINUTE]
                                                                 if (tree.getParent().getChildCount() > 2 && tree.getParent().getChild(2).getText().equals("SECONDS_OF_MINUTE")) {
                                                                     recurringUnit += "|SECONDS_OF_MINUTE";//adds second if exists
@@ -2537,45 +2595,50 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                             }
                                                         }
                                                         tree = tree.getChild(0);//continue to next loop
-                                                    }
+                                                    } while (true);
                                                     //todo check if all dates are covered and stored properly with debug
                                                     ArrayList<String> recurringStat = new ArrayList<>();
-                                                    for(int j = 0; j < dates.size(); j++){
-                                                        if(dates.get(i).before(new Date())){
-                                                            System.out.println("PAST & RECUR");
+                                                    for (int j = 0; j < dates.size(); j++) {
+                                                        if (dates.get(i).before(new Date())) {//Deal with all past and recur situations
+                                                            //System.out.println("PAST & RECUR");
                                                             //if explicitly indicated a past time, warn that stupid person/troll :)
                                                             String[] pastTimeIndicators = new String[]{"last sec", "last min", "last hr", "last hour", "yesterday", "last week", "last month", "last year"};
-                                                            if(isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)){
+                                                            if (isStringContainAnyOfTheseWords(group.getText().toLowerCase(), pastTimeIndicators)) {
                                                                 //BZZZZZZZZZZZZZZZZZZZZZZZ!!
                                                                 Vibrator vibrator = (Vibrator) getActivity().getSystemService(Context.VIBRATOR_SERVICE);
                                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                                                     if (vibrator != null) {
-                                                                        vibrator.vibrate(VibrationEffect.createWaveform(new long[] {200,20,20,20,30,13,12,59,100,29,20,39,250}, new int[] {255,10,255,20,253,14,255,68,255,0,255,0,255}, 3));
+                                                                        vibrator.vibrate(VibrationEffect.createWaveform(new long[]{200, 20, 20, 20, 30, 13, 12, 59, 100, 29, 20, 39, 250}, new int[]{255, 10, 255, 20, 253, 14, 255, 68, 255, 0, 255, 0, 255}, 3));
                                                                     }
-                                                                }else {
+                                                                } else {
                                                                     if (vibrator != null) {
-                                                                        vibrator.vibrate(new long[] {0,200,20,20,20,20,20,20,20,250},3);
+                                                                        vibrator.vibrate(new long[]{0, 200, 20, 20, 20, 20, 20, 20, 20, 250}, 3);
                                                                     }
                                                                 }
-                                                                Toast.makeText(getContext(),getString(R.string.past_time_warning),Toast.LENGTH_LONG).show();
+                                                                getActivity().runOnUiThread(new Runnable() {
+                                                                    @Override
+                                                                    public void run() {
+                                                                        Toast.makeText(getContext(), getString(R.string.past_time_warning), Toast.LENGTH_LONG).show();
+                                                                    }
+                                                                });
                                                             }//otherwise deal with them by adding time to it
-                                                            if(recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")){//increment a year to fix past time bg
+                                                            if (recurringUnit.startsWith("MONTH_OF_YEAR") && !recurringUnit.endsWith("YEAR_OF")) {//increment a year to fix past time bg
                                                                 recurringStat.add(0, recurringUnit);
                                                                 recurringStat.add(1, recurringValue);
                                                                 Calendar calendar = Calendar.getInstance();
                                                                 calendar.setTime(dates.get(i));
-                                                                calendar.add(Calendar.YEAR,1);
+                                                                calendar.add(Calendar.YEAR, 1);
                                                                 recurringStat.add(2, dateFormat.format(calendar));
                                                             }
-                                                            if(recurringUnit.startsWith("HOURS_OF_DAY")){//add one day
+                                                            if (recurringUnit.startsWith("HOURS_OF_DAY")) {//add one day
                                                                 recurringStat.add(0, recurringUnit);
                                                                 recurringStat.add(1, recurringValue);
                                                                 Calendar calendar = Calendar.getInstance();
                                                                 calendar.setTime(dates.get(i));
-                                                                calendar.add(Calendar.DAY_OF_YEAR,1);
+                                                                calendar.add(Calendar.DAY_OF_YEAR, 1);
                                                                 recurringStat.add(2, dateFormat.format(calendar));
                                                             }
-                                                        }else {
+                                                        } else {
                                                             recurringStat.add(0, recurringUnit);
                                                             recurringStat.add(1, recurringValue);
                                                             recurringStat.add(2, dateFormat.format(dates.get(i)));
@@ -2583,8 +2646,8 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                                                         }
                                                     }
                                                     Date untilDate = group.getRecursUntil();//add until date
-                                                    if(untilDate.after(new Date())){//skip if detected past time as untilDate, which is stupid and useless
-                                                        recurringStat.add(3,dateFormat.format(untilDate));
+                                                    if (untilDate.after(new Date())) {//skip if detected past time as untilDate, which is stupid and useless
+                                                        recurringStat.add(3, dateFormat.format(untilDate));
                                                     }
                                                     recurringStats.add(recurringStat);
                                                 }
@@ -2594,11 +2657,33 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
 
                                     }
                                     for(int i = 0; i < dates.size(); i++){//eliminate past dates that are intentional, and correct the past dates to a future date if unintentional judging by input provided date units
-                                        if(dates.get(i).before(new Date())){
+                                        if(dates.get(i).before(new Date())){//deal with all past dates here
+                                            System.out.println("PAST: " + dates.get(i));
                                             Tree tree = group.getSyntaxTree().getChild(i);//gets each DATE_TIME subtree
+                                            //filter out other past times and correct intended future dates
+                                            // keep dates intended for a specific next year date. E.g: INPUT: Oct 1, NOW: Oct 2 2018, ORIGINAL PARSING: Oct 1 2018, INTENDED: Oct 1 2019.
                                             if(tree.getChild(0).getText().equals("EXPLICIT_DATE") && tree.getChild(0).getChild(0).getText().equals("MONTH_OF_YEAR") && !(tree.getChildCount() > 2 && tree.getChild(0).getChild(2).getText().equals("YEAR_OF"))){
-                                                remindDates.add(dates.get(i));
-                                            }//filter out other past times
+                                                System.out.println("add one year");
+                                                Calendar calendar = Calendar.getInstance();
+                                                calendar.setTime(dates.get(i));
+                                                calendar.add(Calendar.YEAR,1);//add one year
+                                                remindDates.add(calendar.getTime());
+                                            }//keep dates intended for a specific next year month (1st day of the month). E.g: INPUT: Sep, NOW: Oct 2018, ORIGINAL PARSING: Sep 1 2018, INTENDED: Sep 1 2019.
+                                            else if(tree.getChild(0).getText().equals("RELATIVE_DATE") && tree.getChild(0).getChild(0).getText().equals("SEEK") && tree.getChild(0).getChild(0).getChild(3).getText().equals("MONTH_OF_YEAR")){
+                                                System.out.println("add one year");
+                                                Calendar calendar = Calendar.getInstance();
+                                                calendar.setTime(dates.get(i));
+                                                calendar.add(Calendar.YEAR,1);//add one year
+                                                remindDates.add(calendar.getTime());
+                                            }//keep dates intended for a specific next day time. E.g: INPUT: 1pm, NOW: 4pm, ORIGINAL PARSING: 1pm today, INTENDED: 1pm tomorrow.
+                                            else if(tree.getChild(0).getText().equals("EXPLICIT_TIME") && tree.getChild(0).getChild(0).getText().equals("HOURS_OF_DAY")){
+                                                System.out.println("add one day");
+                                                Calendar calendar = Calendar.getInstance();
+                                                calendar.setTime(dates.get(i));
+                                                calendar.add(Calendar.DAY_OF_YEAR,1);//add one day
+                                                remindDates.add(calendar.getTime());
+                                            }
+                                            //otherwise discard the date
                                         }else {
                                             remindDates.add(dates.get(i));
                                         }
@@ -2669,14 +2754,18 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         Gson arrayListToStrGson = new Gson();//convert to json to store ArrayList in SQLITE
                         values.put(DATE_STRING_REFERENCES, arrayListToStrGson.toJson(dateStringReferences));
                     }
-                    getActivity().getContentResolver().insert(DatabaseContract.Item.TODO_URI, values);
-                    scheduleReminder((int)todoSql.getIdOfLatestDataInTODO(), getContext());
+                    //todo update data
+                    if (uri == null) {
+                        uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
+                    }
+                    getActivity().getContentResolver().update(uri, values, null, null);
+                    scheduleReminder(insertID, getContext());
                 }
             }
         }).start();//end of thread
     }
 
-    public void finishData(long id){
+    public void finishData(int id){
         ContentValues cv = new ContentValues();
         String data = todoSql.getOneTitleInTODO(id);
         cv.put(TITLE,data);
@@ -2685,7 +2774,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         getActivity().getContentResolver().insert(DatabaseContract.Item.HISTORY_URI, cv);
     }
 
-    public void deleteData(long id){
+    public void deleteData(int id){
         Uri uri = ContentUris.withAppendedId(DatabaseContract.Item.TODO_URI, id);
         //System.out.println("delete data" + id);
         String note = todoSql.getOneTitleInTODO(id);
@@ -2695,6 +2784,12 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
         //remove set reminders for it
         if(todoSql.hasReminder(id)){
             deleteReminder(id,getContext());
+        }
+
+        //remove ongoing reminder notification, if exist
+        NotificationManager notificationManager = (NotificationManager)getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.cancel(id);
         }
 
         if(!(tags == null)){//if contains tags

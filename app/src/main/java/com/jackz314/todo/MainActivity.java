@@ -150,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public static String REMINDER_NOTIFICATION_GROUP = "reminder_notification_group";
     public static String NORMAL_CHANNEL_ID = "10101", IMPORTANT_CHANNEL_ID = "10102", URGENT_CHANNEL_ID = "10103";
     public boolean isInSearchMode = false, isInSelectionMode = false;
-    public ArrayList<Long> selectedId = new ArrayList<>();
+    public ArrayList<Integer> selectedId = new ArrayList<>();
     public ArrayList<String> selectedContent = new ArrayList<>();
     public ArrayList<String> CLONESelectedContent = new ArrayList<>();
     public String searchText;
@@ -394,6 +394,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
+        setTheme(R.style.AppTheme_NoActionBar);
         sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
 //        System.out.println(sharedPreferences.contains(getString(R.string.font_overriden_key)));
 //        System.out.println(sharedPreferences.getBoolean(getString(R.string.font_overriden_key), false));
@@ -2128,7 +2129,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * @return the reminder notification, null if failed during the process, for example, ParseException
      */
     public static Notification generateReminderNotification(Context context, Cursor cursor, long... previouslySnoozedTime){
-        String title = cursor.getString(cursor.getColumnIndex(TITLE));
+        cursor.moveToNext();
+        String title = cursor.getString(cursor.getColumnIndexOrThrow(TITLE));
         String recentRemindDateStr = cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME));
         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
         Date nowRemindTime = null;
@@ -2145,8 +2147,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             remindDates = removePastDates(remindDates);
             isOverdue = true;
         }
-        Date nextUpRemindTime = remindDates.get(1);
-        Date thenUpRemindTime = remindDates.get(2);
+        Date nextUpRemindTime = null, thenUpRemindTime = null;
+        if(remindDates.size() >= 2){//have at least 2 remind dates (ignore recurring ones now)
+            nextUpRemindTime = remindDates.get(1);
+            if(remindDates.size() >= 3){//have at least 3 remind dates (ignore recurring ones now)
+                thenUpRemindTime = remindDates.get(2);
+            }
+        }
         SimpleDateFormat timeNotificationDateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         SimpleDateFormat dateNotificationDateFormat = new SimpleDateFormat("MMM d",Locale.getDefault());
         SimpleDateFormat wholeTimeDateFormat = new SimpleDateFormat("hh aa",Locale.getDefault());
@@ -2477,7 +2484,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         Intent snoozeIntent = new Intent(context, ReminderBroadcastReceiver.class);
         snoozeIntent.setAction(ACTION_SNOOZE);
         snoozeIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
-        PendingIntent snoozePendingIntent = PendingIntent.getBroadcast(context, 0, snoozeIntent, 0);
+        PendingIntent snoozePendingIntent = PendingIntent.getBroadcast(context, 0, snoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         //snooze for specific time button action intent
         Intent snoozeTimeIntent = new Intent(context, ReminderBroadcastReceiver.class);
@@ -2496,13 +2503,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             snoozeButtonTxt = "1 " + context.getString(R.string.hour_caps);//default
             snoozeTimeIntent.putExtra(SNOOZE_TIME, (long)3600);//default snooze time 1 hour
         }
-        PendingIntent snoozeTimePendingIntent = PendingIntent.getBroadcast(context, 0, snoozeTimeIntent, 0);
+        PendingIntent snoozeTimePendingIntent = PendingIntent.getBroadcast(context, 0, snoozeTimeIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         //finish button action intent
         Intent finishIntent = new Intent(context, ReminderBroadcastReceiver.class);
         finishIntent.setAction(ACTION_FINISH);
         finishIntent.putExtra(REMINDER_NOTIFICATION_ID, cursor.getInt(cursor.getColumnIndex(ID)));
-        PendingIntent finishPendingIntent = PendingIntent.getBroadcast(context, 0, finishIntent, 0);
+        PendingIntent finishPendingIntent = PendingIntent.getBroadcast(context, 0, finishIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         reminderNotifBuilder.setSmallIcon(R.mipmap.ic_launcher);
         reminderNotifBuilder.setContentTitle(formatNotificationText(title,context));
@@ -2723,11 +2730,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
 
-    public static boolean deleteReminder(long id, Context context){
+    public static boolean deleteReminder(int id, Context context){
         Intent notificationIntent = new Intent(context, ReminderBroadcastReceiver.class);
         notificationIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
         notificationIntent.setAction(ACTION_START_REMINDER);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, (int)id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager != null) {
             alarmManager.cancel(pendingIntent);
@@ -2755,8 +2762,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }).run();
     }
 
-    public static boolean scheduleReminder(long id, Context context) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
+    public static boolean scheduleReminder(int id, Context context) {
+        //SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
         DatabaseManager todoSql = new DatabaseManager(context);
         Cursor cursor = todoSql.getOneDataInTODO(id);
         cursor.moveToFirst();
@@ -2766,7 +2773,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             notificationIntent.setAction(ACTION_START_REMINDER);
             String recentRemindDateStr = cursor.getString(cursor.getColumnIndex(RECENT_REMIND_TIME));
             SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT,Locale.getDefault());
-            Date remindTime = null;
+            Date remindTime;
             try {
                 remindTime = dateFormat.parse(recentRemindDateStr);
             } catch (ParseException e){
@@ -2776,9 +2783,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
             if(alarmManager != null){
                 notificationIntent.putExtra(REMINDER_NOTIFICATION_SET_TIME, remindTime.getTime());
-                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, (int)id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, id, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                System.out.println("Reminder Scheduled with id: " + notificationIntent.getIntExtra(REMINDER_NOTIFICATION_ID, -1));
                 System.out.println("ALARM SET at " + remindTime + ", current time: " + new Date() + ", time difference: " + ((remindTime.getTime() - System.currentTimeMillis()) / 1000) + " seconds");
-                System.out.println(pendingIntent.toString());
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, remindTime.getTime(), pendingIntent);
                 }else {

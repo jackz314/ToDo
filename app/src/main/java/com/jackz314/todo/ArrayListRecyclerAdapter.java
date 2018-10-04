@@ -1,6 +1,7 @@
 package com.jackz314.todo;
 
 import android.content.Context;
+import android.graphics.Typeface;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -14,11 +15,14 @@ import java.util.ArrayList;
 
  class ArrayListRecyclerAdapter extends RecyclerView.Adapter<ArrayListRecyclerAdapter.ArrayRecyclerViewHolder> implements Filterable {
 
-    private ArrayList<String> arrayList, arrayListFiltered;
+    private ArrayList<String> arrayList;
+    private ArrayList<String> arrayListFiltered;
+    private Context context;
 
-     ArrayListRecyclerAdapter(ArrayList<String> arrayList){
+     ArrayListRecyclerAdapter(ArrayList<String> arrayList, Context context){
         this.arrayList = arrayList;
         arrayListFiltered = arrayList;
+        this.context = context;
     }
 
     @NonNull
@@ -32,7 +36,29 @@ import java.util.ArrayList;
 
      @Override
      public void onBindViewHolder(@NonNull final ArrayRecyclerViewHolder holder, int position) {
-         holder.mainText.setText(arrayListFiltered.get(position));
+         if(arrayListFiltered.size() > 0 && arrayListFiltered.size() > position){
+             final String fontName = arrayListFiltered.get(position);
+             holder.mainText.setText(fontName);
+             //set font here
+             //run font requests in separated threads
+             GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                 @Override
+                 public void onFontRetrieved(Typeface typeface) {
+                     if(typeface != null){
+                         holder.mainText.setTypeface(typeface);
+                         System.out.println("Font Set: " + holder.mainText.getText());
+                     }else {
+                         System.out.println("TYPEFACE IS NULL");
+                     }
+                 }
+                 @Override
+                 public void onFontRequestError(int errorCode) {
+                     System.out.println("Font request failed, error code: " + errorCode);
+                     //Toast.makeText(SettingsActivity.this, SettingsActivity.this.getString(R.string.font_list_font_load_failed), Toast.LENGTH_LONG).show();
+                 }
+             };
+             GetGoogleFont.requestGoogleFont(googleFontCallback, fontName,400,false,false, context);
+         }
      }
 
     static class ArrayRecyclerViewHolder extends RecyclerView.ViewHolder{
@@ -48,43 +74,45 @@ import java.util.ArrayList;
         return arrayList.size();
     }
 
+    public int getFilteredItemCount(){
+         return arrayListFiltered.size();
+    }
+
     @Override
     public Filter getFilter(){
+         System.out.println("initial count"+ getItemCount());
         return new Filter() {
             @Override
             protected FilterResults performFiltering(CharSequence constraint) {
                 String charString = constraint.toString();
+                ArrayList<String> arrTemp = new ArrayList<>();
                 if (charString.isEmpty()) {
-                    arrayListFiltered = arrayList;
+                    arrTemp = arrayList;
                 } else {
-                    if(arrayListFiltered == null){//initiate it if not done before
-                        arrayListFiltered = new ArrayList<>();
-                    }
-                    arrayListFiltered.clear();//clear previous stuff in it
+                    //arrayListFiltered.clear();//clear previous stuff in it
                     for (String string : arrayList) {
-
                         //matching...
                         if (string.toLowerCase().contains(charString.toLowerCase())) {
-                            arrayListFiltered.add(string);
+                            arrTemp.add(string);
                         }
                     }
                 }
-
                 FilterResults filterResults = new FilterResults();
-                filterResults.values = arrayListFiltered;
+                filterResults.values = arrTemp;
                 return filterResults;
             }
 
             @Override
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 arrayListFiltered = (ArrayList<String>) results.values;//it's fine, ignore the warning, I had to it this way, and the way that make sure the warning goes away slows down the performance, so no... maybe find out more about it in the future
+                System.out.println(" Filtered Result Size: "+arrayListFiltered.size() + " Original Size: " + arrayList.size());
                 notifyDataSetChanged();
             }
         };
     }
 
     public String getItemAtPos(int position){
-        return arrayList.get(position);
+        return arrayListFiltered.get(position);
     }
 
     public void swapNewDataSet(ArrayList<String> newArrayList)

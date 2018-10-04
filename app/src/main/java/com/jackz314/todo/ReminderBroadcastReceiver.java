@@ -40,14 +40,14 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
             scheduleAllReminder(context);
         }else {
             if(ACTION_START_REMINDER.equals(intent.getAction())){
-                System.out.println("START REMINDER INTENT RECEIVED " + intent + intent.getExtras().toString());
                 PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
                 if (pm != null && !pm.isInteractive()) {//screen is off
                     PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"com.jackz314.ToDo:ReminderWakeLock");
                     wl.acquire(5000);//wake screen for 5 seconds.
                 }
+                int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
+                System.out.println("START REMINDER INTENT RECEIVED: " + id);
                 NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-                long id = intent.getLongExtra(REMINDER_NOTIFICATION_ID, -1);
                 Notification reminderNotification;
                 DatabaseManager todoSql = new DatabaseManager(context);
                 if(intent.getBooleanExtra(SNOOZED_REMINDER,false)){
@@ -58,14 +58,14 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
                 }
                 if (notificationManager != null && reminderNotification != null) {
                     System.out.println("REMINDER NOTIFICATION FIRED");
-                    notificationManager.notify((int) id,reminderNotification);//fire notification
+                    notificationManager.notify(id,reminderNotification);//fire notification
                 }else if(reminderNotification == null){//unlikely to happen but will still notify user of such events happening as the matters needed to be reminded might be crucial to user
                     Notification.Builder notificationBuilder = new Notification.Builder(context);
                     notificationBuilder.setSmallIcon(R.mipmap.ic_launcher);
                     notificationBuilder.setContentTitle(context.getString(R.string.failed_to_create_reminder));
                     notificationBuilder.setContentText(context.getString(R.string.failed_to_create_reminder_detail));
                     if (notificationManager != null) {
-                        notificationManager.notify((int)id, notificationBuilder.build());
+                        notificationManager.notify(id, notificationBuilder.build());
                     }else {
                         Toast.makeText(context,"FAILED TO CREATE NotificationManager",Toast.LENGTH_LONG).show();
                     }
@@ -84,8 +84,8 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
                     notificationOverdueIntent.putExtra(REMINDER_NOTIFICATION_ID, id);
                     notificationOverdueIntent.putExtra(OVERDUE_REMINDER, overdueCount + 1);//count overdue times, stop notifying after a certain number of notifications
                     notificationOverdueIntent.setAction(ACTION_START_REMINDER);
-                    PendingIntent overduePendingIntent = PendingIntent.getBroadcast(context, (int) id, notificationOverdueIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-                    Long remindTime = intent.getLongExtra(REMINDER_NOTIFICATION_SET_TIME, getCurrentTime().getTime());
+                    PendingIntent overduePendingIntent = PendingIntent.getBroadcast(context, id, notificationOverdueIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                    long remindTime = intent.getLongExtra(REMINDER_NOTIFICATION_SET_TIME, getCurrentTime().getTime());
                     if(sharedPreferences.getBoolean(context.getString(R.string.normal_overdue_switch),true)){//if main overdue reminder switch is turned on, then set overdue reminder AlarmManagers here
                         if (overdueCount < 5){
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -116,18 +116,23 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
                 }
             }else if(ACTION_SNOOZE.equals(intent.getAction())){
                 //todo pop up snooze time chooser
-            }else if(ACTION_FINISH.equals(intent.getAction())){
+            }else if(ACTION_FINISH.equals(intent.getAction())){//todo not working
                 int id = intent.getIntExtra(REMINDER_NOTIFICATION_ID, -1);
-
-                //update data to finish the reminder's previous remind times (to eliminate overdue situations
+                //update data to finish the reminder's previous remind times (to eliminate overdue situations)
                 DatabaseManager todoSql = new DatabaseManager(context);
                 todoSql.finishReminder(id);
+
+                //dismiss notification
+                NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    notificationManager.cancel(id);
+                }
 
                 //cancel previous alarms
                 PendingIntent cancelAlarmPendingIntent = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT);
                 AlarmManager cancelAlarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
                 if (cancelAlarmManager != null) {
-                    System.out.println("Previous AlarmManager canceled! Finished reminder!");
+                    System.out.println("Previous AlarmManager canceled! Finished reminder: " + id);
                     cancelAlarmManager.cancel(cancelAlarmPendingIntent);
                     cancelAlarmPendingIntent.cancel();
                 }
@@ -160,7 +165,11 @@ public class ReminderBroadcastReceiver extends BroadcastReceiver{
                 if(alarmManager != null){
                     alarmManager.setExact(AlarmManager.RTC_WAKEUP, snoozeToTime + System.currentTimeMillis(), pendingIntent);
                 }
-
+                NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    notificationManager.cancel(id);
+                }
+                Toast.makeText(context, context.getString(R.string.reminder_snoozed), Toast.LENGTH_SHORT).show();
             }
 
         }

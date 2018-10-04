@@ -6,6 +6,7 @@ import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.DateTime;
 import net.fortuna.ical4j.model.Period;
 import net.fortuna.ical4j.model.PeriodList;
+import net.fortuna.ical4j.util.MapTimeZoneCache;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,13 +41,12 @@ public class IcsSearcher {
   }
 
   public Map<Integer, Date> findDates(int startYear, int endYear, String eventSummary) {
-    Map<Integer, Date> holidays = new HashMap<Integer, Date>(); 
-    
-    if(_holidayCalendar == null) {
+    Map<Integer, Date> holidays = new HashMap<Integer, Date>();
+      System.setProperty("net.fortuna.ical4j.timezone.cache.impl", MapTimeZoneCache.class.getName());//workaround for a stupid bug
+      if(_holidayCalendar == null) {
       InputStream fin = WalkerState.class.getResourceAsStream(_calendarFileName);
-      try {
+          try {
         _holidayCalendar = new CalendarBuilder().build(fin);
-        
       } catch (IOException e) {
         _logger.error("Couln't open " + _calendarFileName);
         return holidays;
@@ -60,8 +60,8 @@ public class IcsSearcher {
     Period period = null;
     try {
       DateTime from = new DateTime(startYear + "0101T000000Z");
-      DateTime to = new DateTime(endYear + "1231T000000Z");;
-      period = new Period(from, to);
+      DateTime to = new DateTime(endYear + "1231T000000Z");
+        period = new Period(from, to);
       
     } catch (ParseException e) {
       _logger.error("Invalid start or end year: " + startYear + ", " + endYear, e);

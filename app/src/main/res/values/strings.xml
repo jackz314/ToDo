@@ -210,6 +210,7 @@
     <string name="font_list_load_failed">Failed to load the font list from font provider, please try again later.\nOnly local added fonts will be shown.</string>
     <string name="font_list_font_load_failed">Failed to load preview of fonts, please try again later.\nThe list will be shown with the default font instead.</string>
     <string name="font_test_hint">Test out the font here…</string>
+    <string name="font_search_empty">No results found :(</string>
     <string name="default_font_preview_text">This is a preview of the font.</string>
     <string name="clipboard_is_empty">Your clipboard is empty.</string>
     <string name="recreate_main_key" translatable="false">recreate_main_key</string>
@@ -303,6 +304,7 @@
     <string name="hours">hours</string>
     <string name="ago">ago</string>
     <string name="in">in</string>
+    <string name="reminder_snoozed">Reminder Snoozed!</string>
     <string name="normal_channel_name">Normal</string>
     <string name="important_channel_name">Important</string>
     <string name="urgent_channel_name">Urgent</string>
