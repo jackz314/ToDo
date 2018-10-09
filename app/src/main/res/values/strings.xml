@@ -214,9 +214,8 @@
     <string name="default_font_preview_text">This is a preview of the font.</string>
     <string name="clipboard_is_empty">Your clipboard is empty.</string>
     <string name="recreate_main_key" translatable="false">recreate_main_key</string>
-\    <string name="font_overriden_key" translatable="false">font_overriden_key</string>
     <string name="setting_font_to_text">Setting font to: </string>
-    <string name="google_font_query_key" translatable="false">googel_font_name_key</string>
+    <string name="google_font_query_key" translatable="false">google_font_name_key</string>
     <string name="just_do_it">Just do it!</string>
     <string name="reconsider">I\'ll reconsider</string>
     <string name="storage_permission_refused_explanation_bk">We\'ll need the storage permission to backup your notes</string>

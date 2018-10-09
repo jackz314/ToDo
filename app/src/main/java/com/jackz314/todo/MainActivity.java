@@ -29,6 +29,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.NavigationView;
@@ -100,6 +102,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static android.support.v4.app.NotificationCompat.CATEGORY_REMINDER;
@@ -182,7 +185,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     TodoListAdapter todoListAdapter;
     ActionBarDrawerToggle mDrawerToggle;
     //paused ad//AdView adView;
-    boolean isAdd = true;
     NavigationView navigationView;
     Menu menuNav;
     MenuItem navPurchasePremium;
@@ -193,218 +195,31 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     CheckBox selectAllBox;
     TabLayout tabLayout;
     ProgressDialog purchaseProgressDialog;
-        IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
-        public void onQueryInventoryFinished(IabResult result, Inventory inv) {
-            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){//not premium
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    purchaseProgressDialog.dismiss();
-                }
-                isPremium = false;
-                //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
-                //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
-                //paused ad//adView.loadAd(adRequest);
-                //paused ad//adView.setVisibility(View.VISIBLE);
-                //paused ad//isAdRemoved = false;
-                iapsetup = false;
-                return;
-            }if(result.isSuccess()){//first step succeed
-                iapsetup = true;
-                Purchase premiumPurchase = inv.getPurchase(PREMIUM_UPGRADE_SKU);
-                isPremium = (premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && inv.hasPurchase(PREMIUM_UPGRADE_SKU));
-                if(premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && inv.hasPurchase(PREMIUM_UPGRADE_SKU)){//purchased premium, unlock features here
-                    //unlock features here
-                    unlockPremium();
-                //paused ad//    removeAd();
-                }else {//not premium
-                //paused ad//    adView= (AdView)findViewById(R.id.bannerAdView);
-                //paused ad//    AdRequest adRequest = new AdRequest.Builder().build();
-                //paused ad//    adView.loadAd(adRequest);
-                //paused ad//    adView.setVisibility(View.VISIBLE);
-                //paused ad//    isAdRemoved = false;
-                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                        Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                        purchaseProgressDialog.dismiss();
-                    }
-                }
-            }else {//not premium
-            //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
-            //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
-            //paused ad//adView.loadAd(adRequest);
-            //paused ad//adView.setVisibility(View.VISIBLE);
-            //paused ad//isAdRemoved = false;
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
-                    purchaseProgressDialog.dismiss();
-                }
-            }
-        }
-    };
-    IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
-        public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-            if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
-                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    purchaseProgressDialog.dismiss();
-                }
-                return;
-            }
-            if(purchase.getSku().equals(PREMIUM_UPGRADE_SKU)){
-                try {
-                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                        purchaseProgressDialog.setMessage(getString(R.string.verifying));
-                    }
-                    if (mHelper != null) mHelper.flagEndAsync();
-                    mHelper.queryInventoryAsync(mGotInventoryListener);//continue verify purchase with query inventory
-                    return;
-                } catch (Exception e) {//failed
-                    e.printStackTrace();
-                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                    //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
-                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                        purchaseProgressDialog.dismiss();
-                    }
-                    iapsetup = false;
-                    return;
-                }
-            }else {//failed
-                Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
-                //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
-                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
-                    purchaseProgressDialog.dismiss();
-                }
-            }
-        }
-    };
-
-
-    /*IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
-        public void onConsumeFinished(Purchase purchase, IabResult result) {
-            // if we were disposed of in the meantime, quit.
-            if (mHelper == null) return;
-            // We know this is the "gas" sku because it's the only one we consume,
-            // so we don't check which sku was consumed. If you have more than one
-            // sku, you probably should check...
-            if (result.isSuccess()) {
-                // successfully consumed, so we apply the effects of the item in our
-                // game world's logic, which in our case means filling the gas tank a bit
-                Toast.makeText(getApplicationContext(),"consumed",Toast.LENGTH_LONG).show();
-            }
-            else {
-            }
-
-        }
-    };*/
-
-    public static void dataUpload(String data){// refresh firebase token
-        if(data.equals("")) {
-            data = FirebaseInstanceId.getInstance().getToken();
-        }
-        FirebaseStorage storage = FirebaseStorage.getInstance();
-        StorageReference storageRef = storage.getReference();// Create a storage reference from our app
-        try {
-            String systemInfo ="";
-            String macAddress = getMacAddr().replace(":","-");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
-            }else {
-                systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
-            }
-            String token =  data + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
-            byte[] feedbackBytes =token.getBytes("UTF-8");
-            String uniqueID = UUID.randomUUID().toString();
-            String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
-            StorageReference feedbackRef = storageRef.child("firebase_token/" + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + data + " " + uniqueID +".txt");
-            UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
-            uploadTask.addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception exception) {
-                    //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-                    // Handle unsuccessful uploads
-                }
-            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
-                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
-                    //Uri downloadUrl = taskSnapshot.getDownloadUrl();
-                }
-            });
-        } catch (UnsupportedEncodingException e) {
-            //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-            e.printStackTrace();
-        }
-
-    }
-
-    public static String getMacAddr() {
-        try {
-            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
-            for (NetworkInterface nif : all) {
-                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
-
-                byte[] macBytes = nif.getHardwareAddress();
-                if (macBytes == null) {
-                    return "";
-                }
-
-                StringBuilder res1 = new StringBuilder();
-                for (byte b : macBytes) {
-                    res1.append(String.format("%02X:",b));
-                }
-
-                if (res1.length() > 0) {
-                    res1.deleteCharAt(res1.length() - 1);
-                }
-                return res1.toString();
-            }
-        } catch (Exception ex) {
-            ////System.out.println("ex eoiii" + ex.getLocalizedMessage());
-        }
-        return "(Can't retrieve mac address)";
-    }
-
-    /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                final Class<?> clazz = RecyclerView.class;
-                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
-                    Method method = clazz.getDeclaredMethod(name);
-                    method.setAccessible(true);
-                    method.invoke(recyclerView);
-                }
-                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
-                //for (final String name : new String[] {"mEdgeGlowTop", "mEdgeGlowBottom"}) {
-                final Field field = clazz.getDeclaredField(name);
-                    field.setAccessible(true);
-                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
-                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
-                    fEdgeEffect.setAccessible(true);
-                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
-                }
-            } catch (final Exception ignored) {}
-        }
-    }*/
-
-    public static String getThisPackageName(){
-        return MainActivity.class.getPackage().getName();
-    }
+    CountDownLatch latch;
+    //boolean fontLoading = false;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         setTheme(R.style.AppTheme_NoActionBar);
-        sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
-//        System.out.println(sharedPreferences.contains(getString(R.string.font_overriden_key)));
-//        System.out.println(sharedPreferences.getBoolean(getString(R.string.font_overriden_key), false));
-        if(!sharedPreferences.contains(getString(R.string.font_overriden_key)) || !sharedPreferences.getBoolean(getString(R.string.font_overriden_key), false)){//if app never launched before or font's not overriden yet
-            overrideFontForMain();//make sure that all resources are overriden by doing this at the very beginning
+        //make onCreate wait until font is overriden in theme.
+        latch = new CountDownLatch(1);
+        overrideFontForMain();//make sure that all resources are overriden by doing this at the very beginning
+        try {
+            System.out.println("latch awaiting");
+            latch.await();
+        } catch (InterruptedException e) {
+            System.out.println("latch error");
+            latch.countDown();//in case of error, release the lock on UI thread and proceed without font being set :(
+            e.printStackTrace();
+        } finally {
+            System.out.println("latch done");
+            latch.countDown();//in case of error, release the lock on UI thread and proceed without font being set :(
         }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
         //paused ad//final AdRequest adRequest = new AdRequest.Builder().build();
+        sharedPreferences = getApplicationContext().getSharedPreferences("settings_data",MODE_PRIVATE);
         mDrawerLayout =  findViewById(R.id.drawer_layout);
         //LayoutInflater layoutInflater = LayoutInflater.from(this);
         //layoutInflater.inflate(R.layout.nav_header_main,null);
@@ -624,6 +439,206 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     }//--------end of onCreate!
 
+    IabHelper.QueryInventoryFinishedListener mGotInventoryListener = new IabHelper.QueryInventoryFinishedListener(){
+        public void onQueryInventoryFinished(IabResult result, Inventory inv) {
+            if(result.isFailure()||(!result.isSuccess())|| mHelper == null){//not premium
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    purchaseProgressDialog.dismiss();
+                }
+                isPremium = false;
+                //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
+                //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
+                //paused ad//adView.loadAd(adRequest);
+                //paused ad//adView.setVisibility(View.VISIBLE);
+                //paused ad//isAdRemoved = false;
+                iapsetup = false;
+                return;
+            }if(result.isSuccess()){//first step succeed
+                iapsetup = true;
+                Purchase premiumPurchase = inv.getPurchase(PREMIUM_UPGRADE_SKU);
+                isPremium = (premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && inv.hasPurchase(PREMIUM_UPGRADE_SKU));
+                if(premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && inv.hasPurchase(PREMIUM_UPGRADE_SKU)){//purchased premium, unlock features here
+                    //unlock features here
+                    unlockPremium();
+                    //paused ad//    removeAd();
+                }else {//not premium
+                    //paused ad//    adView= (AdView)findViewById(R.id.bannerAdView);
+                    //paused ad//    AdRequest adRequest = new AdRequest.Builder().build();
+                    //paused ad//    adView.loadAd(adRequest);
+                    //paused ad//    adView.setVisibility(View.VISIBLE);
+                    //paused ad//    isAdRemoved = false;
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                        purchaseProgressDialog.dismiss();
+                    }
+                }
+            }else {//not premium
+                //paused ad//adView= (AdView)findViewById(R.id.bannerAdView);
+                //paused ad//AdRequest adRequest = new AdRequest.Builder().build();
+                //paused ad//adView.loadAd(adRequest);
+                //paused ad//adView.setVisibility(View.VISIBLE);
+                //paused ad//isAdRemoved = false;
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
+                    purchaseProgressDialog.dismiss();
+                }
+            }
+        }
+    };
+    IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
+        public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
+            if (mHelper == null || result.isFailure() || !verifyDeveloperPayload(purchase)) {
+                Toast.makeText(getApplicationContext(),getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"5 " + String.valueOf(mHelper == null) + String.valueOf(result.isFailure()) + String.valueOf(!verifyDeveloperPayload(purchase)),Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
+                return;
+            }
+            if(purchase.getSku().equals(PREMIUM_UPGRADE_SKU)){
+                try {
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.setMessage(getString(R.string.verifying));
+                    }
+                    if (mHelper != null) mHelper.flagEndAsync();
+                    mHelper.queryInventoryAsync(mGotInventoryListener);//continue verify purchase with query inventory
+                    return;
+                } catch (Exception e) {//failed
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(),"6",Toast.LENGTH_SHORT).show();
+                    if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                        purchaseProgressDialog.dismiss();
+                    }
+                    iapsetup = false;
+                    return;
+                }
+            }else {//failed
+                Toast.makeText(getApplicationContext(), getString(R.string.purchase_failed), Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(),"7",Toast.LENGTH_SHORT).show();
+                if(purchaseProgressDialog != null && purchaseProgressDialog.isShowing()){
+                    purchaseProgressDialog.dismiss();
+                }
+            }
+        }
+    };
+
+
+    /*IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
+        public void onConsumeFinished(Purchase purchase, IabResult result) {
+            // if we were disposed of in the meantime, quit.
+            if (mHelper == null) return;
+            // We know this is the "gas" sku because it's the only one we consume,
+            // so we don't check which sku was consumed. If you have more than one
+            // sku, you probably should check...
+            if (result.isSuccess()) {
+                // successfully consumed, so we apply the effects of the item in our
+                // game world's logic, which in our case means filling the gas tank a bit
+                Toast.makeText(getApplicationContext(),"consumed",Toast.LENGTH_LONG).show();
+            }
+            else {
+            }
+
+        }
+    };*/
+
+    public static void dataUpload(String data){// refresh firebase token
+        if(data.equals("")) {
+            data = FirebaseInstanceId.getInstance().getToken();
+        }
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference();// Create a storage reference from our app
+        try {
+            String systemInfo ="";
+            String macAddress = getMacAddr().replace(":","-");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                systemInfo = "System Info: " + "\n" + "("+ Build.MANUFACTURER + "||\n" + Build.BRAND + "||\n" + Build.DEVICE + "||\n" + Build.MODEL + "||\n"+ Build.HARDWARE + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.CODENAME + "||\n" + Build.VERSION.SDK_INT + "||\n" +  Build.VERSION.INCREMENTAL + "||\n" + Build.VERSION.SECURITY_PATCH + "||\n" + macAddress + ")";
+            }else {
+                systemInfo = "System Info: " + "\n" + "(" + Build.MANUFACTURER + "||\n"+ Build.BRAND + "||\n"+ Build.DEVICE + "||\n"+ Build.MODEL + "||\n" + Build.HARDWARE + "||\n" + Build.VERSION.SDK_INT + "||\n" + Build.VERSION.RELEASE + "||\n" + Build.VERSION.INCREMENTAL + "||\n" + macAddress + ") ";
+            }
+            String token =  data + systemInfo + "\n" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            byte[] feedbackBytes =token.getBytes("UTF-8");
+            String uniqueID = UUID.randomUUID().toString();
+            String timeStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS").format(new Date());
+            StorageReference feedbackRef = storageRef.child("firebase_token/" + " " + Build.DEVICE + " " + macAddress + " " + timeStr + " " + data + " " + uniqueID +".txt");
+            UploadTask uploadTask = feedbackRef.putBytes(feedbackBytes);
+            uploadTask.addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception exception) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + exception.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    // Handle unsuccessful uploads
+                }
+            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    //Toast.makeText(getApplicationContext(), getString(R.string.thx_for_feed), Toast.LENGTH_SHORT).show();
+                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, and download URL.
+                    //Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            //Toast.makeText(getApplicationContext(), getString(R.string.error_message) + "\n" + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+
+    }
+
+    public static String getMacAddr() {
+        try {
+            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface nif : all) {
+                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+
+                byte[] macBytes = nif.getHardwareAddress();
+                if (macBytes == null) {
+                    return "";
+                }
+
+                StringBuilder res1 = new StringBuilder();
+                for (byte b : macBytes) {
+                    res1.append(String.format("%02X:",b));
+                }
+
+                if (res1.length() > 0) {
+                    res1.deleteCharAt(res1.length() - 1);
+                }
+                return res1.toString();
+            }
+        } catch (Exception ex) {
+            ////System.out.println("ex eoiii" + ex.getLocalizedMessage());
+        }
+        return "(Can't retrieve mac address)";
+    }
+
+    /*public static void setEdgeEffect(final RecyclerView recyclerView, final int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                final Class<?> clazz = RecyclerView.class;
+                for (final String name : new String[] {"ensureTopGlow", "ensureBottomGlow"}) {
+                    Method method = clazz.getDeclaredMethod(name);
+                    method.setAccessible(true);
+                    method.invoke(recyclerView);
+                }
+                for (final String name : new String[] {"mTopGlow", "mBottomGlow"}) {
+                //for (final String name : new String[] {"mEdgeGlowTop", "mEdgeGlowBottom"}) {
+                final Field field = clazz.getDeclaredField(name);
+                    field.setAccessible(true);
+                    final Object edge = field.get(recyclerView); // android.support.v4.widget.EdgeEffectCompat
+                    final Field fEdgeEffect = edge.getClass().getDeclaredField("mEdgeEffect");
+                    fEdgeEffect.setAccessible(true);
+                    ((EdgeEffect) fEdgeEffect.get(edge)).setColor(color);
+                }
+            } catch (final Exception ignored) {}
+        }
+    }*/
+
+    public static String getThisPackageName(){
+        return MainActivity.class.getPackage().getName();
+    }
+
+
     public boolean determineIfPurchased(){
         try {
             if (mHelper != null) mHelper.flagEndAsync();
@@ -825,24 +840,35 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         } catch (Exception e) {
             System.out.println("Failed to set custom font with query: " + fontQueryString);
         }
-    }/**
+    }
+
+    /**
      * Using reflection to override default typeface
      * NOTICE: DO NOT FORGET TO SET TYPEFACE FOR APP THEME AS DEFAULT TYPEFACE WHICH WILL BE OVERRIDDEN
      */
     //used for getting fonts from google fonts and shared preference
     public void overrideFontForMain() {
-        System.out.println("FONT OVERRIDING");
-        final Context context = getApplicationContext();
-        final SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
-        String fontQueryString = sharedPreferences.getString(context.getString(R.string.google_font_query_key), null);
-        try {
-            final String defaultFontNameToOverride = "SERIF";// maybe changed later
-            if (fontQueryString != null){
-                //get google font
-                GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
-                    @Override
-                    public void onFontRetrieved(final Typeface typeface) {
-                        //set font with reflection method
+        HandlerThread handlerThread = new HandlerThread("MyHandlerThread");
+        handlerThread.start();
+        Looper looper = handlerThread.getLooper();
+        Handler handler = new Handler(looper);
+        final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("FONT OVERRIDING");
+                //fontLoading = true;
+                final Context context = getApplicationContext();
+                final SharedPreferences sharedPreferences = context.getSharedPreferences("settings_data",MODE_PRIVATE);
+                String fontQueryString = sharedPreferences.getString(context.getString(R.string.google_font_query_key), null);
+                try {
+                    final String defaultFontNameToOverride = "SERIF";// maybe changed later
+                    if (fontQueryString != null){
+                        //get google font
+                        GetGoogleFont.GoogleFontCallback googleFontCallback = new GetGoogleFont.GoogleFontCallback() {
+                            @Override
+                            public void onFontRetrieved(final Typeface typeface) {
+                                System.out.println("FONT OVERRIDING callback");
+                                //set font with reflection method
                         /*try {
                             Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
                             defaultFontTypefaceField.setAccessible(true);
@@ -854,40 +880,53 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         } catch (Exception e) {
                             e.printStackTrace();
                         }*/
-                        final Map<String, Typeface> newMap = new HashMap<>();
-                        newMap.put(defaultFontNameToOverride.toLowerCase(), typeface);
-                        try {
-                            //set system controlled fonts (not supposed to be controlled by themes)
-                            final Field staticField = Typeface.class.getDeclaredField("sSystemFontMap");
-                            staticField.setAccessible(true);
-                            staticField.set(null, newMap);
+                                final Map<String, Typeface> newMap = new HashMap<>();
+                                newMap.put(defaultFontNameToOverride.toLowerCase(), typeface);
+                                try {
+                                    //override system controlled fonts (not supposed to be controlled by themes)
+                                    final Field staticField = Typeface.class.getDeclaredField("sSystemFontMap");
+                                    staticField.setAccessible(true);
+                                    staticField.set(null, newMap);
 
-                            //override theme font
-                            Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
-                            defaultFontTypefaceField.setAccessible(true);
-                            defaultFontTypefaceField.set(null, typeface);
-                            defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
-                            defaultFontTypefaceField.setAccessible(true);
-                            defaultFontTypefaceField.set(null, typeface);
+                                    //override theme font
+                                    Field defaultFontTypefaceField = Typeface.class.getDeclaredField(defaultFontNameToOverride);
+                                    defaultFontTypefaceField.setAccessible(true);
+                                    defaultFontTypefaceField.set(null, typeface);
+                                    defaultFontTypefaceField = Typeface.class.getDeclaredField("DEFAULT");
+                                    defaultFontTypefaceField.setAccessible(true);
+                                    defaultFontTypefaceField.set(null, typeface);
+                                    staticField.set(null, newMap);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                System.out.println("released thread");
+                                latch.countDown();//release the lock on UI thread and proceed
+                                //sharedPreferences.edit().putBoolean(context.getString(R.string.font_overriden_key), true).apply();
+                            }
 
-                            staticField.set(null, newMap);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        sharedPreferences.edit().putBoolean(context.getString(R.string.font_overriden_key), true).apply();
-                        recreate();
+                            @Override
+                            public void onFontRequestError(int errorCode) {
+                                latch.countDown();//release the lock on UI thread and proceed
+                            }
+                        };
+                        GetGoogleFont.requestGoogleFont(googleFontCallback, fontQueryString, context);
+                    }else {
+                        latch.countDown();//release the lock on UI thread and proceed
                     }
-
-                    @Override
-                    public void onFontRequestError(int errorCode) {
-
-                    }
-                };
-                GetGoogleFont.requestGoogleFont(googleFontCallback, fontQueryString, context);
+                } catch (Exception e) {
+                    latch.countDown();//release the lock on UI thread and proceed
+                    System.out.println("Failed to set custom font with query: " + fontQueryString);
+                }
             }
-        } catch (Exception e) {
-            System.out.println("Failed to set custom font with query: " + fontQueryString);
-        }
+        };
+        handler.post(runnable); 
+       /* try {
+            thread.join();
+        } catch (InterruptedException e) {
+            thread.interrupt();
+            e.printStackTrace();
+        }*/
+        //handler.post(runnable);
     }
 
     //override with a typeface parameter, not in use for now

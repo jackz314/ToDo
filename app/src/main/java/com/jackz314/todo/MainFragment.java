@@ -1070,7 +1070,7 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                         tagPopupAdapter.notifyDataSetChanged();
                         popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
                         //popupView.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-                        Toast.makeText(getContext(),String.valueOf(popupWindow.getContentView().getMeasuredHeight()),Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(getContext(),String.valueOf(popupWindow.getContentView().getMeasuredHeight()),Toast.LENGTH_SHORT).show();
                         popupWindow.showAsDropDown(input, (int) xOffSet, -input.getHeight() - popupWindow.getContentView().getMeasuredHeight(), Gravity.TOP);
                         popupWindow.dismiss();
                         popupWindow.showAsDropDown(input, (int) xOffSet, -input.getHeight() - popupWindow.getContentView().getMeasuredHeight(), Gravity.TOP);
@@ -1299,8 +1299,6 @@ public class MainFragment extends Fragment implements LoaderManager.LoaderCallba
                 }
             }
         });
-                sharedPreferences.edit().putBoolean(getContext().getString(R.string.font_overriden_key), false).apply();//prepare for the next launch o the app to override the font again
-
     }
 
     @Override

@@ -1,10 +1,10 @@
 package com.jackz314.colorpicker.builder;
 
-import android.support.v7.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.support.v7.app.AlertDialog;
 import android.text.InputFilter;
 import android.view.Gravity;
 import android.view.View;
@@ -58,7 +58,6 @@ public class ColorPickerDialogBuilder {
 		colorPickerView = new ColorPickerView(context);
 
 		pickerContainer.addView(colorPickerView, layoutParamsForColorPickerView);
-
 		builder.setView(pickerContainer);
 	}
 
@@ -257,7 +256,7 @@ public class ColorPickerDialogBuilder {
 					if (initialColor[i] == null)
 						break;
 					LinearLayout colorLayout = (LinearLayout) View.inflate(context, R.layout.color_selector, null);
-					ImageView colorImage = (ImageView) colorLayout.findViewById(R.id.image_preview);
+					ImageView colorImage = colorLayout.findViewById(R.id.image_preview);
 					colorImage.setImageDrawable(new ColorDrawable(initialColor[i]));
 					colorPreview.addView(colorLayout);
 				}

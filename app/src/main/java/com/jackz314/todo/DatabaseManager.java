@@ -425,7 +425,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
     public ArrayList<String> getTags(){
         SQLiteDatabase database = this.getWritableDatabase();
         Cursor cs = database.rawQuery("SELECT _id," + TAG + " FROM " + TAGS_TABLE ,null);
-        ArrayList<String> allTags = new ArrayList<String>();
+        ArrayList<String> allTags = new ArrayList<>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){
                 allTags.add(cs.getString(cs.getColumnIndex(TAG)));
@@ -455,7 +455,7 @@ public class DatabaseManager extends SQLiteOpenHelper{
 
     ArrayList<String> getTagColorsForNavMenu(){
         SQLiteDatabase database = this.getWritableDatabase();
-        Cursor cs = database.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE + " LIMIT 5",null);
+        Cursor cs = database.rawQuery("SELECT _id," + TAG_COLOR + " FROM " + TAGS_TABLE + " order by _id desc LIMIT 5",null);
         ArrayList<String> allTagColors = new ArrayList<>();
         if(cs.getCount() != 0){
             while(cs.moveToNext()){
