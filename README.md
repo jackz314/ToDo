@@ -2,14 +2,26 @@
 
 This the ToDo Project Repository.
 
-### What is this repository for? ###
+### What is ToDo? ###
 
-* Quick summary: ToDoooooooooooooooooooooooooooo
-* Version 1.0
+* Quick summary: ToDoooooooooooooooooooooooooooo.
+* It's yet another ToDo-list app, but with quirky features and implementations built in. It's my experimentation with various the Android functions and third-party libraries.
+* Powered by SQLite.
 
-### Contact/Websites ###
+### Features ###
 
-* [ToDo Slack Workspace](todojmd.slack.com)
-* [ToDo Notion Workspace](https://www.notion.so/jmd/Todo-App-827e45a6a68e481884a85828984a0e4f)
-* Jack Zhang: Email: [Gmail](mailto:zhangmngyu10@gmail.com)
-* Morfeo Qu: Email: [Hotmail](mailto:qu100@hotmail.com), [Gmail](mailto:morfqu@gmail.com), [163](mailto:quhaotian100@163.com)
+* Dynamic theme
+* Dynamic font (Google Font)
+* Smart date parsing for ToDos
+* Reminders for ToDos
+* Tags for ToDos
+* Dynamic Importance system
+* And more...
+
+### Future ###
+
+Probably more interesting stuff that I want to experiment with, like cloud syncing.
+
+Improve code quality and poor implementations (depreciated stuff).
+
+And more...
