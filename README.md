@@ -2,9 +2,9 @@
 
 This the ToDo Project Repository.
 
-Now available on [Google Play](https://play.google.com/store/apps/details?id=com.jackz314.adb-tool)<sup>[1](#googlelegalfoot)</sup>.
+Now available on [Google Play](https://play.google.com/store/apps/details?id=com.jackz314.todo)<sup>[1](#googlelegalfoot)</sup>.
 
-<a href='https://play.google.com/store/apps/details?id=com.jackz314.adb-tool&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width="240px"></a>
+<a href='https://play.google.com/store/apps/details?id=com.jackz314.todo&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width="240"></a>
 
 ## What is ToDo? 
 
